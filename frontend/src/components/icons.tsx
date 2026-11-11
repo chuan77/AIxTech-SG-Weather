@@ -141,6 +141,40 @@ export function TrendIcon({ className = 'h-3.5 w-3.5' }: IconProps) {
   );
 }
 
+export function RainIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M7 15h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 8.4 3.5 3.5 0 0 0 7 15Z" />
+      <path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3" />
+    </svg>
+  );
+}
+
+export function ThunderIcon({ className = 'h-5 w-5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M7 14h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 7.4 3.5 3.5 0 0 0 7 14Z" />
+      <path d="m12 14-2 4h3l-2 4" />
+    </svg>
+  );
+}
+
+export function MapIcon({ className = 'h-3.5 w-3.5' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="m3 6 6-2 6 2 6-2v14l-6 2-6-2-6 2ZM9 4v14M15 6v14" />
+    </svg>
+  );
+}
+
+export function ExpandIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M14 4h6v6M10 20H4v-6M20 4l-7 7M4 20l7-7" />
+    </svg>
+  );
+}
+
 export function CloseIcon({ className = 'h-3.5 w-3.5' }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" className={className} {...base}>

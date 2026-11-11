@@ -51,7 +51,7 @@ export function TenDayForecast({ weather }: TenDayForecastProps) {
   const range = computeWeekRange(days);
 
   return (
-    <section className="rounded-2xl border border-white/15 bg-white/[0.08] backdrop-blur-xl">
+    <section className="rounded-card border border-white/15 bg-white/[0.08] backdrop-blur-xl">
       <header className="flex items-center gap-2 border-b border-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
         <CalendarIcon />
         <span>{days.length}-Day Forecast</span>

@@ -4,6 +4,7 @@ import { dirname, join } from 'node:path';
 import { and, desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migrate } from 'drizzle-orm/sqlite-proxy/migrator';
+import { logger } from './logger.js';
 import { locations, type WeatherSnapshot } from './schema.js';
 
 export interface LocationRecord {
@@ -40,19 +41,33 @@ const defaultWeather: WeatherSnapshot = {
 const databasePath = process.env.DATABASE_PATH ?? join(process.cwd(), 'backend', 'weather.db');
 mkdirSync(dirname(databasePath), { recursive: true });
 
-const sqlite = new DatabaseSync(databasePath);
-sqlite.exec('PRAGMA journal_mode = WAL');
-const db = drizzle(sqliteCallback, { schema: { locations } });
-await migrate(
-  db,
-  async (migrationQueries) => {
-    for (const query of migrationQueries) {
-      const trimmed = query.trim();
-      if (trimmed) sqlite.exec(trimmed);
-    }
-  },
-  { migrationsFolder: join(process.cwd(), 'backend', 'drizzle') },
-);
+// If the database cannot be opened or migrated, log why and fail fast. The file is never
+// deleted or recreated, so existing saved locations are left untouched.
+let sqlite: DatabaseSync;
+
+async function openDatabase() {
+  try {
+    sqlite = new DatabaseSync(databasePath);
+    sqlite.exec('PRAGMA journal_mode = WAL');
+    const database = drizzle(sqliteCallback, { schema: { locations } });
+    await migrate(
+      database,
+      async (migrationQueries) => {
+        for (const query of migrationQueries) {
+          const trimmed = query.trim();
+          if (trimmed) sqlite.exec(trimmed);
+        }
+      },
+      { migrationsFolder: join(process.cwd(), 'backend', 'drizzle') },
+    );
+    return database;
+  } catch (error) {
+    logger.error({ err: error, databasePath }, 'could not open or migrate the database');
+    throw error;
+  }
+}
+
+const db = await openDatabase();
 
 export async function listLocations(): Promise<LocationRecord[]> {
   return (
@@ -68,25 +83,37 @@ export async function createLocation(latitude: number, longitude: number): Promi
     .get();
 
   if (duplicate) {
-    const error = new Error('Location already exists');
-    error.name = 'DuplicateLocationError';
-    throw error;
+    throw duplicateLocationError();
   }
 
   const createdAt = new Date().toISOString().slice(0, 19);
   const weather = weatherToColumns(defaultWeather);
-  const row = await db
-    .insert(locations)
-    .values({
-      latitude,
-      longitude,
-      createdAt,
-      ...weather,
-    })
-    .returning()
-    .get();
+  try {
+    const row = await db
+      .insert(locations)
+      .values({
+        latitude,
+        longitude,
+        createdAt,
+        ...weather,
+      })
+      .returning()
+      .get();
 
-  return rowToRecord(row);
+    return rowToRecord(row);
+  } catch (error) {
+    // A concurrent add can pass the pre-check; the unique index is the real guard.
+    if (error instanceof Error && /UNIQUE constraint failed/i.test(error.message)) {
+      throw duplicateLocationError();
+    }
+    throw error;
+  }
+}
+
+function duplicateLocationError(): Error {
+  const error = new Error('Location already exists');
+  error.name = 'DuplicateLocationError';
+  return error;
 }
 
 export async function getLocation(id: number): Promise<LocationRecord | null> {
@@ -102,6 +129,16 @@ export async function updateWeather(
   const row = await db.update(locations).set(columns).where(eq(locations.id, id)).returning().get();
 
   return row ? rowToRecord(row) : null;
+}
+
+export async function deleteLocation(id: number): Promise<boolean> {
+  const row = await db
+    .delete(locations)
+    .where(eq(locations.id, id))
+    .returning({ id: locations.id })
+    .get();
+
+  return row !== undefined;
 }
 
 export function closeDatabase(): void {

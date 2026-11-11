@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useState } from 'rea
 import {
   listLocations,
   createLocation,
+  deleteLocation,
   refreshLocation,
   logInteraction,
 } from '../api';
@@ -16,15 +17,19 @@ export function StoreProvider({ children }: ProviderProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [refreshingId, setRefreshingId] = useState<number | null>(null);
   const [error, setError] = useState<unknown>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async (): Promise<Location[]> => {
     try {
       const data = await listLocations();
       setLocations(data.locations);
       setError(null);
+      setLoadError(null);
       return data.locations;
     } catch (err) {
+      // Keep the locations already on screen; a failed load must not look like an empty list.
       setError(err);
+      setLoadError(err instanceof Error ? err.message : 'Request failed');
       return [];
     } finally {
       setIsLoading(false);
@@ -93,6 +98,24 @@ export function StoreProvider({ children }: ProviderProps) {
     [load],
   );
 
+  const remove = useCallback(async (id: number) => {
+    setError(null);
+    logInteraction('location_delete_clicked', { locationId: id });
+    try {
+      await deleteLocation(id);
+      setLocations((current) => current.filter((location) => location.id !== id));
+      setSelectedId((selected) => (selected === id ? null : selected));
+      logInteraction('location_deleted', { locationId: id });
+    } catch (err) {
+      setError(err);
+      logInteraction('location_delete_failed', {
+        locationId: id,
+        error: err instanceof Error ? err.message : 'Unknown error',
+      });
+      throw err;
+    }
+  }, []);
+
   const value: StoreValue = {
     locations,
     selectedId: effectiveSelectedId,
@@ -100,13 +123,19 @@ export function StoreProvider({ children }: ProviderProps) {
     isLoading,
     refreshingId,
     error,
+    loadError,
     select: setSelectedId,
     setAdding: (nextIsAdding) => {
       setIsAdding(nextIsAdding);
       if (nextIsAdding) logInteraction('location_form_opened');
     },
     create,
+    remove,
     refresh,
+    reload: async () => {
+      const next = await load();
+      if (next.length > 0) setSelectedId((current) => current ?? next[0].id);
+    },
   };
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

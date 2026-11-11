@@ -13,10 +13,10 @@ interface TileShellProps {
   children: ReactNode;
 }
 
-function TileShell({ icon, title, className = '', children }: TileShellProps) {
+export function TileShell({ icon, title, className = '', children }: TileShellProps) {
   return (
     <section
-      className={`flex flex-col gap-3 rounded-2xl border border-white/15 bg-white/[0.08] p-4 backdrop-blur-xl ${className}`}
+      className={`flex flex-col gap-3 rounded-card border border-white/15 bg-white/[0.08] p-4 backdrop-blur-xl ${className}`}
     >
       <header className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
         {icon}
@@ -96,6 +96,24 @@ export function AirQualityTile({ weather }: WeatherProps) {
       <p className="mt-3 text-xs leading-snug text-white/70">
         PM2.5 {pm25} ug/m3 · {weather?.air_quality_region ?? 'nearest'} region
       </p>
+    </TileShell>
+  );
+}
+
+export function ConditionTile({ weather }: WeatherProps) {
+  return (
+    <TileShell
+      icon={<CloudIcon className="h-3.5 w-3.5" />}
+      title="Conditions"
+      className="col-span-2"
+    >
+      <div className="text-2xl font-light leading-tight text-white/95">
+        {weather.condition || 'Conditions unavailable'}
+      </div>
+      <p className="mt-1 text-sm text-white/75">{weather.area || 'Forecast area unavailable'}</p>
+      {weather.valid_period_text && (
+        <p className="mt-3 text-xs leading-snug text-white/65">{weather.valid_period_text}</p>
+      )}
     </TileShell>
   );
 }
@@ -208,7 +226,7 @@ export function PrecipitationTile({ weather }: WeatherProps) {
       <div className="text-4xl font-light leading-none tabular-nums text-white/95">
         {formatNumber(weather?.rainfall_mm, 1)} mm
       </div>
-      <div className="mt-1 text-sm text-white/85">Latest reading</div>
+      <div className="mt-1 text-sm text-white/85">Latest 5-minute total</div>
       <p className="mt-3 text-xs leading-snug text-white/70">Nearest realtime rainfall station.</p>
     </TileShell>
   );
@@ -247,6 +265,7 @@ export function AveragesTile({ weather }: WeatherProps) {
 export function TileGrid({ weather }: WeatherProps) {
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <ConditionTile weather={weather} />
       <AirQualityTile weather={weather} />
       <WindTile weather={weather} />
       <UVTile weather={weather} />

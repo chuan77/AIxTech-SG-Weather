@@ -6,7 +6,11 @@ export default {
   },
   theme: {
     extend: {
+      borderRadius: { card: 'var(--card-radius)' },
+      fontFamily: { sans: ['var(--font-body)'] },
       colors: {
+        // Themes set --ink (an r g b triplet) so every white/* utility follows the palette.
+        white: 'rgb(var(--ink) / <alpha-value>)',
         sky: {
           50: '#f0f9ff',
           100: '#e0f2fe',

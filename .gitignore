@@ -37,3 +37,6 @@ pnpm-debug.log*
 .mise.local.toml
 *.swp
 *.swo
+
+# Sample API dumps (not committed)
+RealtimeWeatherReadingsacrossSingapore/

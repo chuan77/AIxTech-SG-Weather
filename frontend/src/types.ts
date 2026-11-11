@@ -53,10 +53,13 @@ export interface StoreValue {
   isLoading: boolean;
   refreshingId: number | null;
   error: unknown;
+  loadError: string | null;
   select: (id: number | null) => void;
   setAdding: (isAdding: boolean) => void;
   create: (payload: CreateLocationPayload) => Promise<void>;
+  remove: (id: number) => Promise<void>;
   refresh: (id: number) => Promise<void>;
+  reload: () => Promise<void>;
 }
 
 export interface ProviderProps {

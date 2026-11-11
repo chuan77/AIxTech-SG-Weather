@@ -37,7 +37,7 @@ export function AddLocationForm() {
       <button
         type="button"
         onClick={() => setAdding(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/[0.07] px-3 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.12]"
+        className="flex w-full items-center justify-center gap-2 rounded-card border border-white/15 bg-white/[0.07] px-3 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.12]"
       >
         <PlusIcon />
         <span>Add Location</span>
@@ -48,7 +48,7 @@ export function AddLocationForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="grid gap-2.5 rounded-2xl border border-white/15 bg-white/[0.1] p-3 backdrop-blur-xl"
+      className="grid gap-2.5 rounded-card border border-white/15 bg-white/[0.1] p-3 backdrop-blur-xl"
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
         New coordinate
@@ -90,7 +90,7 @@ export function AddLocationForm() {
         <button
           type="submit"
           disabled={submitting}
-          className="rounded-md bg-white/90 px-3 py-1.5 text-xs font-semibold text-slate-900 hover:bg-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="app-primary-button rounded-md px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
         >
           {submitting ? 'Adding…' : 'Add'}
         </button>

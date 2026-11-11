@@ -8,12 +8,192 @@ body,
   height: 100%;
 }
 
-body {
-  @apply text-white antialiased;
-  background:
+/* Theme palettes. Add a new [data-theme='...'] block and register it in src/theme/themes.ts. */
+:root,
+[data-theme='apple'] {
+  --app-background:
     radial-gradient(120% 80% at 70% 0%, rgba(255, 255, 255, 0.18) 0%, transparent 55%),
     radial-gradient(90% 70% at 10% 100%, rgba(80, 110, 150, 0.55) 0%, transparent 60%),
     linear-gradient(170deg, #6f8aa8 0%, #5a7591 35%, #4a627c 65%, #3c5066 100%);
+  --map-background: #4a627c;
+  --pin-label-border: rgba(255, 255, 255, 0.35);
+  --pin-label-bg: rgba(30, 45, 62, 0.82);
+  --pin-label-text: #fff;
+  --pin-label-selected-bg: #fff;
+  --pin-label-selected-text: #1e2d3e;
+  --pin-dot: #3b82f6;
+  --pin-dot-border: #fff;
+  --pin-dot-selected: #f59e0b;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.18);
+  --card-radius: 1rem;
+  --card-border: rgba(255, 255, 255, 0.15);
+  --card-shadow: none;
+  --ink: 255 255 255;
+  --temperature-color: #fff;
+  --temperature-weight: 200;
+  --sidebar-bg: rgba(0, 0, 0, 0.2);
+  --button-bg: rgba(255, 255, 255, 0.9);
+  --button-bg-hover: #fff;
+  --button-text: #0f172a;
+  --error-text: #fee2e2;
+  --map-filter: none;
+  --font-body: ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Apple Glass: a brighter sky, more frosted panels, larger radius. */
+[data-theme='glass'] {
+  --app-background:
+    radial-gradient(120% 80% at 70% 0%, rgba(255, 255, 255, 0.28) 0%, transparent 55%),
+    linear-gradient(165deg, #6fa8dc 0%, #4b8bcd 40%, #2f6db5 100%);
+  --map-background: #4b8bcd;
+  --card-radius: 1.25rem;
+  --card-border: rgba(255, 255, 255, 0.45);
+  --pin-label-bg: rgba(20, 50, 90, 0.8);
+  --pin-label-selected-text: #14325a;
+  --pin-dot-selected: #ffd479;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.3);
+}
+
+/* Midnight Radar: a dark console with glowing data. */
+[data-theme='radar'] {
+  --app-background:
+    radial-gradient(90% 60% at 80% 0%, rgba(0, 229, 255, 0.08) 0%, transparent 60%),
+    linear-gradient(180deg, #0a1222 0%, #070d1a 100%);
+  --map-background: #0d1626;
+  --card-radius: 0.375rem;
+  --card-border: #1f6f8b;
+  --card-shadow: 0 0 14px rgba(0, 229, 255, 0.2);
+  --temperature-color: #00e5ff;
+  --font-body: 'JetBrains Mono', ui-monospace, monospace;
+  --pin-label-border: #1f6f8b;
+  --pin-label-bg: #0d1626;
+  --pin-label-text: #d6f6ff;
+  --pin-label-selected-bg: #00e5ff;
+  --pin-label-selected-text: #070d1a;
+  --pin-dot: #1f6f8b;
+  --pin-dot-border: #d6f6ff;
+  --pin-dot-selected: #ffb000;
+  --scrollbar-thumb: rgba(0, 229, 255, 0.25);
+}
+
+/* rounded-card marks every themeable panel; Tailwind's border-white/* classes stay in place for apple. */
+[data-theme='glass'] .rounded-card,
+[data-theme='radar'] .rounded-card,
+[data-theme='sticker'] .rounded-card,
+[data-theme='memphis'] .rounded-card {
+  border-color: var(--card-border);
+  box-shadow: var(--card-shadow);
+}
+
+.hero-temperature {
+  color: var(--temperature-color);
+  font-weight: var(--temperature-weight);
+}
+
+.app-sidebar {
+  background: var(--sidebar-bg);
+}
+
+.app-primary-button {
+  background: var(--button-bg);
+  color: var(--button-text);
+}
+
+.app-primary-button:hover:not(:disabled) {
+  background: var(--button-bg-hover);
+}
+
+.text-red-100 {
+  color: var(--error-text);
+}
+
+.weather-map .leaflet-tile-pane {
+  filter: var(--map-filter);
+}
+
+/* Light themes: opaque card surfaces, with a stronger fill for the selected sidebar card. */
+[data-theme='sticker'] .rounded-card,
+[data-theme='memphis'] .rounded-card {
+  background: var(--card-bg);
+}
+
+[data-theme='sticker'] .rounded-card[data-selected='true'],
+[data-theme='memphis'] .rounded-card[data-selected='true'] {
+  background: var(--card-bg-selected);
+}
+
+/* Pastel Sticker: soft peach, mint and lilac with chunky, pill-like cards. */
+[data-theme='sticker'] {
+  --ink: 74 59 92;
+  --app-background:
+    radial-gradient(70% 50% at 15% 10%, rgba(200, 235, 218, 0.8) 0%, transparent 70%),
+    radial-gradient(70% 50% at 90% 90%, rgba(214, 200, 245, 0.8) 0%, transparent 70%),
+    linear-gradient(170deg, #ffd9c7 0%, #ffe9d6 100%);
+  --map-background: #ffe9d6;
+  --map-filter: sepia(0.2);
+  --card-radius: 1.75rem;
+  --card-bg: #fff8e1;
+  --card-bg-selected: #ffe9a8;
+  --card-border: transparent;
+  --card-shadow: 0 6px 0 #f2a9c0;
+  --sidebar-bg: rgba(255, 255, 255, 0.45);
+  --temperature-color: #7a55c9;
+  --temperature-weight: 800;
+  --font-body: Nunito, ui-sans-serif, system-ui, sans-serif;
+  --button-bg: #7a55c9;
+  --button-bg-hover: #6842b8;
+  --button-text: #fff;
+  --error-text: #8a1c3a;
+  --pin-label-border: #f2a9c0;
+  --pin-label-bg: #fff8e1;
+  --pin-label-text: #4a3b5c;
+  --pin-label-selected-bg: #7a55c9;
+  --pin-label-selected-text: #fff;
+  --pin-dot: #f2a9c0;
+  --pin-dot-border: #fff;
+  --pin-dot-selected: #7a55c9;
+  --scrollbar-thumb: rgba(74, 59, 92, 0.3);
+}
+
+/* Neo-Memphis: off-white ground, hard black outlines and offset pink shadows. */
+[data-theme='memphis'] {
+  --ink: 17 17 17;
+  --app-background:
+    radial-gradient(circle at 20% 20%, rgba(255, 79, 163, 0.18) 0 3px, transparent 4px) 0 0 / 48px 48px,
+    radial-gradient(circle at 70% 70%, rgba(0, 127, 121, 0.18) 0 3px, transparent 4px) 0 0 / 48px 48px,
+    #fff6e5;
+  --map-background: #fff6e5;
+  --card-radius: 0.75rem;
+  --card-bg: #fff;
+  --card-bg-selected: #ffe14d;
+  --card-border: #111;
+  --card-shadow: 6px 6px 0 #ff4fa3;
+  --sidebar-bg: #fff1d6;
+  --temperature-color: #007f79;
+  --temperature-weight: 700;
+  --font-body: Poppins, ui-sans-serif, system-ui, sans-serif;
+  --button-bg: #ffe14d;
+  --button-bg-hover: #ffd400;
+  --button-text: #111;
+  --error-text: #8a1c1c;
+  --pin-label-border: #111;
+  --pin-label-bg: #fff;
+  --pin-label-text: #111;
+  --pin-label-selected-bg: #ffe14d;
+  --pin-label-selected-text: #111;
+  --pin-dot: #ff4fa3;
+  --pin-dot-border: #111;
+  --pin-dot-selected: #007f79;
+  --scrollbar-thumb: rgba(17, 17, 17, 0.3);
+}
+
+[data-theme='memphis'] .rounded-card {
+  border-width: 2px;
+}
+
+body {
+  @apply text-white antialiased;
+  background: var(--app-background);
   background-attachment: fixed;
   background-repeat: no-repeat;
 }
@@ -28,13 +208,102 @@ input:focus-visible {
   @apply outline-none ring-2 ring-white/40 ring-offset-0;
 }
 
+.weather-map {
+  background: var(--map-background);
+  font: inherit;
+}
+
+.weather-pin-wrapper {
+  background: none;
+  border: none;
+}
+
+.weather-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+
+.weather-pin__label {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--pin-label-border);
+  background: var(--pin-label-bg);
+  color: var(--pin-label-text);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.weather-pin__dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: 0.25rem;
+  border-radius: 9999px;
+  border: 2px solid var(--pin-dot-border);
+  background: var(--pin-dot);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+
+.weather-pin--selected .weather-pin__label {
+  background: var(--pin-label-selected-bg);
+  color: var(--pin-label-selected-text);
+}
+
+.weather-pin--selected .weather-pin__dot {
+  background: var(--pin-dot-selected);
+}
+
+@media (max-width: 639px) {
+  .weather-pin__label {
+    font-size: 0.75rem;
+    padding: 0.125rem 0.375rem;
+  }
+}
+
+/* Pinch to zoom on phones; the +/- buttons only crowd a small map. */
+@media (max-width: 767px) {
+  .weather-map .leaflet-control-zoom {
+    display: none;
+  }
+}
+
+.map-fullscreen {
+  animation: map-fullscreen-in 180ms ease-out;
+}
+
+@keyframes map-fullscreen-in {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .map-fullscreen {
+    animation: none;
+  }
+}
+
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.18);
+  background: var(--scrollbar-thumb);
   border-radius: 9999px;
 }
 
