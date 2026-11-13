@@ -1,8 +1,35 @@
-# Weather Starter
+# AIxTech SG Weather
 
-A minimal TypeScript weather app starter project for agentic coding.
+A Singapore weather dashboard built with an AI coding assistant as part of the **AIxTech** programme, which teaches how to use AI coding assistants on production work.
 
-The app tracks Singapore locations and stores the latest weather snapshot for each one. It uses a Node/Express backend, a React/Vite frontend, and Portless for a stable local `.localhost` URL.
+The app tracks Singapore locations, stores a weather snapshot for each one, and shows them on a themed dashboard and map. It includes current conditions, forecasts, a lightning-strike map layer, "use my location" and outdoor comfort tiles. Data comes from NEA's open data on data.gov.sg.
+
+The point of this repo is less the app than **how it was built**: spec-driven development, written context for the AI, and guardrails that check its work.
+
+> Built on AI Singapore's [`weather_starter`](https://github.com/AISG-AIAP/weather_starter) template.
+
+## How This Was Built
+
+| Practice                  | What it looks like in this repo                                                                                                                                                                                                  |
+| ------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Assess before specifying  | Ideas go through the Spec Kit **Assess** extension (intake → define → research → shape → decide) before any spec is written. See [`.specify/assessments/`](.specify/assessments/).                                               |
+| Spec-driven development   | Each feature is built through [GitHub Spec Kit](https://github.com/github/spec-kit) (specify → clarify → plan → tasks → implement → analyze). See [`specs/`](specs/).                                                            |
+| Project constitution      | Rules that must not break (snapshot-only data, injectable provider, offline tests, theme-driven UI, quality gate), versioned and amended deliberately. See [`.specify/memory/constitution.md`](.specify/memory/constitution.md). |
+| Context engineering       | [`CLAUDE.md`](CLAUDE.md) points the AI to "read before you touch" docs, and the AI loads project skills (data.gov.sg API, browser automation, Spec Kit) only when it needs them.                                                 |
+| AI-assisted documentation | An Astro Starlight docs site in [`docs/`](docs/) with Mermaid diagrams for the architecture, data flow, API and storage. The AI drafted it from the code, then each page was reviewed by hand.                                   |
+| Formatting and linting    | Prettier formats every file the AI edits, and ESLint runs with typescript-eslint and the React rules.                                                                                                                            |
+| Quality gate              | A Husky pre-commit hook runs `npm run lint` and `npm test`. Bypassing it with `--no-verify` isn't allowed.                                                                                                                       |
+| Testing                   | Vitest + Supertest on every route, using a fake weather provider and a temporary SQLite DB, so tests never touch the network. Frontend logic is pulled into pure modules and tested there.                                       |
+| Debugging                 | Pino structured logs (`backend/logs/app.log`), browser automation for end-to-end checks, Chrome DevTools for network and performance, and `npm run doctor` for health checks.                                                    |
+
+### Delivered Features
+
+| Spec                                                                     | Feature                                                                     |
+| ------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| [001-persist-saved-locations](specs/001-persist-saved-locations/spec.md) | Saved locations persist in SQLite                                           |
+| [002-lightning-map-layer](specs/002-lightning-map-layer/spec.md)         | Lightning strikes on the map, fetched and cached only when you ask for them |
+| [003-use-my-location](specs/003-use-my-location/spec.md)                 | Add your current location with the browser Geolocation API                  |
+| [004-outdoor-comfort-tiles](specs/004-outdoor-comfort-tiles/spec.md)     | Feels-like temperature and sunrise/sunset tiles                             |
 
 ## Tech Stack
 
@@ -50,10 +77,13 @@ http://weather-starter.localhost:1355
 
 ```bash
 npm run dev      # Start Express + Vite through Portless
+npm run docs     # Start the Astro Starlight docs site
+npm run docs:build # Build the docs site
 npm run build    # Build the frontend and compile backend TypeScript
 npm run start    # Run the compiled production server
-npm test         # Run backend API tests
-npm run test:watch # Run backend API tests in watch mode
+npm run lint     # Run ESLint (also runs in the pre-commit hook)
+npm test         # Run backend and frontend tests (also runs in the pre-commit hook)
+npm run test:watch # Run tests in watch mode
 npm run doctor   # Verify /health and /api/locations
 npm run reset    # Remove the local SQLite database
 npm run db:generate # Generate Drizzle migrations after schema changes
@@ -62,13 +92,15 @@ npm run db:migrate  # Apply Drizzle migrations to backend/weather.db
 
 ## API
 
-| Method | Endpoint                     | Description                    |
-| ------ | ---------------------------- | ------------------------------ |
-| `GET`  | `/health`                    | Health check                   |
-| `GET`  | `/api/locations`             | List all locations             |
-| `POST` | `/api/locations`             | Create a location              |
-| `GET`  | `/api/locations/:id`         | Get a single location          |
-| `POST` | `/api/locations/:id/refresh` | Refresh weather for a location |
+| Method   | Endpoint                     | Description                             |
+| -------- | ---------------------------- | --------------------------------------- |
+| `GET`    | `/health`                    | Health check                            |
+| `GET`    | `/api/locations`             | List all locations                      |
+| `POST`   | `/api/locations`             | Create a location                       |
+| `GET`    | `/api/locations/:id`         | Get a single location                   |
+| `DELETE` | `/api/locations/:id`         | Delete a location                       |
+| `POST`   | `/api/locations/:id/refresh` | Refresh weather for a location          |
+| `POST`   | `/api/lightning/refresh`     | Fetch recent lightning strikes (cached) |
 
 Create a location:
 
@@ -123,6 +155,10 @@ weather-starter/
 │       ├── state/
 │       ├── components/
 │       └── index.css
+├── docs/                              # Astro Starlight developer docs (npm run docs)
+├── specs/                             # Spec Kit feature specs, plans, contracts and tasks
+├── .specify/                          # Spec Kit config, constitution and Assess notes
+├── .husky/pre-commit                  # Lint + test gate
 ├── scripts/
 │   ├── dev.mjs
 │   ├── start.mjs
@@ -154,9 +190,9 @@ export WEATHER_API_KEY=your_api_key_here
 npm run dev
 ```
 
-## Feature Tasks
+## Original Starter Exercises
 
-These tasks are ordered from easiest to hardest. Each one builds on the existing codebase and introduces new concepts progressively. File names may differ by implementation, but the product behavior should stay the same.
+These exercises come from the original `weather_starter` template and are kept here for reference. They are ordered from easiest to hardest. Each one builds on the existing codebase and introduces new concepts progressively. File names may differ by implementation, but the product behavior should stay the same.
 
 ### 1. Delete a location
 
