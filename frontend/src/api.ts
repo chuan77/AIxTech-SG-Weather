@@ -1,4 +1,4 @@
-import type { CreateLocationPayload, Location } from './types';
+import type { CreateLocationPayload, LightningObservation, Location } from './types';
 
 const API_BASE = '/api';
 
@@ -33,6 +33,9 @@ export const deleteLocation = (id: number) =>
 
 export const refreshLocation = (id: number) =>
   request<Location>(`/locations/${id}/refresh`, { method: 'POST' });
+
+export const refreshLightning = () =>
+  request<LightningObservation>('/lightning/refresh', { method: 'POST' });
 
 export function logInteraction(event: string, metadata: object = {}) {
   const page = typeof window === 'undefined' ? undefined : window.location.pathname;

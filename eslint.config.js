@@ -12,6 +12,7 @@ export default tseslint.config(
       '**/dist/**',
       'backend/drizzle/**',
       'backend/logs/**',
+      'docs/.astro/**',
       'RealtimeWeatherReadingsacrossSingapore/**',
       'specs/**',
       '.specify/**',

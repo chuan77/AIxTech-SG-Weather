@@ -1,14 +1,44 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import {
   listLocations,
   createLocation,
   deleteLocation,
   refreshLocation,
+  refreshLightning,
   logInteraction,
 } from '../api';
-import type { CreateLocationPayload, Location, ProviderProps, StoreValue } from '../types';
+import {
+  isFresh,
+  LIGHTNING_STORAGE_KEY,
+  parseEnabled,
+  serialiseEnabled,
+} from '../components/map/lightningHelpers';
+import type {
+  CreateLocationPayload,
+  LightningObservation,
+  LightningStatus,
+  Location,
+  ProviderProps,
+  StoreValue,
+} from '../types';
 
 const StoreContext = createContext<StoreValue | null>(null);
+
+function readLightningEnabled(): boolean {
+  try {
+    return parseEnabled(window.localStorage.getItem(LIGHTNING_STORAGE_KEY));
+  } catch {
+    return true;
+  }
+}
+
+function writeLightningEnabled(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(LIGHTNING_STORAGE_KEY, serialiseEnabled(enabled));
+  } catch {
+    // Storage can be blocked; the choice then only lasts for this page session.
+  }
+}
 
 export function StoreProvider({ children }: ProviderProps) {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -18,6 +48,11 @@ export function StoreProvider({ children }: ProviderProps) {
   const [refreshingId, setRefreshingId] = useState<number | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [lightningEnabled, setLightningEnabled] = useState(readLightningEnabled);
+  const [lightningStatus, setLightningStatus] = useState<LightningStatus>('idle');
+  const [lightningObservation, setLightningObservation] = useState<LightningObservation | null>(null);
+  const lightningObservationRef = useRef<LightningObservation | null>(null);
+  const lightningInFlightRef = useRef(false);
 
   const load = useCallback(async (): Promise<Location[]> => {
     try {
@@ -116,6 +151,38 @@ export function StoreProvider({ children }: ProviderProps) {
     }
   }, []);
 
+  // Lightning is island-wide and fetched only on a user action (never on mount); see constitution I.
+  const refreshLightningData = useCallback(async () => {
+    if (lightningInFlightRef.current) return;
+    if (isFresh(lightningObservationRef.current, Date.now())) return;
+
+    lightningInFlightRef.current = true;
+    setLightningStatus('loading');
+    logInteraction('lightning_refreshed');
+    try {
+      const next = await refreshLightning();
+      lightningObservationRef.current = next;
+      setLightningObservation(next);
+      if (next.stale) setLightningStatus('unavailable');
+      else setLightningStatus(next.strikes.length > 0 ? 'ok' : 'empty');
+    } catch {
+      // Keep any strikes loaded earlier on screen; only the status changes.
+      setLightningStatus('unavailable');
+    } finally {
+      lightningInFlightRef.current = false;
+    }
+  }, []);
+
+  const setLightningEnabledAndLoad = useCallback(
+    (enabled: boolean) => {
+      setLightningEnabled(enabled);
+      writeLightningEnabled(enabled);
+      logInteraction('lightning_toggled', { enabled });
+      if (enabled) void refreshLightningData();
+    },
+    [refreshLightningData],
+  );
+
   const value: StoreValue = {
     locations,
     selectedId: effectiveSelectedId,
@@ -135,6 +202,13 @@ export function StoreProvider({ children }: ProviderProps) {
     reload: async () => {
       const next = await load();
       if (next.length > 0) setSelectedId((current) => current ?? next[0].id);
+    },
+    lightning: {
+      enabled: lightningEnabled,
+      status: lightningStatus,
+      observation: lightningObservation,
+      setEnabled: setLightningEnabledAndLoad,
+      refresh: refreshLightningData,
     },
   };
 

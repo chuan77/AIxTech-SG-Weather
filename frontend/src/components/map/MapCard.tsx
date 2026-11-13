@@ -4,6 +4,7 @@ import { useStore } from '../../state/store';
 import { ExpandIcon, MapIcon } from '../icons';
 import { TileShell } from '../Tiles';
 import { isCoarsePointer, type MapView } from './mapHelpers';
+import { LightningControl } from './LightningControl';
 import { MapFullscreen } from './MapFullscreen';
 import { WeatherMap } from './WeatherMap';
 
@@ -42,6 +43,7 @@ export function MapCard() {
           onViewChange={handleViewChange}
           onBackgroundTap={isCoarsePointer() ? expand : undefined}
         />
+        <LightningControl className="right-14 top-2" />
         <button
           type="button"
           onClick={expand}

@@ -4,6 +4,9 @@ import pinoHttpModule from 'pino-http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
+import { createLightningRouter } from './routes/lightning.js';
+import type { LightningClient } from './lightning.js';
+import { createFixtureLightningClient } from './lightningFixture.js';
 import { logger } from './logger.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -14,6 +17,7 @@ interface AppOptions {
   serveFrontend?: boolean;
   enableRequestLogging?: boolean;
   weatherClient?: WeatherClient;
+  lightningClient?: LightningClient;
 }
 
 export async function createApp(options: AppOptions = {}) {
@@ -51,6 +55,13 @@ export async function createApp(options: AppOptions = {}) {
   });
 
   app.use('/api', createLocationsRouter({ weatherClient: options.weatherClient }));
+
+  let lightningClient = options.lightningClient;
+  if (!lightningClient && process.env.LIGHTNING_FIXTURE === 'demo' && process.env.NODE_ENV !== 'production') {
+    logger.warn('LIGHTNING_FIXTURE=demo: serving fake lightning strikes (development only)');
+    lightningClient = createFixtureLightningClient();
+  }
+  app.use('/api', createLightningRouter({ lightningClient }));
 
   if (serveFrontend) {
     if (process.env.NODE_ENV === 'production') {

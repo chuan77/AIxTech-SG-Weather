@@ -1,0 +1,35 @@
+---
+title: Weather Starter
+description: A Singapore weather dashboard that stores one weather snapshot per saved location.
+template: splash
+hero:
+  tagline: A Singapore weather dashboard. Express and React/Vite in one Node process, SQLite through Drizzle, data from data.gov.sg.
+  actions:
+    - text: Get started
+      link: /getting-started/
+      icon: right-arrow
+    - text: How it fits together
+      link: /architecture/overview/
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<CardGrid>
+  <Card title="Snapshot, not live" icon="document">
+    Weather is fetched only when you add or refresh a location, then stored in SQLite. Page loads
+    only read the database. See [Data flow](/architecture/data-flow/).
+  </Card>
+  <Card title="One process" icon="puzzle">
+    Express serves `/api/*` and mounts Vite as middleware, so the frontend calls relative URLs with
+    no CORS or port setup. See [System overview](/architecture/overview/).
+  </Card>
+  <Card title="Lightning on demand" icon="warning">
+    Island-wide lightning strikes are the one exception: fetched on a user action, cached in memory
+    for 2 minutes, never stored. See [Lightning](/backend/lightning/).
+  </Card>
+  <Card title="Testable offline" icon="approve-check">
+    `createApp` takes injectable weather and lightning clients, so tests never touch the network.
+    See [Testing](/guides/testing/).
+  </Card>
+</CardGrid>

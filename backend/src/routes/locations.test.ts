@@ -23,6 +23,12 @@ const weather: WeatherSnapshot = {
   psi_twenty_four_hourly: 42,
   pm25_one_hourly: 9,
   air_quality_region: 'central',
+  pm10_twenty_four_hourly: 18,
+  o3_eight_hour_max: 34,
+  no2_one_hour_max: 22,
+  so2_twenty_four_hourly: 4,
+  co_eight_hour_max: 0.4,
+  air_quality_observed_at: '2026-05-04T00:00:00Z',
   forecast_periods: [{ label: 'Now', forecast: 'Cloudy' }],
   daily_forecast: [
     { date: '2026-05-04', forecast: 'Cloudy', temperature_low_c: 25, temperature_high_c: 32 },
@@ -119,6 +125,12 @@ describe('locations API', () => {
       psi_twenty_four_hourly: 42,
       pm25_one_hourly: 9,
       air_quality_region: 'central',
+      pm10_twenty_four_hourly: 18,
+      o3_eight_hour_max: 34,
+      no2_one_hour_max: 22,
+      so2_twenty_four_hourly: 4,
+      co_eight_hour_max: 0.4,
+      air_quality_observed_at: '2026-05-04T00:00:00Z',
       forecast_low_c: 25,
       forecast_high_c: 32,
       forecast_periods: [{ label: 'Now', forecast: 'Cloudy' }],
@@ -185,6 +197,14 @@ describe('locations API', () => {
       });
       const response = await request(app).post('/api/locations').send(coords[index]).expect(201);
       expect(response.body.weather.condition).toBe('Not refreshed');
+      expect(response.body.weather).toMatchObject({
+        pm10_twenty_four_hourly: null,
+        o3_eight_hour_max: null,
+        no2_one_hour_max: null,
+        so2_twenty_four_hourly: null,
+        co_eight_hour_max: null,
+        air_quality_observed_at: null,
+      });
     }
     expect(await listIds()).toHaveLength(2);
   });

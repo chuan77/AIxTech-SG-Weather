@@ -29,6 +29,12 @@ export interface WeatherSnapshot {
   psi_twenty_four_hourly: number | null;
   pm25_one_hourly: number | null;
   air_quality_region: string | null;
+  pm10_twenty_four_hourly: number | null;
+  o3_eight_hour_max: number | null;
+  no2_one_hour_max: number | null;
+  so2_twenty_four_hourly: number | null;
+  co_eight_hour_max: number | null;
+  air_quality_observed_at: string | null;
   forecast_periods: ForecastPeriod[];
   daily_forecast: DailyForecast[];
 }
@@ -46,6 +52,34 @@ export interface CreateLocationPayload {
   longitude: number;
 }
 
+export interface LightningStrike {
+  id: string;
+  latitude: number;
+  longitude: number;
+  occurred_at: string;
+  type: string;
+  label: string;
+}
+
+export interface LightningObservation {
+  strikes: LightningStrike[];
+  window_minutes: number;
+  fetched_at: string;
+  provider_updated_at: string | null;
+  stale: boolean;
+}
+
+export type LightningStatus = 'idle' | 'loading' | 'ok' | 'empty' | 'unavailable';
+
+export interface LightningState {
+  enabled: boolean;
+  status: LightningStatus;
+  observation: LightningObservation | null;
+  setEnabled: (enabled: boolean) => void;
+  /** Loads the last hour of strikes; a no-op while the data is under 2 minutes old. */
+  refresh: () => Promise<void>;
+}
+
 export interface StoreValue {
   locations: Location[];
   selectedId: number | null;
@@ -60,6 +94,7 @@ export interface StoreValue {
   remove: (id: number) => Promise<void>;
   refresh: (id: number) => Promise<void>;
   reload: () => Promise<void>;
+  lightning: LightningState;
 }
 
 export interface ProviderProps {

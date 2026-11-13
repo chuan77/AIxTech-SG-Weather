@@ -24,6 +24,7 @@ body,
   --pin-dot: #3b82f6;
   --pin-dot-border: #fff;
   --pin-dot-selected: #f59e0b;
+  --lightning: #ffd21f;
   --scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --card-radius: 1rem;
   --card-border: rgba(255, 255, 255, 0.15);
@@ -51,6 +52,7 @@ body,
   --pin-label-bg: rgba(20, 50, 90, 0.8);
   --pin-label-selected-text: #14325a;
   --pin-dot-selected: #ffd479;
+  --lightning: #ffd21f;
   --scrollbar-thumb: rgba(255, 255, 255, 0.3);
 }
 
@@ -73,6 +75,7 @@ body,
   --pin-dot: #1f6f8b;
   --pin-dot-border: #d6f6ff;
   --pin-dot-selected: #ffb000;
+  --lightning: #fff35c;
   --scrollbar-thumb: rgba(0, 229, 255, 0.25);
 }
 
@@ -152,6 +155,7 @@ body,
   --pin-dot: #f2a9c0;
   --pin-dot-border: #fff;
   --pin-dot-selected: #7a55c9;
+  --lightning: #ff4d8d;
   --scrollbar-thumb: rgba(74, 59, 92, 0.3);
 }
 
@@ -184,6 +188,7 @@ body,
   --pin-dot: #ff4fa3;
   --pin-dot-border: #111;
   --pin-dot-selected: #007f79;
+  --lightning: #ff3d6e;
   --scrollbar-thumb: rgba(17, 17, 17, 0.3);
 }
 

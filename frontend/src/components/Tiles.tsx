@@ -1,6 +1,9 @@
 import { CloudIcon, DropletIcon, SunIcon, ThermometerIcon, TrendIcon, WindIcon } from './icons';
-import type { ReactNode } from 'react';
-import type { WeatherSnapshot } from '../types';
+import { useMemo, useState, type ReactNode } from 'react';
+import type { Location, WeatherSnapshot } from '../types';
+import { feelsLike, missingInputsText } from './feelsLike';
+import { useNow } from './map/useNow';
+import { formatSgtTime, singaporeDate, sunTimes } from './sunTimes';
 
 interface WeatherProps {
   weather: WeatherSnapshot;
@@ -74,15 +77,32 @@ function airQualityLabel(psi: number | null | undefined): string {
   return 'Hazardous';
 }
 
+// Display units for NEA PSI pollutant concentrations (research R7; CO pending confirmation).
+const POLLUTANTS = [
+  { key: 'pm10_twenty_four_hourly', label: 'PM10', unit: 'µg/m³' },
+  { key: 'o3_eight_hour_max', label: 'O₃', unit: 'µg/m³' },
+  { key: 'no2_one_hour_max', label: 'NO₂', unit: 'µg/m³' },
+  { key: 'so2_twenty_four_hourly', label: 'SO₂', unit: 'µg/m³' },
+  { key: 'co_eight_hour_max', label: 'CO', unit: 'mg/m³' },
+] as const;
+
+// Show the provider's own precision (NEA often reports whole numbers, e.g. CO as 0).
+const pollutantFormat = new Intl.NumberFormat('en-SG', { maximumFractionDigits: 2 });
+
 export function AirQualityTile({ weather }: WeatherProps) {
   const psi = formatNumber(weather?.psi_twenty_four_hourly);
   const pm25 = formatNumber(weather?.pm25_one_hourly);
+  const [open, setOpen] = useState(false);
+  const readingTime = weather?.air_quality_observed_at
+    ? new Date(weather.air_quality_observed_at)
+    : null;
 
   return (
     <TileShell
       icon={<CloudIcon className="h-3.5 w-3.5" />}
       title="Air Quality"
-      className="col-span-2"
+      // Open detail takes the full row on large screens so it does not stretch neighbouring tiles.
+      className={open ? 'col-span-2 lg:col-span-4' : 'col-span-2'}
     >
       <div className="text-4xl font-light leading-none text-white/95">{psi}</div>
       <div className="mt-1 text-base text-white/85">
@@ -96,6 +116,41 @@ export function AirQualityTile({ weather }: WeatherProps) {
       <p className="mt-3 text-xs leading-snug text-white/70">
         PM2.5 {pm25} ug/m3 · {weather?.air_quality_region ?? 'nearest'} region
       </p>
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls="air-quality-detail"
+        onClick={() => setOpen((value) => !value)}
+        className="mt-3 rounded-full border border-white/15 bg-white/[0.06] px-3 py-1 text-xs font-medium text-white/85 hover:bg-white/[0.12]"
+      >
+        {open ? 'Hide details' : 'Details'}
+      </button>
+      {open && (
+        <div id="air-quality-detail" className="mt-3 border-t border-white/10 pt-3">
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-5">
+            {POLLUTANTS.map(({ key, label, unit }) => {
+              const value = weather?.[key];
+              return (
+                <li key={key} className="flex flex-col">
+                  <span className="text-xs text-white/60">{label}</span>
+                  {isFiniteNumber(value) ? (
+                    <span className="tabular-nums text-white/90">
+                      {pollutantFormat.format(value)} <span className="text-xs text-white/60">{unit}</span>
+                    </span>
+                  ) : (
+                    <span className="text-white/60">No reading</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-3 text-xs text-white/60">
+            {readingTime && !Number.isNaN(readingTime.getTime())
+              ? `Reading at ${formatSgtTime(readingTime)} SGT`
+              : 'Reading time unavailable'}
+          </p>
+        </div>
+      )}
     </TileShell>
   );
 }
@@ -243,9 +298,9 @@ export function HumidityTile({ weather }: WeatherProps) {
   );
 }
 
-export function AveragesTile({ weather }: WeatherProps) {
+export function AveragesTile({ weather, className = '' }: WeatherProps & { className?: string }) {
   return (
-    <TileShell icon={<TrendIcon />} title="Forecast High">
+    <TileShell icon={<TrendIcon />} title="Forecast High" className={className}>
       <div className="text-4xl font-light leading-none tabular-nums text-white/95">
         {formatTemperature(weather?.forecast_high_c)}&deg;
       </div>
@@ -262,17 +317,97 @@ export function AveragesTile({ weather }: WeatherProps) {
   );
 }
 
-export function TileGrid({ weather }: WeatherProps) {
+export function FeelsLikeTile({ weather }: WeatherProps) {
+  const result = feelsLike(weather);
+
+  return (
+    <TileShell icon={<ThermometerIcon />} title="Feels Like" className="col-span-2">
+      {result.kind === 'no-reading' ? (
+        <>
+          <div
+            className="text-2xl font-light leading-tight text-white/85"
+            title={missingInputsText(result.missing)}
+          >
+            No reading
+          </div>
+          <p className="mt-3 text-xs leading-snug text-white/65">
+            {missingInputsText(result.missing)}.
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="flex items-baseline gap-2">
+            <span className="text-4xl font-light leading-none tabular-nums text-white/95">
+              {result.value.toFixed(1)}&deg;
+            </span>
+            {result.approx && (
+              <span className="text-xs text-white/60" title="No wind reading; calculated for still air">
+                approx.
+              </span>
+            )}
+          </div>
+          <div className="mt-1 text-base text-white/85">{result.band.label}</div>
+          <p className="mt-3 text-xs leading-snug text-white/70">
+            {result.band.advice}
+            {result.umbrella && <span className="text-white/90"> Carry an umbrella.</span>}
+          </p>
+        </>
+      )}
+    </TileShell>
+  );
+}
+
+interface SunTileProps {
+  latitude: number;
+  longitude: number;
+  className?: string;
+}
+
+export function SunTile({ latitude, longitude, className = '' }: SunTileProps) {
+  // A 60-second tick moves the times to the new day after midnight SGT without a refresh.
+  const now = useNow(60_000);
+  const today = singaporeDate(new Date(now));
+  const times = useMemo(() => sunTimes(latitude, longitude, today), [latitude, longitude, today]);
+
+  return (
+    <TileShell icon={<SunIcon className="h-3.5 w-3.5" />} title="Sun" className={className}>
+      <ul className="space-y-2 text-sm">
+        <li className="flex justify-between border-b border-white/10 pb-2">
+          <span className="text-white/75">Sunrise</span>
+          <span className="tabular-nums text-white/90">{formatSgtTime(times.sunrise)}</span>
+        </li>
+        <li className="flex justify-between">
+          <span className="text-white/75">Sunset</span>
+          <span className="tabular-nums text-white/90">{formatSgtTime(times.sunset)}</span>
+        </li>
+      </ul>
+      <p className="mt-3 text-xs leading-snug text-white/70">Today, Singapore time.</p>
+    </TileShell>
+  );
+}
+
+interface TileGridProps {
+  location: Location;
+}
+
+export function TileGrid({ location }: TileGridProps) {
+  const weather = location.weather;
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <ConditionTile weather={weather} />
+      <FeelsLikeTile weather={weather} />
       <AirQualityTile weather={weather} />
       <WindTile weather={weather} />
       <UVTile weather={weather} />
       <TemperatureTile weather={weather} />
       <PrecipitationTile weather={weather} />
       <HumidityTile weather={weather} />
-      <AveragesTile weather={weather} />
+      <AveragesTile weather={weather} className="lg:col-span-2" />
+      <SunTile
+        latitude={location.latitude}
+        longitude={location.longitude}
+        className="lg:col-span-2"
+      />
     </div>
   );
 }

@@ -1,9 +1,8 @@
 import { logger } from './logger.js';
 
-export class WeatherProviderError extends Error {}
+import { ProviderRequester, WeatherProviderError } from './providerHttp.js';
 
-const PROVIDER_REQUEST_INTERVAL_MS = 250;
-const RATE_LIMIT_RETRY_DELAY_MS = 1000;
+export { WeatherProviderError };
 
 interface ForecastPayload {
   code?: number;
@@ -173,13 +172,43 @@ export interface WeatherSnapshot {
   psi_twenty_four_hourly: number | null;
   pm25_one_hourly: number | null;
   air_quality_region: string | null;
+  pm10_twenty_four_hourly: number | null;
+  o3_eight_hour_max: number | null;
+  no2_one_hour_max: number | null;
+  so2_twenty_four_hourly: number | null;
+  co_eight_hour_max: number | null;
+  air_quality_observed_at: string | null;
   forecast_periods: ForecastPeriod[];
   daily_forecast: DailyForecast[];
 }
 
+interface AirQuality {
+  psi: number | null;
+  pm25: number | null;
+  /** PSI pollutant concentrations for the region, from the same `psi` response. */
+  pollutants: {
+    pm10: number | null;
+    o3: number | null;
+    no2: number | null;
+    so2: number | null;
+    co: number | null;
+  };
+  psiObservedAt: string | null;
+  region: string | null;
+  timestamp: string | null;
+}
+
+const EMPTY_AIR_QUALITY: AirQuality = {
+  psi: null,
+  pm25: null,
+  pollutants: { pm10: null, o3: null, no2: null, so2: null, co: null },
+  psiObservedAt: null,
+  region: null,
+  timestamp: null,
+};
+
 export class SingaporeWeatherClient {
-  private requestQueue: Promise<void> = Promise.resolve();
-  private nextRequestAt = 0;
+  private readonly requester: ProviderRequester;
 
   constructor(
     private readonly options: {
@@ -188,7 +217,9 @@ export class SingaporeWeatherClient {
       timeoutMs?: number;
       userAgent?: string;
     } = {},
-  ) {}
+  ) {
+    this.requester = new ProviderRequester(options);
+  }
 
   async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot> {
     const [
@@ -230,12 +261,11 @@ export class SingaporeWeatherClient {
         { value: null, timestamp: null },
       ),
       this.fetchOptional('uv', () => this.fetchUvIndex(), { value: null, timestamp: null }),
-      this.fetchOptional('air-quality', () => this.fetchAirQuality(latitude, longitude), {
-        psi: null,
-        pm25: null,
-        region: null,
-        timestamp: null,
-      }),
+      this.fetchOptional(
+        'air-quality',
+        () => this.fetchAirQuality(latitude, longitude),
+        EMPTY_AIR_QUALITY,
+      ),
       this.fetchOptional(
         'twenty-four-hr-forecast',
         () => this.fetchTwentyFourHourForecast(latitude, longitude),
@@ -278,6 +308,12 @@ export class SingaporeWeatherClient {
     snapshot.psi_twenty_four_hourly = airQuality.psi;
     snapshot.pm25_one_hourly = airQuality.pm25;
     snapshot.air_quality_region = airQuality.region;
+    snapshot.pm10_twenty_four_hourly = airQuality.pollutants.pm10;
+    snapshot.o3_eight_hour_max = airQuality.pollutants.o3;
+    snapshot.no2_one_hour_max = airQuality.pollutants.no2;
+    snapshot.so2_twenty_four_hourly = airQuality.pollutants.so2;
+    snapshot.co_eight_hour_max = airQuality.pollutants.co;
+    snapshot.air_quality_observed_at = airQuality.psiObservedAt;
     snapshot.forecast_low_c = forecast24Hour.low;
     snapshot.forecast_high_c = forecast24Hour.high;
     snapshot.forecast_periods = forecast24Hour.periods;
@@ -349,12 +385,7 @@ export class SingaporeWeatherClient {
   async fetchAirQuality(
     latitude: number,
     longitude: number,
-  ): Promise<{
-    psi: number | null;
-    pm25: number | null;
-    region: string | null;
-    timestamp: string | null;
-  }> {
+  ): Promise<AirQuality> {
     const [psiPayload, pm25Payload] = await Promise.all([
       this.fetchOptional('psi', () => this.fetchAirQualityPayload('psi'), null),
       this.fetchOptional('pm25', () => this.fetchAirQualityPayload('pm25'), null),
@@ -365,9 +396,18 @@ export class SingaporeWeatherClient {
     const region = nearestRegionName(regionMetadata, latitude, longitude);
     const psiItem = psiPayload?.data?.items?.[0];
     const pm25Item = pm25Payload?.data?.items?.[0];
+    const psiReadings = psiItem?.readings;
     return {
-      psi: valueForRegion(psiItem?.readings?.psi_twenty_four_hourly, region),
+      psi: valueForRegion(psiReadings?.psi_twenty_four_hourly, region),
       pm25: valueForRegion(pm25Item?.readings?.pm25_one_hourly, region),
+      pollutants: {
+        pm10: valueForRegion(psiReadings?.pm10_twenty_four_hourly, region),
+        o3: valueForRegion(psiReadings?.o3_eight_hour_max, region),
+        no2: valueForRegion(psiReadings?.no2_one_hour_max, region),
+        so2: valueForRegion(psiReadings?.so2_twenty_four_hourly, region),
+        co: valueForRegion(psiReadings?.co_eight_hour_max, region),
+      },
+      psiObservedAt: psiItem ? (psiItem.updatedTimestamp ?? psiItem.timestamp ?? null) : null,
       region,
       timestamp: latestTimestamp([
         psiItem?.updatedTimestamp ?? psiItem?.timestamp ?? null,
@@ -466,62 +506,7 @@ export class SingaporeWeatherClient {
   }
 
   private async fetchJson<T>(url: string): Promise<T> {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
-      await this.waitForRequestSlot();
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 8000);
-
-      try {
-        const response = await fetch(url, {
-          signal: controller.signal,
-          headers: {
-            Accept: 'application/json',
-            'User-Agent': this.options.userAgent ?? 'weather-starter/0.1 (educational project)',
-            ...(this.options.apiKey ? { 'x-api-key': this.options.apiKey } : {}),
-          },
-        });
-
-        if (response.status === 429 && attempt === 0) {
-          await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_RETRY_DELAY_MS));
-          continue;
-        }
-
-        if (!response.ok) {
-          if (response.status === 429) {
-            throw new WeatherProviderError('Weather provider rate limit reached (HTTP 429)');
-          }
-          if (response.status === 401 || response.status === 403) {
-            throw new WeatherProviderError('Weather provider rejected request (check API key)');
-          }
-          throw new WeatherProviderError(`Weather provider returned HTTP ${response.status}`);
-        }
-
-        return (await response.json()) as T;
-      } catch (error) {
-        if (error instanceof WeatherProviderError) throw error;
-        throw new WeatherProviderError('Unable to reach weather provider');
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-
-    throw new WeatherProviderError('Weather provider request failed after retry');
-  }
-
-  private async waitForRequestSlot(): Promise<void> {
-    const requestSlot = this.requestQueue.then(async () => {
-      const delay = Math.max(0, this.nextRequestAt - Date.now());
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-      this.nextRequestAt = Date.now() + PROVIDER_REQUEST_INTERVAL_MS;
-    });
-
-    this.requestQueue = requestSlot.then(
-      () => undefined,
-      () => undefined,
-    );
-    await requestSlot;
+    return this.requester.getJson<T>(url);
   }
 
   snapshotFromPayload(
@@ -571,6 +556,12 @@ export class SingaporeWeatherClient {
         psi_twenty_four_hourly: null,
         pm25_one_hourly: null,
         air_quality_region: null,
+        pm10_twenty_four_hourly: null,
+        o3_eight_hour_max: null,
+        no2_one_hour_max: null,
+        so2_twenty_four_hourly: null,
+        co_eight_hour_max: null,
+        air_quality_observed_at: null,
         forecast_periods: [],
         daily_forecast: [],
       };
@@ -594,6 +585,12 @@ export class SingaporeWeatherClient {
       psi_twenty_four_hourly: null,
       pm25_one_hourly: null,
       air_quality_region: null,
+      pm10_twenty_four_hourly: null,
+      o3_eight_hour_max: null,
+      no2_one_hour_max: null,
+      so2_twenty_four_hourly: null,
+      co_eight_hour_max: null,
+      air_quality_observed_at: null,
       forecast_periods: [],
       daily_forecast: [],
     };
@@ -617,6 +614,12 @@ export class SingaporeWeatherClient {
       psi_twenty_four_hourly: null,
       pm25_one_hourly: null,
       air_quality_region: null,
+      pm10_twenty_four_hourly: null,
+      o3_eight_hour_max: null,
+      no2_one_hour_max: null,
+      so2_twenty_four_hourly: null,
+      co_eight_hour_max: null,
+      air_quality_observed_at: null,
       forecast_periods: [],
       daily_forecast: [],
     };

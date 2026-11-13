@@ -26,3 +26,7 @@ Do not commit `RealtimeWeatherReadingsacrossSingapore/` (untracked sample API du
 - [Architecture](docs/architecture.md): one-process server, snapshot pattern, storage, frontend store, map. Read before changing backend, API or data flow.
 - [Theming](docs/theming.md): the `--ink` and `rounded-card` mechanics. Read before touching colours, Tailwind classes or `index.css`.
 - [Testing](docs/testing.md): vitest setup and its limits. Read before adding tests.
+
+## Browser Automation Routing
+- Use `agent-browser` for UI navigation, clicking interactive `@eN` refs, form filling, screenshots, and E2E verification.
+- Use `chromedevtools` only when inspecting deep DevTools performance traces, memory profiles, or raw CDP network internals.

@@ -17,6 +17,12 @@ export interface WeatherSnapshot {
   psi_twenty_four_hourly: number | null;
   pm25_one_hourly: number | null;
   air_quality_region: string | null;
+  pm10_twenty_four_hourly: number | null;
+  o3_eight_hour_max: number | null;
+  no2_one_hour_max: number | null;
+  so2_twenty_four_hourly: number | null;
+  co_eight_hour_max: number | null;
+  air_quality_observed_at: string | null;
   forecast_periods: Array<{
     label: string;
     forecast: string;
@@ -52,6 +58,12 @@ export const locations = sqliteTable(
     psiTwentyFourHourly: real('psi_twenty_four_hourly'),
     pm25OneHourly: real('pm25_one_hourly'),
     airQualityRegion: text('air_quality_region'),
+    pm10TwentyFourHourly: real('pm10_twenty_four_hourly'),
+    o3EightHourMax: real('o3_eight_hour_max'),
+    no2OneHourMax: real('no2_one_hour_max'),
+    so2TwentyFourHourly: real('so2_twenty_four_hourly'),
+    coEightHourMax: real('co_eight_hour_max'),
+    airQualityObservedAt: text('air_quality_observed_at'),
     forecastPeriods: text('forecast_periods', { mode: 'json' })
       .$type<WeatherSnapshot['forecast_periods']>()
       .notNull(),

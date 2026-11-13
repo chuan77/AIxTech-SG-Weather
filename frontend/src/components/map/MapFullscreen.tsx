@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import type { Location } from '../../types';
 import { CloseIcon } from '../icons';
+import { LightningControl } from './LightningControl';
 import type { MapView } from './mapHelpers';
 import { WeatherMap } from './WeatherMap';
 
@@ -61,6 +62,7 @@ export function MapFullscreen({
         initialView={initialView}
         focusKey={focusKey}
       />
+      <LightningControl className="right-[calc(max(0.75rem,env(safe-area-inset-right))+3.5rem)] top-[max(0.75rem,env(safe-area-inset-top))]" />
       <button
         ref={closeRef}
         type="button"

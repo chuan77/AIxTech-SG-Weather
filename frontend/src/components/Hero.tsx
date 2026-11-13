@@ -58,7 +58,7 @@ export function Hero() {
         <HourlyStrip periods={selected.weather?.forecast_periods} />
         <TenDayForecast weather={selected.weather} />
         <MapCard />
-        <TileGrid weather={selected.weather} />
+        <TileGrid location={selected} />
 
         <footer className="mt-2 flex flex-col items-center gap-3 pb-8 text-xs text-white/55">
           <button

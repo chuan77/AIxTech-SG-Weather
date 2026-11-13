@@ -7,6 +7,7 @@ import type { Location } from '../../types';
 import { useTheme } from '../../theme/ThemeContext';
 import type { Basemap } from '../../theme/themes';
 import { CloudIcon, RainIcon, SunIcon, ThunderIcon } from '../icons';
+import { LightningLayer } from './LightningLayer';
 import {
   conditionToIcon,
   DEFAULT_ZOOM,
@@ -211,6 +212,7 @@ export function WeatherMap({
           onSelect={onSelect}
         />
       ))}
+      <LightningLayer />
       <FitBounds locations={locations} skipFirstFit={initialView !== undefined} />
       <FocusSelected locations={locations} selectedId={selectedId} focusKey={focusKey} />
       <ResizeWatcher />

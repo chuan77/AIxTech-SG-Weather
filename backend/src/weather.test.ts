@@ -76,7 +76,14 @@ function payloadFor(path: string) {
     };
   }
   if (path.endsWith('/psi')) {
-    return airQualityReading('psi_twenty_four_hourly', 42);
+    return airQualityReadings({
+      psi_twenty_four_hourly: 42,
+      pm10_twenty_four_hourly: 18,
+      o3_eight_hour_max: 34,
+      no2_one_hour_max: 22,
+      so2_twenty_four_hourly: 4,
+      co_eight_hour_max: '0.4',
+    });
   }
   if (path.endsWith('/pm25')) {
     return airQualityReading('pm25_one_hourly', 9);
@@ -142,6 +149,10 @@ function stationReading(value: number, timestamp: string) {
 }
 
 function airQualityReading(readingType: string, value: number) {
+  return airQualityReadings({ [readingType]: value });
+}
+
+function airQualityReadings(values: Record<string, number | string>) {
   return {
     code: 0,
     data: {
@@ -151,7 +162,9 @@ function airQualityReading(readingType: string, value: number) {
       items: [
         {
           updatedTimestamp: '2026-11-01T10:05:00Z',
-          readings: { [readingType]: { central: value } },
+          readings: Object.fromEntries(
+            Object.entries(values).map(([key, value]) => [key, { central: value }]),
+          ),
         },
       ],
     },
@@ -244,6 +257,65 @@ describe('SingaporeWeatherClient', () => {
     expect(snapshot.psi_twenty_four_hourly).toBe(42);
     expect(snapshot.pm25_one_hourly).toBeNull();
     expect(snapshot.air_quality_region).toBe('central');
+  });
+
+  it('adds the PSI pollutant breakdown for the region from the existing psi call', async () => {
+    const fetchMock = installFetchMock();
+    const client = new SingaporeWeatherClient();
+
+    const snapshot = await client.getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot).toMatchObject({
+      pm10_twenty_four_hourly: 18,
+      o3_eight_hour_max: 34,
+      no2_one_hour_max: 22,
+      so2_twenty_four_hourly: 4,
+      co_eight_hour_max: 0.4,
+      air_quality_observed_at: '2026-11-01T10:05:00Z',
+    });
+    // Same 11 upstream calls as before the pollutant breakdown existed.
+    expect(fetchMock).toHaveBeenCalledTimes(11);
+  });
+
+  it('leaves only the missing pollutant null', async () => {
+    const fetchMock = installFetchMock();
+    fetchMock.mockImplementation(async (input: string | URL | Request) => {
+      const url = new URL(input.toString());
+      const payload = url.pathname.endsWith('/psi')
+        ? airQualityReadings({ psi_twenty_four_hourly: 42, pm10_twenty_four_hourly: 18 })
+        : payloadFor(url.pathname);
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    const client = new SingaporeWeatherClient();
+
+    const snapshot = await client.getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot.pm10_twenty_four_hourly).toBe(18);
+    expect(snapshot.o3_eight_hour_max).toBeNull();
+    expect(snapshot.co_eight_hour_max).toBeNull();
+    expect(snapshot.psi_twenty_four_hourly).toBe(42);
+  });
+
+  it('sets every pollutant to null when the psi call fails, without touching PM2.5', async () => {
+    const fetchMock = installFetchMock('/v2/real-time/api/psi');
+    const client = new SingaporeWeatherClient();
+
+    const snapshot = await client.getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot).toMatchObject({
+      psi_twenty_four_hourly: null,
+      pm10_twenty_four_hourly: null,
+      o3_eight_hour_max: null,
+      no2_one_hour_max: null,
+      so2_twenty_four_hourly: null,
+      co_eight_hour_max: null,
+      air_quality_observed_at: null,
+      pm25_one_hourly: 9,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(11);
   });
 
   it('retries the temperature reading once after a rate limit response', async () => {

@@ -1,10 +1,15 @@
 <!--
 Sync Impact Report (temporary; remove before commit)
-- Version change: (unversioned template) → 1.0.0
-- Modified principles: none renamed (all five principles newly defined from the template)
-- Added sections: Core Principles I–V, Technical Constraints, Development Workflow, Governance
+- Version change: 1.1.0 → 1.2.0
+- Modified principles: none (I–V unchanged)
+- Added sections: VI. Testing & Quality Gate
 - Removed sections: none
-- Follow-up TODOs: none
+- Other edits: Technical Constraints bullet "No ESLint or Prettier is enforced" replaced, because it
+  contradicts Principle VI (`npm run lint` is now a mandatory gate). Development Workflow
+  "Before merge" bullet is unchanged and remains consistent.
+- Follow-up TODOs: `.husky/pre-commit` is currently empty and must run `npm run lint` and
+  `npm test`; CLAUDE.md and docs/testing.md still say no ESLint runs and need syncing; verify
+  `backend/src/routes/lightning.test.ts` conforms to the locations.test.ts pattern.
 -->
 # Weather Starter Constitution
 
@@ -15,6 +20,12 @@ The app MUST NOT call data.gov.sg while serving a page load. Weather data is fet
 location is created or explicitly refreshed (`POST /api/locations/:id/refresh`), merged into one
 `WeatherSnapshot`, and stored in SQLite. `GET /api/locations` MUST only read stored data. Map pins
 and other views MUST derive from that stored data and make no weather calls of their own.
+Exception: island-wide data that is not tied to any saved location (currently the lightning map
+layer) MAY be fetched through a dedicated endpoint (`POST /api/lightning/refresh`) only on an
+explicit user action, never during a page load. It MUST NOT be stored in SQLite or in any
+location's `WeatherSnapshot`, MUST be cached server-side for at least 2 minutes so repeated actions
+do not call data.gov.sg again, and MUST degrade to an "unavailable" state without affecting the
+rest of the app. Any further exception requires its own amendment.
 Rationale: keeps the dashboard fast and independent of upstream availability and rate limits.
 
 ### II. One Process, Relative API
@@ -46,6 +57,14 @@ New themes MUST be added as a `[data-theme='…']` block in `index.css` plus a `
 its map basemap. The `apple` theme is the default and MUST stay visually unchanged.
 Rationale: every theme must work for every component without per-component overrides.
 
+### VI. Testing & Quality Gate
+Every backend Express route MUST have Vitest and Supertest coverage that follows the patterns in
+`backend/src/routes/locations.test.ts`: build the app with `createApp`, inject a fake provider,
+use a temporary SQLite database, and exercise the route through Supertest. No code MAY be
+committed unless `npm run lint` and `npm test` both pass, and this MUST be enforced by a Husky
+pre-commit hook; the hook MUST NOT be bypassed (for example with `--no-verify`).
+Rationale: untested routes and unlinted code are caught before they enter history, not after.
+
 ## Technical Constraints
 
 - Stack: Node with npm workspaces (`frontend`, `backend`), React 18, Tailwind 3, Vite, Express,
@@ -57,13 +76,15 @@ Rationale: every theme must work for every component without per-component overr
 - Optional keys (for example `VITE_CARTO_API_KEY`) MUST degrade gracefully when absent, and
   secrets MUST NOT be committed.
 - `RealtimeWeatherReadingsacrossSingapore/` sample dumps MUST NOT be committed.
-- No ESLint or Prettier is enforced; new code MUST match the style of the surrounding code.
+- ESLint (`npm run lint`) is enforced by the pre-commit gate in Principle VI; Prettier is not
+  enforced, so new code MUST match the style of the surrounding code.
 
 ## Development Workflow
 
 - Before changing the backend, API or data flow, read `docs/architecture.md`; before touching
   colours, Tailwind classes or `index.css`, read `docs/theming.md`; before adding tests, read
   `docs/testing.md`.
+- Before commit, `npm run lint` and `npm test` MUST pass (Principle VI).
 - Before merge, `npm test` MUST pass and `npm run build -w frontend` MUST type-check and build.
 - Changes to architecture, theming or testing behaviour MUST update the matching file in `docs/`
   in the same change.
@@ -82,4 +103,4 @@ Every plan and review MUST check compliance with the principles; any deviation M
 in writing in the plan or pull request. `CLAUDE.md` and `docs/` provide runtime development
 guidance and MUST NOT contradict this document.
 
-**Version**: 1.0.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-11
+**Version**: 1.2.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-13

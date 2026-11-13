@@ -8,6 +8,13 @@
 
 **Input**: User description: "Add lightning on map feature. Singapore's official weather data publishes the coordinates of recent lightning strikes. Plot them on the existing map as an island-wide layer (not tied to any saved location), covering the last 30–60 minutes, with a time-based fade and an empty state such as 'No lightning in the last hour'. Additional requirement: allow the user to toggle the lightning display on/off on the map."
 
+## Clarifications
+
+### Session 2026-11-12
+
+- Q: When someone opens the map for the first time with the lightning layer on, should it prompt and wait for their action, or load lightning by itself? → A: The layer starts on but shows a "Show latest lightning" prompt and no strikes until the user's first action (turning it on or pressing Refresh); nothing is fetched on page load.
+- Q: If a refresh fails after strikes were already loaded, keep them with an "unavailable" notice or clear them? → A: Keep the earlier strikes (still hiding any older than 60 minutes) and show the unavailable notice plus the last-updated time.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - See where lightning has struck recently (Priority: P1)
@@ -20,7 +27,7 @@ A user viewing the weather map wants to know whether there has been lightning ne
 
 **Acceptance Scenarios**:
 
-1. **Given** lightning strikes were recorded in the last hour, **When** the user views the map with the lightning layer on, **Then** one marker appears at the location of each strike.
+1. **Given** lightning strikes were recorded in the last hour and the user has loaded lightning data (by turning the layer on or pressing Refresh), **When** the user views the map with the lightning layer on, **Then** one marker appears at the location of each strike.
 2. **Given** strikes were recorded more than one hour ago, **When** the user views the map, **Then** those older strikes are not shown.
 3. **Given** the user selects a marker, **When** the details open, **Then** they show the strike type and the time it occurred.
 
@@ -39,7 +46,7 @@ A user who finds the lightning markers distracting, or who wants an uncluttered 
 1. **Given** the lightning layer is on and strikes are visible, **When** the user turns it off, **Then** all lightning markers disappear immediately and the rest of the map (location pins, basemap) is unchanged.
 2. **Given** the lightning layer is off, **When** the user turns it on, **Then** the markers for the last hour reappear.
 3. **Given** the user turned the layer off, **When** they reload the page later in the same browser, **Then** the layer remains off until they turn it on again.
-4. **Given** the user has never touched the control, **When** they open the map for the first time, **Then** the layer is on.
+4. **Given** the user has never touched the control, **When** they open the map for the first time, **Then** the layer is on, no lightning data has been requested, and a prompt such as "Show latest lightning" is shown until their first action (turning the layer off and on, or pressing Refresh) loads the data.
 
 ---
 
@@ -69,8 +76,9 @@ A user who sees an empty map layer needs to know whether that means "no lightnin
 **Acceptance Scenarios**:
 
 1. **Given** the layer is on and there were no strikes in the last hour, **When** the map is shown, **Then** a message such as "No lightning in the last hour" is displayed.
-2. **Given** the lightning data cannot be retrieved, **When** the map is shown, **Then** a message says lightning data is currently unavailable, and the map, pins and other weather information remain fully usable.
+2. **Given** the lightning data cannot be retrieved, **When** the map is shown, **Then** a message says lightning data is currently unavailable, and the map, pins and other weather information remain fully usable. Any strikes loaded earlier stay visible with their last-updated time.
 3. **Given** the layer is off, **When** the map is shown, **Then** no lightning message is displayed.
+4. **Given** the layer is on and no lightning data has been loaded yet in this page session, **When** the map is shown, **Then** a prompt such as "Show latest lightning" is displayed (distinct from the "no lightning" and "unavailable" messages) and no data request has been made.
 
 ---
 
@@ -95,7 +103,7 @@ A user watching an active storm wants to pull the latest strikes without reloadi
 - A strike with missing, non-numeric or out-of-range coordinates: that strike is skipped, the others are still shown.
 - A strike type other than the one observed so far (cloud-to-cloud): it is still shown, labelled with the text supplied by the data source, or a generic "Lightning" label if none is supplied.
 - Several strikes at (almost) the same position: all remain individually discernible or visibly clustered rather than hiding each other completely.
-- The data source rate-limits or is down: the unavailable message is shown, previously displayed strikes may remain with a "last updated" time, and no other map feature is affected.
+- The data source rate-limits or is down: the unavailable message is shown, previously loaded strikes remain visible (still hiding any older than 60 minutes) together with the "last updated" time of that earlier data, and no other map feature is affected.
 - The user toggles the layer repeatedly: no duplicate markers accumulate and no extra data requests are made while data is still fresh (under 2 minutes old).
 - The map is opened in full screen: the toggle and lightning markers behave the same as in the card view.
 - A strike's time is slightly in the future or just past the one-hour boundary due to clock differences: it is shown or hidden consistently without errors.
@@ -108,7 +116,7 @@ A user watching an active storm wants to pull the latest strikes without reloadi
 - **FR-002**: The map MUST show only strikes from the last 60 minutes, and strikes older than that MUST NOT be displayed.
 - **FR-003**: Users MUST be able to turn the lightning display on and off with a clearly labelled control on the map, in both the card view and the full-screen view.
 - **FR-004**: Turning the display off MUST remove all lightning markers and any lightning message while leaving location pins and the basemap unchanged; turning it on MUST restore them.
-- **FR-005**: The lightning display MUST be on by default for a new user, and the user's on/off choice MUST be remembered across page reloads in the same browser.
+- **FR-005**: The lightning display MUST be on by default for a new user, and the user's on/off choice MUST be remembered across page reloads in the same browser. "On" is a display preference only: it MUST NOT by itself trigger a data request (see FR-013), so until the first user action the layer shows a load prompt instead of strikes.
 - **FR-006**: Strikes MUST visibly fade with age so that newer strikes are more prominent than older ones.
 - **FR-007**: Selecting a strike marker MUST show its type and the time it occurred.
 - **FR-008**: When the display is on and no strikes occurred in the last 60 minutes, the system MUST show an empty-state message ("No lightning in the last hour").
