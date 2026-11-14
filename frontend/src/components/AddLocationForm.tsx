@@ -1,16 +1,17 @@
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import type { FormEvent, KeyboardEvent } from 'react';
 import { logInteraction } from '../api';
 import { useStore } from '../state/store';
 import { PlusIcon } from './icons';
 import type { Town } from './towns';
 import { searchTowns } from './townSearch';
+import { savedNear } from './nearbySaved';
 
 const INPUT_CLASS =
-  'w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-white/40';
+  'min-h-11 w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-ink-muted md:min-h-0';
 
 export function AddLocationForm() {
-  const { isAdding, setAdding, create } = useStore();
+  const { isAdding, setAdding, create, locations, select } = useStore();
   const [latitude, setLatitude] = useState('');
   const [longitude, setLongitude] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -23,6 +24,19 @@ export function AddLocationForm() {
   const townInputId = `${idPrefix}-town`;
   const listboxId = `${idPrefix}-towns`;
   const optionId = (index: number) => `${idPrefix}-town-${index}`;
+  const townInputRef = useRef<HTMLInputElement>(null);
+  const openButtonRef = useRef<HTMLButtonElement>(null);
+  // Set when the form closes from inside it, so focus goes back to "Add Location", not <body>.
+  const returnFocus = useRef(false);
+
+  useEffect(() => {
+    if (isAdding) {
+      townInputRef.current?.focus();
+    } else if (returnFocus.current) {
+      returnFocus.current = false;
+      openButtonRef.current?.focus();
+    }
+  }, [isAdding]);
 
   const matches = useMemo(() => searchTowns(townQuery), [townQuery]);
   const hasQuery = townQuery.trim() !== '';
@@ -31,6 +45,12 @@ export function AddLocationForm() {
     pickedTown !== null &&
     latitude === String(pickedTown.latitude) &&
     longitude === String(pickedTown.longitude);
+  const hasCoordinates = latitude.trim() !== '' && longitude.trim() !== '';
+  // A town was typed but not picked, and there are no coordinates to fall back on.
+  const needsPick = hasQuery && pickedTown === null && !hasCoordinates;
+  const alreadySaved = pickedStillMatches
+    ? savedNear(locations, pickedTown.latitude, pickedTown.longitude)
+    : null;
 
   const clearTown = () => {
     setTownQuery('');
@@ -44,6 +64,7 @@ export function AddLocationForm() {
     setLongitude('');
     clearTown();
     setSubmitError(null);
+    returnFocus.current = true;
     setAdding(false);
   };
 
@@ -60,6 +81,12 @@ export function AddLocationForm() {
 
   const onTownChange = (value: string) => {
     setTownQuery(value);
+    // Editing a picked town drops its coordinates, so Add can never save a place the field no
+    // longer names. Coordinates typed by hand (no pick) are left alone.
+    if (pickedStillMatches) {
+      setLatitude('');
+      setLongitude('');
+    }
     setPickedTown(null);
     const next = searchTowns(value);
     setListOpen(value.trim() !== '');
@@ -95,11 +122,13 @@ export function AddLocationForm() {
     setSubmitting(true);
     setSubmitError(null);
     try {
+      returnFocus.current = true;
       await create({ latitude: Number(latitude), longitude: Number(longitude) });
       setLatitude('');
       setLongitude('');
       clearTown();
     } catch (err) {
+      returnFocus.current = false;
       setSubmitError(err instanceof Error ? err.message : 'Could not add location');
     } finally {
       setSubmitting(false);
@@ -109,9 +138,10 @@ export function AddLocationForm() {
   if (!isAdding) {
     return (
       <button
+        ref={openButtonRef}
         type="button"
         onClick={() => setAdding(true)}
-        className="flex w-full items-center justify-center gap-2 rounded-card border border-white/15 bg-white/[0.07] px-3 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.12]"
+        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-card border border-white/15 bg-white/[0.07] px-3 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.12]"
       >
         <PlusIcon />
         <span>Add Location</span>
@@ -128,16 +158,24 @@ export function AddLocationForm() {
   return (
     <form
       onSubmit={onSubmit}
+      // Escape closes the form, unless the town list took it first to close itself.
+      onKeyDown={(event) => {
+        if (event.key === 'Escape' && !event.defaultPrevented) {
+          event.preventDefault();
+          cancel();
+        }
+      }}
       className="relative z-10 grid gap-2.5 rounded-card border border-white/15 bg-white/[0.1] p-3 backdrop-blur-xl"
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60">
-        New coordinate
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+        New location
       </p>
       <div className="relative grid min-w-0 gap-1">
-        <label htmlFor={townInputId} className="text-[11px] text-white/60">
+        <label htmlFor={townInputId} className="text-[11px] text-ink-muted">
           Town
         </label>
         <input
+          ref={townInputRef}
           id={townInputId}
           name="town"
           type="text"
@@ -174,7 +212,7 @@ export function AddLocationForm() {
                   pick(match.town);
                 }}
                 onMouseEnter={() => setActiveIndex(index)}
-                className={`cursor-pointer px-2 py-1.5 text-sm text-white ${
+                className={`flex min-h-11 cursor-pointer items-center px-2 py-1.5 text-sm text-white md:min-h-0 ${
                   index === activeIndex ? 'bg-white/20' : ''
                 }`}
               >
@@ -187,15 +225,30 @@ export function AddLocationForm() {
           {statusText}
         </span>
         {hasQuery && matches.length === 0 && (
-          <p className="text-xs text-white/60">No matching town</p>
+          <p className="text-xs text-ink-muted">No matching town</p>
         )}
-        {pickedStillMatches && pickedTown && (
-          <p className="text-xs text-white/60">Town: {pickedTown.name}</p>
+        {needsPick && matches.length > 0 && (
+          <p className="text-xs text-ink-muted">Pick a town from the list, or enter coordinates.</p>
+        )}
+        {alreadySaved && (
+          <p className="flex flex-wrap items-center gap-x-2 text-xs text-white/90">
+            <span>{pickedTown?.name} is already saved.</span>
+            <button
+              type="button"
+              onClick={() => {
+                select(alreadySaved.id);
+                cancel();
+              }}
+              className="min-h-11 font-semibold underline underline-offset-2 md:min-h-0"
+            >
+              Show it
+            </button>
+          </p>
         )}
       </div>
       <div className="grid grid-cols-2 gap-2">
         <label className="grid min-w-0 gap-1">
-          <span className="text-[11px] text-white/60">Latitude</span>
+          <span className="text-[11px] text-ink-muted">Latitude</span>
           <input
             name="latitude"
             type="number"
@@ -211,7 +264,7 @@ export function AddLocationForm() {
           />
         </label>
         <label className="grid min-w-0 gap-1">
-          <span className="text-[11px] text-white/60">Longitude</span>
+          <span className="text-[11px] text-ink-muted">Longitude</span>
           <input
             name="longitude"
             type="number"
@@ -231,14 +284,14 @@ export function AddLocationForm() {
         <button
           type="button"
           onClick={cancel}
-          className="rounded-md px-2.5 py-1.5 text-xs font-medium text-white/70 hover:text-white"
+          className="min-h-11 rounded-md px-3 text-xs font-medium text-ink-muted hover:text-white md:min-h-0 md:px-2.5 md:py-1.5"
         >
           Cancel
         </button>
         <button
           type="submit"
-          disabled={submitting}
-          className="app-primary-button rounded-md px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={submitting || needsPick}
+          className="app-primary-button min-h-11 rounded-md px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-h-0 md:px-3 md:py-1.5"
         >
           {submitting ? 'Adding…' : 'Add'}
         </button>

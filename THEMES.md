@@ -7,10 +7,11 @@ This file was written from the code. Design rationale from earlier discussions w
 | id        | Label          | Mood                                                                  | Basemap     |
 | --------- | -------------- | --------------------------------------------------------------------- | ----------- |
 | `apple`   | Apple          | Muted slate-blue sky, thin type. The original design and the default. | `voyager`   |
-| `glass`   | Apple Glass    | Brighter blue sky, frosted panels.                                    | `voyager`   |
+| `glass`   | Apple Glass    | Deep blue sky, frosted panels.                                        | `voyager`   |
 | `radar`   | Midnight Radar | Dark console, glowing cyan data.                                      | `dark_all`  |
 | `sticker` | Pastel Sticker | Soft peach, mint and lilac, chunky pill cards.                        | `light_all` |
 | `memphis` | Neo-Memphis    | Off-white ground, hard black outlines, offset pink shadows.           | `light_all` |
+| `singapore` | Singapore Sky | A dark sky that follows the selected place: storm, haze, heat or calm. NEA flag colours on heat stress and the gauges. | `dark_all` |
 
 ## Descriptions and design considerations
 
@@ -18,12 +19,12 @@ This file was written from the code. Design rationale from earlier discussions w
 
 - Slate-blue gradient background, white text (`--ink: 255 255 255`), translucent dark sidebar.
 - Hero temperature in weight 200 (very light). 1rem card radius, 1px translucent white border, no shadow.
-- Default theme. Keep it visually unchanged; the other themes override its variables.
+- Default theme; the other themes override its variables. Its sky was darkened (top `#3b4959` to bottom `#202a36`) so 85% ink clears 4.5:1 on every panel.
 
 ### Apple Glass (`glass`)
 
-- Overrides only what differs from Apple: brighter sky gradient, stronger card border (45% white), larger radius (1.25rem).
-- Pin labels are a deeper blue and the selected pin dot is warm yellow (`#ffd479`) for contrast on the brighter sky.
+- Overrides only what differs from Apple: deep saturated blue sky gradient (`#1d4475` to `#11305a`), stronger card border (45% white), larger radius (1.25rem).
+- Pin labels are a deeper blue and the selected pin dot is warm yellow (`#ffd479`) for contrast on the blue sky.
 
 ### Midnight Radar (`radar`)
 
@@ -47,6 +48,21 @@ This file was written from the code. Design rationale from earlier discussions w
 - Teal temperature, Poppins font, yellow primary button with black text.
 - 0.75rem radius.
 
+### Singapore Sky (`singapore`)
+
+- The only theme that reads data. `skyState()` in `frontend/src/theme/sky.ts` turns the selected location's stored snapshot into `data-sky` on `<html>`, and the theme paints one of four skies. The first that applies wins:
+  1. **Storm:** thunder in the current condition or any 2-hour forecast period. Bruised violet with fine slanting rain.
+  2. **Haze:** 24-hour PSI above 100 (NEA's Unhealthy band and up). Smoky sepia with the sun reduced to a dull disc.
+  3. **Heat:** NEA heat stress High, from a WBGT station within 10 km. A scorched rust cast with a glow at the horizon.
+  4. **Calm:** everything else, including missing data. The sky never guesses.
+- The sky colours are `@property`-registered, so a change of state crossfades over about 1.2s. It snaps under reduced motion.
+- White ink in every state. Each state was checked so that 85% ink clears 4.5:1 on a selected card at the sky's lightest point (worst case 4.52:1, calm).
+- NEA flag colours (green, amber, red) appear only where they carry data:
+  - the heat-stress band in the WBGT tile (all three bands);
+  - the hero summary (Moderate and High only, so Low never outshouts a storm);
+  - the UV, PSI and WBGT gauges, which are drawn as hard bands at the NEA cut-offs, so the marker always sits on its band's colour.
+- Lightning-yellow focus ring and text selection. The selected map pin is teal, so it is never confused with yellow lightning strikes.
+
 ## Cross-theme considerations
 
 - **Contrast flips through `--ink`.** `white` in Tailwind maps to `rgb(var(--ink))`, so light themes only set a dark ink and existing classes follow. Use `text-[#fff]` for anything that must stay white, such as icons on the map's dark buttons.
@@ -54,6 +70,7 @@ This file was written from the code. Design rationale from earlier discussions w
 - **Each theme picks a basemap** to match its brightness: `dark_all` for dark, `light_all` for light, `voyager` for the blue themes.
 - **Map pins are themed** through the `--pin-*` variables. Selected pins must contrast with unselected ones in every palette.
 - **Choice persists** in `localStorage` under `weather-theme`, falling back to `apple` if storage is blocked or the saved id is unknown.
+- **Gauge fills are tokens.** `--scale-psi`, `--scale-wbgt` and `--scale-uv` default to the gradients the bars have always rendered (emerald → yellow → red, or → fuchsia for UV). A theme can override them, as Singapore Sky does.
 - **Adding a theme:** add a `[data-theme='…']` block in `index.css`, include it in the shared `.rounded-card` selectors, and add an entry to `THEMES` in `themes.ts`. The selector lists `THEMES` automatically.
 
 ## Proposed themes (pending, not implemented)

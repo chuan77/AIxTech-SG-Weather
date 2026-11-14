@@ -68,7 +68,7 @@ export function MapFullscreen({
         type="button"
         onClick={onClose}
         aria-label="Close map"
-        className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-[#fff] backdrop-blur-xl hover:bg-black/55"
+        className="absolute right-[max(0.75rem,env(safe-area-inset-right))] top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] flex h-11 w-11 items-center justify-center rounded-full map-control backdrop-blur-xl"
       >
         <CloseIcon className="h-5 w-5" />
       </button>

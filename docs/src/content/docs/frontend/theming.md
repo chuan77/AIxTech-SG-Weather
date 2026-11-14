@@ -32,7 +32,7 @@ Defined in `frontend/src/theme/themes.ts`:
 | `sticker` | Pastel Sticker | `light_all` |
 | `memphis` | Neo-Memphis | `light_all` |
 
-`apple` is the original design. Keep it visually unchanged.
+`apple` is the default and the reference design. It follows Apple's current design language and changes only in deliberate theming work, never as a side effect of other changes. Every theme must meet WCAG 2.1 AA contrast.
 
 ## Rules for components
 

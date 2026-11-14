@@ -12,6 +12,8 @@ export const THEMES: readonly Theme[] = [
   { id: 'radar', label: 'Midnight Radar', basemap: 'dark_all' },
   { id: 'sticker', label: 'Pastel Sticker', basemap: 'light_all' },
   { id: 'memphis', label: 'Neo-Memphis', basemap: 'light_all' },
+  // Its sky follows the selected location's snapshot (storm, haze, heat or calm): see sky.ts.
+  { id: 'singapore', label: 'Singapore Sky', basemap: 'dark_all' },
 ];
 
 export const DEFAULT_THEME_ID = 'apple';

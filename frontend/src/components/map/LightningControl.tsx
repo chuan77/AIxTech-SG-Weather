@@ -4,7 +4,7 @@ import { statusMessage } from './lightningHelpers';
 import { useNow } from './useNow';
 
 const BUTTON =
-  'z-[1000] flex h-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-[#fff] backdrop-blur-xl hover:bg-black/55 disabled:opacity-60';
+  'z-[1000] flex h-11 items-center justify-center rounded-full map-control backdrop-blur-xl disabled:opacity-60';
 
 interface LightningControlProps {
   /** Positions the switch and refresh buttons inside the map container. */
@@ -39,7 +39,7 @@ export function LightningControl({ className }: LightningControlProps) {
           aria-checked={lightning.enabled}
           aria-label="Lightning"
           onClick={() => lightning.setEnabled(!lightning.enabled)}
-          className={`${BUTTON} gap-1.5 px-3 text-sm ${lightning.enabled ? '' : 'opacity-75'}`}
+          className={`${BUTTON} gap-1.5 px-3 text-sm`}
         >
           <ThunderIcon className="h-4 w-4" />
           <span aria-hidden="true">{lightning.enabled ? 'On' : 'Off'}</span>
@@ -48,7 +48,8 @@ export function LightningControl({ className }: LightningControlProps) {
       {lightning.enabled && (
         <div
           role="status"
-          className="absolute bottom-2 left-2 z-[1000] max-w-[70%] rounded-xl border border-white/20 bg-black/50 px-3 py-1.5 text-xs text-[#fff] backdrop-blur-xl"
+          // Sits above the attribution row, which spans the map's full width on a phone.
+          className="absolute bottom-8 left-2 z-[1000] max-w-[70%] rounded-xl map-control px-3 py-1.5 text-xs backdrop-blur-xl"
         >
           {lightning.status === 'idle' ? (
             <button type="button" onClick={() => void lightning.refresh()} className="underline">
@@ -57,7 +58,7 @@ export function LightningControl({ className }: LightningControlProps) {
           ) : (
             <span>{message.text}</span>
           )}
-          {message.updatedText && <span className="ml-2 opacity-70">{message.updatedText}</span>}
+          {message.updatedText && <span className="ml-2">{message.updatedText}</span>}
         </div>
       )}
     </>

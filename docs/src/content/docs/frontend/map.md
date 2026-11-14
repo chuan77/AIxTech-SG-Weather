@@ -52,4 +52,4 @@ flowchart TD
 - **Colour** comes from the theme's `--lightning` CSS variable, with a yellow fallback.
 - **Status strip** text comes from `statusMessage()`: idle, loading, "N strikes in the last hour", "No lightning in the last hour", or "Lightning data is currently unavailable", plus an "Updated" time in Singapore time.
 
-The map's buttons and the lightning strip use a fixed dark-glass style (`bg-black/…` with `text-[#fff]`) so they stay readable on every basemap.
+The map's buttons, the lightning strip and Leaflet's zoom buttons use the `map-control` class, coloured by each theme's `--map-control-*` variables so they stay readable on that theme's basemap.

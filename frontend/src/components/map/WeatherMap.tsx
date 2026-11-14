@@ -6,7 +6,8 @@ import 'leaflet/dist/leaflet.css';
 import type { Location } from '../../types';
 import { useTheme } from '../../theme/ThemeContext';
 import type { Basemap } from '../../theme/themes';
-import { CloudIcon, RainIcon, SunIcon, ThunderIcon } from '../icons';
+import { CONDITION_ICONS } from '../ConditionIcon';
+import { prefersReducedMotion } from '../motion';
 import { LightningLayer } from './LightningLayer';
 import {
   conditionToIcon,
@@ -16,7 +17,6 @@ import {
   isCoarsePointer,
   SINGAPORE_CENTER,
   type MapView,
-  type PinIconKey,
 } from './mapHelpers';
 
 const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY as string | undefined;
@@ -33,19 +33,20 @@ const FOCUS_ZOOM = 13;
 const PIN_WIDTH = 64;
 const PIN_HEIGHT = 56;
 
-const PIN_ICONS: Record<PinIconKey, typeof SunIcon> = {
-  thunder: ThunderIcon,
-  rain: RainIcon,
-  cloud: CloudIcon,
-  sun: SunIcon,
-  unknown: CloudIcon,
-};
+function pinName(location: Location, isSelected: boolean): string {
+  const area =
+    location.weather?.area || `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
+  const parts = [area, formatPinLabel(location), location.weather?.condition].filter(Boolean);
+  return `${parts.join(', ')}${isSelected ? ', selected' : ''}`;
+}
 
 function makePinIcon(location: Location, isSelected: boolean): L.DivIcon {
-  const Icon = PIN_ICONS[conditionToIcon(location.weather?.condition)];
+  const Icon = CONDITION_ICONS[conditionToIcon(location.weather?.condition)];
   const html = renderToStaticMarkup(
     <div className={`weather-pin${isSelected ? ' weather-pin--selected' : ''}`}>
-      <div className="weather-pin__label">
+      {/* The pin is a button; its name says which place, not just "30°". */}
+      <span className="sr-only">{pinName(location, isSelected)}</span>
+      <div className="weather-pin__label" aria-hidden="true">
         <Icon className="h-3.5 w-3.5" />
         <span>{formatPinLabel(location)}</span>
       </div>
@@ -64,9 +65,11 @@ interface PinMarkerProps {
   location: Location;
   isSelected: boolean;
   onSelect: (id: number) => void;
+  /** Tab-focusable only on a map the user can operate; the card preview leaves pins to the mouse. */
+  focusable: boolean;
 }
 
-function PinMarker({ location, isSelected, onSelect }: PinMarkerProps) {
+function PinMarker({ location, isSelected, onSelect, focusable }: PinMarkerProps) {
   const icon = useMemo(() => makePinIcon(location, isSelected), [location, isSelected]);
   return (
     <Marker
@@ -74,6 +77,7 @@ function PinMarker({ location, isSelected, onSelect }: PinMarkerProps) {
       icon={icon}
       title={location.weather?.area ?? undefined}
       zIndexOffset={isSelected ? 1000 : 0}
+      keyboard={focusable}
       eventHandlers={{ click: () => onSelect(location.id) }}
     />
   );
@@ -126,11 +130,35 @@ function FocusSelected({ locations, selectedId, focusKey }: FocusSelectedProps) 
     }
     const target = locationsRef.current.find((location) => location.id === selectedId);
     if (!target) return;
-    map.flyTo([target.latitude, target.longitude], Math.max(map.getZoom(), FOCUS_ZOOM), {
-      duration: 0.6,
-    });
+    const center: [number, number] = [target.latitude, target.longitude];
+    const zoom = Math.max(map.getZoom(), FOCUS_ZOOM);
+    // Reduced motion: jump straight to the place instead of the zoom-out-and-in flight.
+    if (prefersReducedMotion()) map.setView(center, zoom, { animate: false });
+    else map.flyTo(center, zoom, { duration: 0.6 });
   }, [map, selectedId, focusKey]);
 
+  return null;
+}
+
+/**
+ * The card preview isn't operable from the keyboard (its Expand button is the way in), so it is
+ * hidden from assistive tech; the fullscreen map is a labelled, focusable region.
+ */
+function MapA11y({ interactive }: { interactive: boolean }) {
+  const map = useMap();
+  useEffect(() => {
+    const container = map.getContainer();
+    if (interactive) {
+      container.setAttribute('role', 'region');
+      container.setAttribute('aria-label', 'Map of saved locations');
+    } else {
+      container.setAttribute('aria-hidden', 'true');
+      // Nothing inside a hidden region may take focus: Leaflet's zoom and attribution links too.
+      container.querySelectorAll<HTMLElement>('a[href], button').forEach((el) => {
+        el.tabIndex = -1;
+      });
+    }
+  }, [map, interactive]);
   return null;
 }
 
@@ -186,6 +214,7 @@ export function WeatherMap({
   className = 'h-full w-full',
 }: WeatherMapProps) {
   const touchLocked = !interactive && isCoarsePointer();
+  const reduceMotion = prefersReducedMotion();
   const { theme } = useTheme();
 
   return (
@@ -196,6 +225,10 @@ export function WeatherMap({
       dragging={!touchLocked}
       touchZoom={!touchLocked}
       doubleClickZoom={!touchLocked}
+      zoomAnimation={!reduceMotion}
+      fadeAnimation={!reduceMotion}
+      markerZoomAnimation={!reduceMotion}
+      keyboard={interactive}
       className={`weather-map ${className}`}
     >
       <TileLayer
@@ -210,12 +243,14 @@ export function WeatherMap({
           location={location}
           isSelected={location.id === selectedId}
           onSelect={onSelect}
+          focusable={interactive}
         />
       ))}
       <LightningLayer />
       <FitBounds locations={locations} skipFirstFit={initialView !== undefined} />
       <FocusSelected locations={locations} selectedId={selectedId} focusKey={focusKey} />
       <ResizeWatcher />
+      <MapA11y interactive={interactive} />
       <MapEvents onViewChange={onViewChange} onBackgroundTap={onBackgroundTap} />
     </MapContainer>
   );

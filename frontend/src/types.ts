@@ -85,6 +85,18 @@ export interface LightningState {
   refresh: () => Promise<void>;
 }
 
+export interface LocationError {
+  id: number;
+  message: string;
+}
+
+export interface PendingDelete {
+  id: number;
+  name: string;
+  status: 'pending' | 'failed';
+  message?: string;
+}
+
 export interface StoreValue {
   locations: Location[];
   selectedId: number | null;
@@ -93,10 +105,19 @@ export interface StoreValue {
   refreshingId: number | null;
   error: unknown;
   loadError: string | null;
+  /** The last failed refresh, tied to the location it was for. */
+  refreshError: LocationError | null;
+  /** A delete waiting out its undo window, or one that failed and was rolled back. */
+  pendingDelete: PendingDelete | null;
   select: (id: number | null) => void;
   setAdding: (isAdding: boolean) => void;
   create: (payload: CreateLocationPayload) => Promise<void>;
-  remove: (id: number) => Promise<void>;
+  /** Hides the location at once and deletes it on the server after the undo window. */
+  remove: (id: number) => void;
+  undoDelete: () => void;
+  dismissDelete: () => void;
+  /** Pauses the undo window while the viewer is reading or focused on the toast. */
+  holdDelete: (held: boolean) => void;
   refresh: (id: number) => Promise<void>;
   reload: () => Promise<void>;
   lightning: LightningState;

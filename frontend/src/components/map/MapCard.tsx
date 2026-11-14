@@ -32,7 +32,7 @@ export function MapCard() {
   const focusKey = `${selectedId}:${refreshingId === selectedId}`;
 
   return (
-    <TileShell icon={<MapIcon />} title="Map">
+    <TileShell icon={<MapIcon />} title="Map" level={2}>
       <div className="relative isolate h-56 overflow-hidden rounded-xl sm:h-72 lg:h-80">
         <WeatherMap
           locations={locations}
@@ -48,7 +48,7 @@ export function MapCard() {
           type="button"
           onClick={expand}
           aria-label="Expand map to fullscreen"
-          className="absolute right-2 top-2 z-[1000] flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-[#fff] backdrop-blur-xl hover:bg-black/55"
+          className="absolute right-2 top-2 z-[1000] flex h-11 w-11 items-center justify-center rounded-full map-control backdrop-blur-xl"
         >
           <ExpandIcon />
         </button>

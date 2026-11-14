@@ -11,10 +11,16 @@ interface ApiError {
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      headers: { 'Content-Type': 'application/json', ...options.headers },
+      ...options,
+    });
+  } catch {
+    // fetch only rejects when the request never got a response; the browser's text ("Failed to fetch") means nothing to people.
+    throw new Error('The server couldn’t be reached. Check your connection.');
+  }
   if (!response.ok) {
     const error = (await response.json().catch(() => ({}))) as ApiError;
     throw new Error(error.detail || 'Request failed');
@@ -30,6 +36,11 @@ export const createLocation = (payload: CreateLocationPayload) =>
 
 export const deleteLocation = (id: number) =>
   request<void>(`/locations/${id}`, { method: 'DELETE' });
+
+/** Fire-and-forget delete that survives the page closing (used to flush a pending undo window). */
+export function deleteLocationOnUnload(id: number) {
+  void fetch(`${API_BASE}/locations/${id}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+}
 
 export const refreshLocation = (id: number) =>
   request<Location>(`/locations/${id}/refresh`, { method: 'POST' });

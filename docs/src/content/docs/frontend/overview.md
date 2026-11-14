@@ -27,7 +27,8 @@ flowchart TD
   Hero --> HourlyStrip["HourlyStrip<br/>forecast_periods"]
   Hero --> TenDayForecast["TenDayForecast<br/>daily_forecast"]
   Hero --> MapCard
-  Hero --> TileGrid
+  Hero --> OutdoorGrid
+  Hero --> MoreReadingsGrid
   Hero --> RefreshBtn["Refresh button"]
 
   MapCard --> WeatherMap
@@ -35,7 +36,8 @@ flowchart TD
   MapCard --> MapFullscreen["MapFullscreen (portal)"]
   WeatherMap --> LightningLayer
 
-  TileGrid --> Tiles["Condition, Feels like, Heat stress, Air quality,<br/>Wind, UV, Temperature, Precipitation,<br/>Humidity, Averages, Sunrise/Sunset"]
+  OutdoorGrid --> Outdoor["Heat & Comfort (air temp, feels like, WBGT),<br/>Rainfall, UV, Air quality"]
+  MoreReadingsGrid --> More["Wind, Humidity, Sunrise/Sunset"]
 ```
 
 `Hero` returns early with a "Select a location" message when nothing is selected, so the map card and tiles only appear once a location exists.

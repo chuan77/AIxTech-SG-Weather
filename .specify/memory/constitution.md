@@ -1,15 +1,18 @@
 <!--
 Sync Impact Report (temporary; remove before commit)
-- Version change: 1.1.0 → 1.2.0
-- Modified principles: none (I–V unchanged)
-- Added sections: VI. Testing & Quality Gate
+- Version change: 1.2.0 → 1.3.0
+- Modified principles: V. Theme-Driven UI. The `apple` theme is no longer frozen ("MUST stay
+  visually unchanged"); it may now change deliberately to follow Apple's current design language.
+  Added a WCAG 2.1 AA contrast requirement for every theme and panel state, and named the
+  `text-ink-muted`, `--focus-ring` and `--map-control-*` tokens. Removed the `text-[#fff]`
+  exception for map buttons, which now take theme colours.
+- Added sections: none
 - Removed sections: none
-- Other edits: Technical Constraints bullet "No ESLint or Prettier is enforced" replaced, because it
-  contradicts Principle VI (`npm run lint` is now a mandatory gate). Development Workflow
-  "Before merge" bullet is unchanged and remains consistent.
-- Follow-up TODOs: `.husky/pre-commit` is currently empty and must run `npm run lint` and
-  `npm test`; CLAUDE.md and docs/testing.md still say no ESLint runs and need syncing; verify
-  `backend/src/routes/lightning.test.ts` conforms to the locations.test.ts pattern.
+- Reason: the colorize contrast pass darkened Apple's sky so secondary text reaches 4.5:1,
+  bringing the Apple theme in line with Apple's updated design system.
+- Synced: docs/theming.md, docs/src/content/docs/frontend/theming.md, frontend/PRODUCT.md,
+  frontend/DESIGN.md, THEMES.md.
+- Follow-up TODOs: none.
 -->
 # Weather Starter Constitution
 
@@ -50,12 +53,18 @@ test that fails without the fix whenever the code is testable under these limits
 Rationale: matches the actual harness while keeping regressions visible.
 
 ### V. Theme-Driven UI
-Colours MUST come from the theme system: use Tailwind `white` classes (mapped to `--ink`) rather
-than literal colours, and mark every themeable panel with `rounded-card`. Literal white is allowed
-only where it must not follow the theme (for example `text-[#fff]` on the map's dark buttons).
-New themes MUST be added as a `[data-theme='…']` block in `index.css` plus a `THEMES` entry naming
-its map basemap. The `apple` theme is the default and MUST stay visually unchanged.
-Rationale: every theme must work for every component without per-component overrides.
+Colours MUST come from the theme system rather than literal colours: Tailwind `white` classes
+(mapped to `--ink`) for primary text, borders and fills, `text-ink-muted` for secondary text, and
+per-theme CSS variables for everything else (for example `--focus-ring` and `--map-control-*`).
+Every themeable panel MUST be marked with `rounded-card`. Every theme MUST meet WCAG 2.1 AA
+contrast on every panel state, including hover and selected: 4.5:1 for body text, 3:1 for large
+text, controls and focus indicators. New themes MUST be added as a `[data-theme='…']` block in
+`index.css` plus a `THEMES` entry naming its map basemap. The `apple` theme is the default and the
+reference design. It follows Apple's current design language and MAY change, but only in a
+deliberate theming change that updates `docs/theming.md` and `DESIGN.md`. It MUST NOT change
+as a side effect of other work.
+Rationale: every theme must work for every component without per-component overrides, and must be
+readable by everyone.
 
 ### VI. Testing & Quality Gate
 Every backend Express route MUST have Vitest and Supertest coverage that follows the patterns in
@@ -103,4 +112,4 @@ Every plan and review MUST check compliance with the principles; any deviation M
 in writing in the plan or pull request. `CLAUDE.md` and `docs/` provide runtime development
 guidance and MUST NOT contradict this document.
 
-**Version**: 1.2.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-13
+**Version**: 1.3.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-14

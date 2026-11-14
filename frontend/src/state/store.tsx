@@ -3,6 +3,7 @@ import {
   listLocations,
   createLocation,
   deleteLocation,
+  deleteLocationOnUnload,
   refreshLocation,
   refreshLightning,
   logInteraction,
@@ -18,11 +19,26 @@ import type {
   LightningObservation,
   LightningStatus,
   Location,
+  LocationError,
+  PendingDelete,
   ProviderProps,
   StoreValue,
 } from '../types';
 
 const StoreContext = createContext<StoreValue | null>(null);
+
+/** How long a deleted location can be brought back before the server delete is sent. */
+export const UNDO_DELETE_MS = 6000;
+
+function errorMessage(err: unknown, fallback: string): string {
+  return err instanceof Error && err.message ? err.message : fallback;
+}
+
+function locationName(location: Location): string {
+  return (
+    location.weather?.area || `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`
+  );
+}
 
 function readLightningEnabled(): boolean {
   try {
@@ -48,6 +64,10 @@ export function StoreProvider({ children }: ProviderProps) {
   const [refreshingId, setRefreshingId] = useState<number | null>(null);
   const [error, setError] = useState<unknown>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<LocationError | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const pendingDeleteRef = useRef<{ id: number; wasSelected: boolean } | null>(null);
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [lightningEnabled, setLightningEnabled] = useState(readLightningEnabled);
   const [lightningStatus, setLightningStatus] = useState<LightningStatus>('idle');
   const [lightningObservation, setLightningObservation] = useState<LightningObservation | null>(null);
@@ -78,9 +98,14 @@ export function StoreProvider({ children }: ProviderProps) {
     });
   }, [load]);
 
+  // A location waiting out its undo window is hidden everywhere but still held in state.
+  const hiddenId = pendingDelete?.status === 'pending' ? pendingDelete.id : null;
+  const visibleLocations =
+    hiddenId === null ? locations : locations.filter((location) => location.id !== hiddenId);
+
   const effectiveSelectedId = (() => {
-    if (locations.length === 0) return null;
-    return locations.some((l) => l.id === selectedId) ? selectedId : locations[0].id;
+    if (visibleLocations.length === 0) return null;
+    return visibleLocations.some((l) => l.id === selectedId) ? selectedId : visibleLocations[0].id;
   })();
 
   const create = useCallback(
@@ -115,6 +140,7 @@ export function StoreProvider({ children }: ProviderProps) {
     async (id: number) => {
       setRefreshingId(id);
       setError(null);
+      setRefreshError(null);
       logInteraction('location_refresh_clicked', { locationId: id });
       try {
         await refreshLocation(id);
@@ -122,6 +148,7 @@ export function StoreProvider({ children }: ProviderProps) {
         logInteraction('location_refreshed', { locationId: id });
       } catch (err) {
         setError(err);
+        setRefreshError({ id, message: errorMessage(err, 'Could not reach the weather service.') });
         logInteraction('location_refresh_failed', {
           locationId: id,
           error: err instanceof Error ? err.message : 'Unknown error',
@@ -133,23 +160,99 @@ export function StoreProvider({ children }: ProviderProps) {
     [load],
   );
 
-  const remove = useCallback(async (id: number) => {
-    setError(null);
-    logInteraction('location_delete_clicked', { locationId: id });
-    try {
-      await deleteLocation(id);
-      setLocations((current) => current.filter((location) => location.id !== id));
-      setSelectedId((selected) => (selected === id ? null : selected));
-      logInteraction('location_deleted', { locationId: id });
-    } catch (err) {
-      setError(err);
-      logInteraction('location_delete_failed', {
-        locationId: id,
-        error: err instanceof Error ? err.message : 'Unknown error',
-      });
-      throw err;
-    }
+  const clearDeleteTimer = useCallback(() => {
+    if (deleteTimerRef.current !== null) clearTimeout(deleteTimerRef.current);
+    deleteTimerRef.current = null;
   }, []);
+
+  // Sends the delete for the location in its undo window. On failure the location reappears
+  // and the toast switches to an error, so nothing is lost silently.
+  const commitDelete = useCallback(() => {
+    clearDeleteTimer();
+    const entry = pendingDeleteRef.current;
+    if (!entry) return;
+    pendingDeleteRef.current = null;
+    const { id } = entry;
+    deleteLocation(id)
+      .then(() => {
+        setLocations((current) => current.filter((location) => location.id !== id));
+        setPendingDelete((current) => (current?.id === id ? null : current));
+        logInteraction('location_deleted', { locationId: id });
+      })
+      .catch((err) => {
+        setError(err);
+        setPendingDelete((current) =>
+          current?.id === id
+            ? { ...current, status: 'failed', message: errorMessage(err, 'Request failed') }
+            : current,
+        );
+        logInteraction('location_delete_failed', {
+          locationId: id,
+          error: errorMessage(err, 'Unknown error'),
+        });
+      });
+  }, [clearDeleteTimer]);
+
+  const startDeleteTimer = useCallback(() => {
+    clearDeleteTimer();
+    deleteTimerRef.current = setTimeout(commitDelete, UNDO_DELETE_MS);
+  }, [clearDeleteTimer, commitDelete]);
+
+  const remove = useCallback(
+    (id: number) => {
+      const location = locations.find((l) => l.id === id);
+      if (!location) return;
+      // Only one delete waits at a time; a second delete sends the first straight away.
+      if (pendingDeleteRef.current) commitDelete();
+      setError(null);
+      logInteraction('location_delete_clicked', { locationId: id });
+      pendingDeleteRef.current = { id, wasSelected: effectiveSelectedId === id };
+      setPendingDelete({ id, name: locationName(location), status: 'pending' });
+      if (effectiveSelectedId === id) setSelectedId(null);
+      startDeleteTimer();
+    },
+    [locations, effectiveSelectedId, commitDelete, startDeleteTimer],
+  );
+
+  const undoDelete = useCallback(() => {
+    const entry = pendingDeleteRef.current;
+    clearDeleteTimer();
+    pendingDeleteRef.current = null;
+    setPendingDelete(null);
+    if (!entry) return;
+    if (entry.wasSelected) setSelectedId(entry.id);
+    logInteraction('location_delete_undone', { locationId: entry.id });
+  }, [clearDeleteTimer]);
+
+  const dismissDelete = useCallback(() => {
+    if (pendingDeleteRef.current) commitDelete();
+    else setPendingDelete(null);
+  }, [commitDelete]);
+
+  const holdDelete = useCallback(
+    (held: boolean) => {
+      if (!pendingDeleteRef.current) return;
+      if (held) clearDeleteTimer();
+      else startDeleteTimer();
+    },
+    [clearDeleteTimer, startDeleteTimer],
+  );
+
+  // Closing the tab inside the undo window still deletes: the user asked for it.
+  useEffect(() => {
+    const flush = () => {
+      const entry = pendingDeleteRef.current;
+      if (!entry) return;
+      pendingDeleteRef.current = null;
+      clearDeleteTimer();
+      deleteLocationOnUnload(entry.id);
+    };
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      clearDeleteTimer();
+    };
+  }, [clearDeleteTimer]);
 
   // Lightning is island-wide and fetched only on a user action (never on mount); see constitution I.
   const refreshLightningData = useCallback(async () => {
@@ -184,13 +287,15 @@ export function StoreProvider({ children }: ProviderProps) {
   );
 
   const value: StoreValue = {
-    locations,
+    locations: visibleLocations,
     selectedId: effectiveSelectedId,
     isAdding,
     isLoading,
     refreshingId,
     error,
     loadError,
+    refreshError,
+    pendingDelete,
     select: setSelectedId,
     setAdding: (nextIsAdding) => {
       setIsAdding(nextIsAdding);
@@ -198,6 +303,9 @@ export function StoreProvider({ children }: ProviderProps) {
     },
     create,
     remove,
+    undoDelete,
+    dismissDelete,
+    holdDelete,
     refresh,
     reload: async () => {
       const next = await load();
