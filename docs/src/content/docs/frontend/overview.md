@@ -19,7 +19,7 @@ flowchart TD
   Layout --> ThemeSelector
 
   Sidebar --> Search["Search input<br/>(filters by area/condition)"]
-  Sidebar --> AddLocationForm
+  Sidebar --> AddLocationForm["AddLocationForm<br/>town search + lat/lon"]
   Sidebar --> LoadError["Load error + Retry"]
   Sidebar --> SidebarCard["SidebarCard x N<br/>select, delete"]
 
@@ -39,6 +39,18 @@ flowchart TD
 ```
 
 `Hero` returns early with a "Select a location" message when nothing is selected, so the map card and tiles only appear once a location exists.
+
+## Adding a location
+
+`AddLocationForm` offers two ways to fill the coordinates:
+
+- **Town search.** A "Town" combobox (WAI-ARIA combobox and listbox pattern) searches a bundled list of the 47 NEA two-hour forecast areas (`components/towns.ts`), using the pure matcher `components/townSearch.ts`.
+  - **Ranking:** exact name first, then start of the name, then start of any word, then near matches with one letter wrong, missing or extra (only for 3+ characters).
+  - **Limit:** at most 8 results.
+  - **Keyboard:** ↑/↓ move the highlight, Enter picks, and Escape closes the list. Enter on a highlighted town never submits the form.
+- **Manual entry** of latitude and longitude, unchanged.
+
+Picking a town fills both fields with the area's reference point and shows "Town: <name>". It does **not** save. The user presses Add as usual, so the server's bounds and duplicate checks still apply. Editing a coordinate clears the "Town:" note. Searching makes no network call. Picking logs `location_town_picked` with the town name only, never the typed text.
 
 ## The store
 

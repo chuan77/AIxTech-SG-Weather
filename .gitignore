@@ -43,3 +43,6 @@ RealtimeWeatherReadingsacrossSingapore/
 
 # Stray DB/logs created when the server runs from inside backend/
 backend/backend/
+
+# Browser test output (agent-browser / chrome-devtools)
+e2e-artifacts/

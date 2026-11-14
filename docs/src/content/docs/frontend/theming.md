@@ -38,10 +38,11 @@ Defined in `frontend/src/theme/themes.ts`:
 
 - **Use `white` classes for ink.** `tailwind.config.js` maps the `white` colour to `rgb(var(--ink) / <alpha-value>)`, so `text-white/70`, `border-white/10` and `bg-white/[0.08]` follow the theme. Light themes set `--ink` to a dark colour.
 - **Literal white** for things that must stay white, such as icons on the map's dark buttons: use `text-[#fff]`.
+- **Pop-up lists use `app-popover`.** It paints `--popover-bg`, an opaque surface each theme sets, so content beneath never shows through (for example, the add form's town list).
 - **Mark panels with `rounded-card`.** Its radius comes from `--card-radius`, and themes restyle panels through `[data-theme='…'] .rounded-card`.
 
 ## Adding a theme
 
-1. Add a `[data-theme='your-id']` block in `index.css` that sets at least `--ink`, `--card-radius`, `--lightning` and the background variables the other themes set.
+1. Add a `[data-theme='your-id']` block in `index.css` that sets at least `--ink`, `--card-radius`, `--lightning`, `--popover-bg` and the background variables the other themes set.
 2. Add `{ id: 'your-id', label: '…', basemap: 'voyager' | 'dark_all' | 'light_all' }` to `THEMES`.
 3. Check every component in the new theme, including the map controls and the lightning strip.

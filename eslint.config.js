@@ -16,6 +16,7 @@ export default tseslint.config(
       'RealtimeWeatherReadingsacrossSingapore/**',
       'specs/**',
       '.specify/**',
+      'e2e-artifacts/**',
     ],
   },
 
