@@ -215,9 +215,13 @@ Add a "Use my location" button that detects the user's position, finds the neare
 | Backend  | No changes needed if nearest-area matching already exists                           |
 | Frontend | New button in `AddLocationForm.tsx` using the Geolocation API. Auto-refresh on add. |
 
-### 3. Singapore area picker
+### 3. Singapore area picker (done, spec 006)
 
-Replace the manual lat/lon inputs with a searchable dropdown. The 2-hour forecast response includes `area_metadata` with area names and coordinates.
+Built as a **Town** search in the add form (`specs/006-town-name-search/`). It differs from the original idea in two ways:
+- Manual lat/lon entry is kept alongside it.
+- The 47 forecast areas are bundled in `frontend/src/components/towns.ts` rather than fetched from `area_metadata` at runtime, so searching never calls data.gov.sg.
+
+Original idea, for reference:
 
 | Layer        | What to do                                                                                  |
 | ------------ | ------------------------------------------------------------------------------------------- |

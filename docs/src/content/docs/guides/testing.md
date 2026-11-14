@@ -39,6 +39,7 @@ flowchart LR
     FL["feelsLike.test.ts"]
     ST["sunTimes.test.ts"]
     HS["heatStress.test.ts"]
+    TS["townSearch.test.ts"]
   end
   RT --> Fake["Fake weatherClient /<br/>lightningClient"]
   RT --> TmpDB[("Temporary SQLite<br/>via DATABASE_PATH")]
@@ -69,7 +70,27 @@ Real pacing would make each weather test wait about 10–20 seconds, so client t
 
 ## Frontend limits
 
-There is no DOM environment, so components are not rendered in tests. Put any logic worth testing in a pure `.ts` module next to the component and test that, as `feelsLike.ts`, `heatStress.ts`, `sunTimes.ts`, `mapHelpers.ts` and `lightningHelpers.ts` do.
+There is no DOM environment, so components are not rendered in tests. Put any logic worth testing in a pure `.ts` module next to the component and test that, as `feelsLike.ts`, `heatStress.ts`, `sunTimes.ts`, `townSearch.ts`, `mapHelpers.ts` and `lightningHelpers.ts` do.
+
+## Browser checks
+
+Some UI behaviour can't be unit-tested without a DOM, so it's checked in a real browser on demand. These checks are **not** part of `npm test` or the pre-commit hook. They add to the vitest unit tests and don't replace them.
+
+Run them against a throwaway database so your own `backend/weather.db` is untouched:
+
+```bash
+DATABASE_PATH=backend/e2e.db npm run reset
+DATABASE_PATH=backend/e2e.db npm run dev     # leave running
+scripts/e2e/town-search.sh                  # or: us1 | us2 | us3 | themes | a11y
+```
+
+- **agent-browser** (`scripts/e2e/town-search.sh`) drives the add-location town search. It finds elements by ARIA role and accessible name, so a broken combobox contract fails the run. It also checks that every theme renders the town list legibly (screenshots), and runs an axe scan that must report 0 violations.
+- **chrome-devtools** (via MCPorter, `mcporter call chrome-devtools.<tool>`) is used for what agent-browser shouldn't own:
+  - the raw network log (searching must make no data.gov.sg calls);
+  - a performance trace while typing (INP);
+  - Lighthouse accessibility.
+
+Screenshots, scans and traces go to `e2e-artifacts/`, which is git-ignored. Each add triggers the normal create snapshot, so a full run makes real data.gov.sg calls for the locations it adds.
 
 ## Quality gate
 

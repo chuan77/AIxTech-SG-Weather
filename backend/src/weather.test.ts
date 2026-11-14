@@ -442,4 +442,45 @@ describe('SingaporeWeatherClient', () => {
     expect(snapshot.wbgt_c).toBeNull();
     expect(snapshot.wbgt_station_name).toBeNull();
   });
+
+  // The add form's town picker fills an area's own label_location (spec 006, research R3).
+  it('labels a location at an exact area point with that area ("exact area point")', async () => {
+    const areas = [
+      { name: 'Ang Mo Kio', latitude: 1.375, longitude: 103.839 },
+      { name: 'Bishan', latitude: 1.350772, longitude: 103.839 },
+      { name: 'Toa Payoh', latitude: 1.334304, longitude: 103.856327 },
+    ];
+    const fetchMock = installFetchMock();
+    fetchMock.mockImplementation(async (input: string | URL | Request) => {
+      const url = new URL(input.toString());
+      const payload = url.pathname.endsWith('/two-hr-forecast')
+        ? {
+            code: 0,
+            data: {
+              area_metadata: areas.map(({ name, latitude, longitude }) => ({
+                name,
+                label_location: { latitude, longitude },
+              })),
+              items: [
+                {
+                  update_timestamp: '2026-11-01T10:00:00Z',
+                  valid_period: { text: '10am to 12pm' },
+                  forecasts: areas.map(({ name }) => ({ area: name, forecast: `${name} Cloudy` })),
+                },
+              ],
+            },
+          }
+        : payloadFor(url.pathname);
+      return new Response(JSON.stringify(payload), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    });
+    const client = new SingaporeWeatherClient(NO_PACING);
+
+    const snapshot = await client.getCurrentWeather(1.350772, 103.839);
+
+    expect(snapshot.area).toBe('Bishan');
+    expect(snapshot.condition).toBe('Bishan Cloudy');
+  });
 });
