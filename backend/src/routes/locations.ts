@@ -9,6 +9,7 @@ import {
 } from '../db.js';
 import { SingaporeWeatherClient, WeatherProviderError, type WeatherSnapshot } from '../weather.js';
 import { logger } from '../logger.js';
+import type { ProviderRequester } from '../providerHttp.js';
 
 export interface WeatherClient {
   getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot>;
@@ -16,12 +17,17 @@ export interface WeatherClient {
 
 interface LocationsRouterOptions {
   weatherClient?: WeatherClient;
+  requester?: ProviderRequester;
 }
 
 export function createLocationsRouter(options: LocationsRouterOptions = {}): Router {
   const router: Router = createRouter();
   const weatherClient =
-    options.weatherClient ?? new SingaporeWeatherClient({ apiKey: process.env.WEATHER_API_KEY });
+    options.weatherClient ??
+    new SingaporeWeatherClient({
+      apiKey: process.env.WEATHER_API_KEY,
+      requester: options.requester,
+    });
 
   router.get('/locations', async (_request, response, next) => {
     try {

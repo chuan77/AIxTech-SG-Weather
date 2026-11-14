@@ -6,6 +6,9 @@ import {
 } from './lightning.js';
 import { WeatherProviderError } from './providerHttp.js';
 
+// Tests exercise lightning handling, not pacing (covered in providerHttp.test.ts).
+const NO_PACING = { requestIntervalMs: 0, rateLimitRetryDelayMs: 0 };
+
 const NOW = new Date('2026-11-11T14:00:00Z'); // 22:00 SGT on 2026-11-11
 
 function minutesAgo(minutes: number, now = NOW): string {
@@ -155,7 +158,7 @@ function urlOf(fetchMock: ReturnType<typeof pagedFetch>, call: number): URL {
 describe('SingaporeLightningClient', () => {
   it('requests today in Singapore time and returns strikes inside the window', async () => {
     const fetchMock = pagedFetch([{ records: windowRecords(0, [4, 40]), token: 'next' }, { records: windowRecords(50) }]);
-    const client = new SingaporeLightningClient({ fetchImpl: fetchMock as never });
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never });
 
     const observation = await client.getRecentLightning(NOW);
 
@@ -173,7 +176,7 @@ describe('SingaporeLightningClient', () => {
       { records: windowRecords(0), token: 'abc=' },
       { records: windowRecords(50) },
     ]);
-    await new SingaporeLightningClient({ fetchImpl: fetchMock as never }).getRecentLightning(NOW);
+    await new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never }).getRecentLightning(NOW);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
     expect(urlOf(fetchMock, 1).searchParams.get('paginationToken')).toBe('abc=');
@@ -181,13 +184,13 @@ describe('SingaporeLightningClient', () => {
 
   it('stops when there is no pagination token even if the window is not covered', async () => {
     const fetchMock = pagedFetch([{ records: windowRecords(0) }]);
-    await new SingaporeLightningClient({ fetchImpl: fetchMock as never }).getRecentLightning(NOW);
+    await new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never }).getRecentLightning(NOW);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('caps today at 3 pages', async () => {
     const fetchMock = pagedFetch([{ records: windowRecords(0), token: 't' }]);
-    await new SingaporeLightningClient({ fetchImpl: fetchMock as never }).getRecentLightning(NOW);
+    await new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never }).getRecentLightning(NOW);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
@@ -197,7 +200,7 @@ describe('SingaporeLightningClient', () => {
       { records: [record([], minutesAgo(2, justAfterMidnight))] },
       { records: [record([reading({ datetime: minutesAgo(30, justAfterMidnight) })], minutesAgo(30, justAfterMidnight))] },
     ]);
-    const observation = await new SingaporeLightningClient({ fetchImpl: fetchMock as never }).getRecentLightning(
+    const observation = await new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never }).getRecentLightning(
       justAfterMidnight,
     );
 
@@ -208,7 +211,7 @@ describe('SingaporeLightningClient', () => {
 
   it('reuses the cached window for 2 minutes, then fetches again', async () => {
     const fetchMock = pagedFetch([{ records: windowRecords(0, [4]) }]);
-    const client = new SingaporeLightningClient({ fetchImpl: fetchMock as never });
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never });
 
     await client.getRecentLightning(NOW);
     await client.getRecentLightning(new Date(NOW.getTime() + 119_000));
@@ -220,14 +223,14 @@ describe('SingaporeLightningClient', () => {
 
   it('shares one request between concurrent callers', async () => {
     const fetchMock = pagedFetch([{ records: windowRecords(0) }]);
-    const client = new SingaporeLightningClient({ fetchImpl: fetchMock as never });
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never });
     await Promise.all([client.getRecentLightning(NOW), client.getRecentLightning(NOW)]);
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
   it('trims cached strikes that have aged out of the window', async () => {
     const fetchMock = pagedFetch([{ records: windowRecords(11, [59]) }]);
-    const client = new SingaporeLightningClient({ fetchImpl: fetchMock as never });
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never });
     expect((await client.getRecentLightning(NOW)).strikes).toHaveLength(1);
     const later = await client.getRecentLightning(new Date(NOW.getTime() + 119_000));
     expect(later.strikes).toHaveLength(0);
@@ -235,7 +238,7 @@ describe('SingaporeLightningClient', () => {
 
   it('serves the previous window as stale when a refresh fails', async () => {
     const ok = pagedFetch([{ records: windowRecords(0, [4]) }]);
-    const client = new SingaporeLightningClient({
+    const client = new SingaporeLightningClient({ ...NO_PACING,
       fetchImpl: (async (...args: Parameters<typeof fetch>) => {
         if (ok.mock.calls.length === 0) return ok(...args);
         throw new Error('network down');
@@ -251,14 +254,14 @@ describe('SingaporeLightningClient', () => {
   });
 
   it('throws a WeatherProviderError when failing with nothing cached', async () => {
-    const client = new SingaporeLightningClient({
+    const client = new SingaporeLightningClient({ ...NO_PACING,
       fetchImpl: (async () => new Response('{}', { status: 500 })) as never,
     });
     await expect(client.getRecentLightning(NOW)).rejects.toBeInstanceOf(WeatherProviderError);
   });
 
   it('treats a provider error body as a failure', async () => {
-    const client = new SingaporeLightningClient({
+    const client = new SingaporeLightningClient({ ...NO_PACING,
       fetchImpl: (async () =>
         new Response(JSON.stringify({ code: 24, errorMsg: 'Rate limit exceeded' }), { status: 200 })) as never,
     });
@@ -267,11 +270,11 @@ describe('SingaporeLightningClient', () => {
 
   it('works without an API key and sends the key header only when configured', async () => {
     const withoutKey = pagedFetch([{ records: windowRecords(0) }]);
-    await new SingaporeLightningClient({ fetchImpl: withoutKey as never }).getRecentLightning(NOW);
+    await new SingaporeLightningClient({ ...NO_PACING, fetchImpl: withoutKey as never }).getRecentLightning(NOW);
     expect((withoutKey.mock.calls[0][1]?.headers as Record<string, string>)['x-api-key']).toBeUndefined();
 
     const withKey = pagedFetch([{ records: windowRecords(0) }]);
-    await new SingaporeLightningClient({ apiKey: 'secret', fetchImpl: withKey as never }).getRecentLightning(NOW);
+    await new SingaporeLightningClient({ ...NO_PACING, apiKey: 'secret', fetchImpl: withKey as never }).getRecentLightning(NOW);
     expect((withKey.mock.calls[0][1]?.headers as Record<string, string>)['x-api-key']).toBe('secret');
   });
 });

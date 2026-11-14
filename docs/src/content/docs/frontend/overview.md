@@ -35,7 +35,7 @@ flowchart TD
   MapCard --> MapFullscreen["MapFullscreen (portal)"]
   WeatherMap --> LightningLayer
 
-  TileGrid --> Tiles["Condition, Feels like, Air quality,<br/>Wind, UV, Temperature, Precipitation,<br/>Humidity, Averages, Sunrise/Sunset"]
+  TileGrid --> Tiles["Condition, Feels like, Heat stress, Air quality,<br/>Wind, UV, Temperature, Precipitation,<br/>Humidity, Averages, Sunrise/Sunset"]
 ```
 
 `Hero` returns early with a "Select a location" message when nothing is selected, so the map card and tiles only appear once a location exists.

@@ -143,6 +143,41 @@ interface FourDayPayload {
   }>;
 }
 
+interface WbgtPayload {
+  code?: number;
+  errorMsg?: string;
+  data?: {
+    records?: Array<{
+      datetime?: string;
+      updatedTimestamp?: string;
+      item?: {
+        readings?: Array<{
+          station?: { id?: string; name?: string; townCenter?: string };
+          location?: { latitude?: number | string; longitude?: number | string };
+          wbgt?: number | string;
+          heatStress?: string;
+        }>;
+      };
+    }>;
+  };
+}
+
+interface WbgtReading {
+  value: number | null;
+  level: string | null;
+  stationName: string | null;
+  distanceKm: number | null;
+  timestamp: string | null;
+}
+
+const EMPTY_WBGT: WbgtReading = {
+  value: null,
+  level: null,
+  stationName: null,
+  distanceKm: null,
+  timestamp: null,
+};
+
 export interface ForecastPeriod {
   label: string;
   forecast: string;
@@ -178,6 +213,11 @@ export interface WeatherSnapshot {
   so2_twenty_four_hourly: number | null;
   co_eight_hour_max: number | null;
   air_quality_observed_at: string | null;
+  wbgt_c: number | null;
+  heat_stress_level: string | null;
+  wbgt_station_name: string | null;
+  wbgt_station_distance_km: number | null;
+  wbgt_observed_at: string | null;
   forecast_periods: ForecastPeriod[];
   daily_forecast: DailyForecast[];
 }
@@ -216,9 +256,13 @@ export class SingaporeWeatherClient {
       apiKey?: string;
       timeoutMs?: number;
       userAgent?: string;
+      /** Shared requester, so all provider calls in the process are paced together. */
+      requester?: ProviderRequester;
+      requestIntervalMs?: number;
+      rateLimitRetryDelayMs?: number;
     } = {},
   ) {
-    this.requester = new ProviderRequester(options);
+    this.requester = options.requester ?? new ProviderRequester(options);
   }
 
   async getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot> {
@@ -233,6 +277,7 @@ export class SingaporeWeatherClient {
       airQuality,
       forecast24Hour,
       forecastFourDay,
+      wbgt,
     ] = await Promise.all([
       this.fetchOptional('two-hr-forecast', () => this.fetchLatestForecastPayload(), null),
       this.fetchOptional(
@@ -275,6 +320,7 @@ export class SingaporeWeatherClient {
         days: [],
         timestamp: null,
       }),
+      this.fetchOptional('wbgt', () => this.fetchWbgt(latitude, longitude), EMPTY_WBGT),
     ]);
 
     let snapshot = this.emptyForecastSnapshot();
@@ -298,6 +344,7 @@ export class SingaporeWeatherClient {
         airQuality.timestamp,
         forecast24Hour.timestamp,
         forecastFourDay.timestamp,
+        wbgt.timestamp,
       ]) ?? snapshot.observed_at;
     snapshot.temperature_c = temperature.value;
     snapshot.humidity_percent = humidity.value;
@@ -318,6 +365,11 @@ export class SingaporeWeatherClient {
     snapshot.forecast_high_c = forecast24Hour.high;
     snapshot.forecast_periods = forecast24Hour.periods;
     snapshot.daily_forecast = forecastFourDay.days;
+    snapshot.wbgt_c = wbgt.value;
+    snapshot.heat_stress_level = wbgt.level;
+    snapshot.wbgt_station_name = wbgt.stationName;
+    snapshot.wbgt_station_distance_km = wbgt.distanceKm;
+    snapshot.wbgt_observed_at = wbgt.timestamp;
 
     return snapshot;
   }
@@ -380,6 +432,39 @@ export class SingaporeWeatherClient {
       value: numberOrNull(latest?.value),
       timestamp: record?.updatedTimestamp ?? latest?.hour ?? record?.timestamp ?? null,
     };
+  }
+
+  /** Latest NEA WBGT reading from the station nearest by ground distance (spec 005). */
+  async fetchWbgt(latitude: number, longitude: number): Promise<WbgtReading> {
+    const payload = await this.fetchJson<WbgtPayload>(
+      `${this.apiBaseUrl()}/v2/real-time/api/weather?api=wbgt`,
+    );
+    if (payload.code !== undefined && payload.code !== 0) {
+      throw new WeatherProviderError(
+        payload.errorMsg ?? 'Weather provider returned an error for wbgt',
+      );
+    }
+
+    const record = payload.data?.records?.[0];
+    let nearest: WbgtReading | null = null;
+    for (const reading of record?.item?.readings ?? []) {
+      const value = Number(reading.wbgt);
+      const lat = Number(reading.location?.latitude);
+      const lon = Number(reading.location?.longitude);
+      if (!Number.isFinite(value) || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+
+      const distance = distanceKm(latitude, longitude, lat, lon);
+      if (!nearest || distance < (nearest.distanceKm as number)) {
+        nearest = {
+          value,
+          level: reading.heatStress?.trim() || null,
+          stationName: reading.station?.name ?? null,
+          distanceKm: distance,
+          timestamp: record?.datetime ?? record?.updatedTimestamp ?? null,
+        };
+      }
+    }
+    return nearest ?? EMPTY_WBGT;
   }
 
   async fetchAirQuality(
@@ -562,6 +647,11 @@ export class SingaporeWeatherClient {
         so2_twenty_four_hourly: null,
         co_eight_hour_max: null,
         air_quality_observed_at: null,
+        wbgt_c: null,
+        heat_stress_level: null,
+        wbgt_station_name: null,
+        wbgt_station_distance_km: null,
+        wbgt_observed_at: null,
         forecast_periods: [],
         daily_forecast: [],
       };
@@ -591,6 +681,11 @@ export class SingaporeWeatherClient {
       so2_twenty_four_hourly: null,
       co_eight_hour_max: null,
       air_quality_observed_at: null,
+      wbgt_c: null,
+      heat_stress_level: null,
+      wbgt_station_name: null,
+      wbgt_station_distance_km: null,
+      wbgt_observed_at: null,
       forecast_periods: [],
       daily_forecast: [],
     };
@@ -620,6 +715,11 @@ export class SingaporeWeatherClient {
       so2_twenty_four_hourly: null,
       co_eight_hour_max: null,
       air_quality_observed_at: null,
+      wbgt_c: null,
+      heat_stress_level: null,
+      wbgt_station_name: null,
+      wbgt_station_distance_km: null,
+      wbgt_observed_at: null,
       forecast_periods: [],
       daily_forecast: [],
     };
@@ -689,6 +789,15 @@ function nearestStation(
   }
 
   return nearest;
+}
+
+/** Great-circle distance in km (haversine, Earth radius 6371 km). */
+function distanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = (degrees: number) => (degrees * Math.PI) / 180;
+  const h =
+    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
 function latestTimestamp(timestamps: Array<string | null>): string | null {

@@ -35,6 +35,11 @@ export interface WeatherSnapshot {
   so2_twenty_four_hourly: number | null;
   co_eight_hour_max: number | null;
   air_quality_observed_at: string | null;
+  wbgt_c: number | null;
+  heat_stress_level: string | null;
+  wbgt_station_name: string | null;
+  wbgt_station_distance_km: number | null;
+  wbgt_observed_at: string | null;
   forecast_periods: ForecastPeriod[];
   daily_forecast: DailyForecast[];
 }

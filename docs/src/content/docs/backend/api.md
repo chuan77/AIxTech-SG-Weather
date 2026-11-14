@@ -109,6 +109,11 @@ interface WeatherSnapshot {
   so2_twenty_four_hourly: number | null;
   co_eight_hour_max: number | null;
   air_quality_observed_at: string | null;
+  wbgt_c: number | null;                  // NEA WBGT, nearest station (°C)
+  heat_stress_level: string | null;       // NEA label: Low | Moderate | High
+  wbgt_station_name: string | null;
+  wbgt_station_distance_km: number | null; // great-circle km, kept even when far
+  wbgt_observed_at: string | null;
   forecast_periods: { label: string; forecast: string }[];   // 24-hour periods, nearest region
   daily_forecast: {
     date: string;

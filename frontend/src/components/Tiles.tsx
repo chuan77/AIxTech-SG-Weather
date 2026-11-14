@@ -2,6 +2,7 @@ import { CloudIcon, DropletIcon, SunIcon, ThermometerIcon, TrendIcon, WindIcon }
 import { useMemo, useState, type ReactNode } from 'react';
 import type { Location, WeatherSnapshot } from '../types';
 import { feelsLike, missingInputsText } from './feelsLike';
+import { heatStressView, type HeatStressTone } from './heatStress';
 import { useNow } from './map/useNow';
 import { formatSgtTime, singaporeDate, sunTimes } from './sunTimes';
 
@@ -357,6 +358,58 @@ export function FeelsLikeTile({ weather }: WeatherProps) {
   );
 }
 
+const HEAT_STRESS_TONE_CLASS: Record<HeatStressTone, string> = {
+  low: 'text-white/80',
+  moderate: 'rounded-full bg-white/10 px-2 font-semibold text-white/90',
+  high: 'rounded-full bg-white/20 px-2 font-bold text-white ring-1 ring-white/40',
+  unknown: 'text-white/80',
+};
+
+export function HeatStressTile({ weather }: WeatherProps) {
+  const view = heatStressView(weather);
+
+  return (
+    <TileShell icon={<ThermometerIcon />} title="Heat Stress">
+      {view.kind === 'no-reading' && (
+        <div className="text-2xl font-light leading-tight text-white/85">No reading</div>
+      )}
+      {view.kind === 'no-nearby-station' && (
+        <>
+          <div className="text-2xl font-light leading-tight text-white/85" title={view.tooltip}>
+            No nearby station
+          </div>
+          <p className="mt-3 text-xs leading-snug text-white/65">{view.tooltip}.</p>
+        </>
+      )}
+      {view.kind === 'reading' && (
+        <>
+          <div className="flex flex-wrap items-baseline gap-2">
+            <span className="text-4xl font-light leading-none tabular-nums text-white/95">
+              {view.value}&deg;
+            </span>
+            {view.level && (
+              <span className={`text-sm ${HEAT_STRESS_TONE_CLASS[view.tone]}`}>{view.level}</span>
+            )}
+          </div>
+          <ScaleBar
+            value={(weather.wbgt_c as number) - 25}
+            max={10}
+            gradientClass="bg-gradient-to-r from-emerald-400 via-yellow-300 via-orange-400 to-red-500"
+          />
+          {view.guidance && (
+            <p className="mt-3 text-xs leading-snug text-white/70">{view.guidance}</p>
+          )}
+          <p className="mt-3 flex flex-wrap gap-x-1 text-[11px] leading-snug text-white/50">
+            <span>WBGT at {view.stationName ?? 'nearest station'}</span>
+            <span>· {view.distanceKm} km</span>
+            {view.observedAt && <span>· {view.observedAt}</span>}
+          </p>
+        </>
+      )}
+    </TileShell>
+  );
+}
+
 interface SunTileProps {
   latitude: number;
   longitude: number;
@@ -396,6 +449,7 @@ export function TileGrid({ location }: TileGridProps) {
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <ConditionTile weather={weather} />
       <FeelsLikeTile weather={weather} />
+      <HeatStressTile weather={weather} />
       <AirQualityTile weather={weather} />
       <WindTile weather={weather} />
       <UVTile weather={weather} />

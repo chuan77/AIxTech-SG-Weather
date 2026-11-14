@@ -43,8 +43,8 @@ sequenceDiagram
     API-->>UI: 409 Location already exists
   end
   API->>WX: getCurrentWeather(lat, lon)
-  WX->>DG: 11 requests, 250 ms apart
-  DG-->>WX: forecasts, readings, air quality
+  WX->>DG: 12 requests through the shared requester, ~884 ms apart (about 10 s)
+  DG-->>WX: forecasts, readings, air quality, WBGT
   WX-->>API: WeatherSnapshot
   API->>DB: UPDATE snapshot columns
   API-->>UI: 201 Location (with snapshot)

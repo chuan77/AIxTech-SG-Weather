@@ -29,6 +29,11 @@ const weather: WeatherSnapshot = {
   so2_twenty_four_hourly: 4,
   co_eight_hour_max: 0.4,
   air_quality_observed_at: '2026-05-04T00:00:00Z',
+  wbgt_c: 28.1,
+  heat_stress_level: 'Moderate',
+  wbgt_station_name: 'Bishan Street',
+  wbgt_station_distance_km: 0.4,
+  wbgt_observed_at: '2026-11-01T10:05:00+08:00',
   forecast_periods: [{ label: 'Now', forecast: 'Cloudy' }],
   daily_forecast: [
     { date: '2026-05-04', forecast: 'Cloudy', temperature_low_c: 25, temperature_high_c: 32 },
@@ -131,6 +136,11 @@ describe('locations API', () => {
       so2_twenty_four_hourly: 4,
       co_eight_hour_max: 0.4,
       air_quality_observed_at: '2026-05-04T00:00:00Z',
+      wbgt_c: 28.1,
+      heat_stress_level: 'Moderate',
+      wbgt_station_name: 'Bishan Street',
+      wbgt_station_distance_km: 0.4,
+      wbgt_observed_at: '2026-11-01T10:05:00+08:00',
       forecast_low_c: 25,
       forecast_high_c: 32,
       forecast_periods: [{ label: 'Now', forecast: 'Cloudy' }],
@@ -142,6 +152,21 @@ describe('locations API', () => {
           temperature_high_c: 32,
         },
       ],
+    });
+  });
+
+  it('returns the WBGT heat-stress fields from an explicit refresh', async () => {
+    const created = await request(app).post('/api/locations').send(coords[0]).expect(201);
+    const refreshed = await request(app)
+      .post(`/api/locations/${created.body.id}/refresh`)
+      .expect(200);
+
+    expect(refreshed.body.weather).toMatchObject({
+      wbgt_c: 28.1,
+      heat_stress_level: 'Moderate',
+      wbgt_station_name: 'Bishan Street',
+      wbgt_station_distance_km: 0.4,
+      wbgt_observed_at: '2026-11-01T10:05:00+08:00',
     });
   });
 
@@ -204,6 +229,11 @@ describe('locations API', () => {
         so2_twenty_four_hourly: null,
         co_eight_hour_max: null,
         air_quality_observed_at: null,
+        wbgt_c: null,
+        heat_stress_level: null,
+        wbgt_station_name: null,
+        wbgt_station_distance_km: null,
+        wbgt_observed_at: null,
       });
     }
     expect(await listIds()).toHaveLength(2);

@@ -9,7 +9,8 @@ The backend loads `.env` from the repo root through `dotenv/config`. `.env.examp
 
 | Variable | Default | Read by | Purpose |
 | --- | --- | --- | --- |
-| `WEATHER_API_KEY` | unset | `routes/locations.ts`, `routes/lightning.ts` | Sent as `x-api-key` to data.gov.sg for higher rate limits. Optional for light local use. |
+| `WEATHER_API_KEY` | unset | `server.ts`, `routes/locations.ts`, `routes/lightning.ts` | Sent as `x-api-key` to data.gov.sg for higher rate limits. Optional. With a key, requests are paced for 12 per 10 s; without, for 6 per 10 s, so a refresh is slower. |
+| `WEATHER_API_RATE_LIMIT` | unset | `providerHttp.ts` | Requests per 10 s that the key allows, for a tier other than Development (for example `30` for a Production key). Invalid values are ignored. |
 | `DATABASE_PATH` | `backend/weather.db` | `db.ts`, `drizzle.config.ts`, `scripts/reset.mjs` | SQLite file location, relative to the working directory. |
 | `PORT` | `3000` | `server.ts` | Listen port on `127.0.0.1`. Portless sets this in development. |
 | `NODE_ENV` | unset | `server.ts`, `logger.ts` | `production` serves `frontend/dist` and disables the lightning fixture. `test` skips frontend serving and request logging. |

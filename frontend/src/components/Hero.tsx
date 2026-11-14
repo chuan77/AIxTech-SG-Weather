@@ -52,7 +52,14 @@ export function Hero() {
           <div className="mt-1 text-sm text-white/70 tabular-nums">
             H:{high} L:{low}
           </div>
-          {observed && <div className="mt-3 text-xs text-white/55">Updated {observed}</div>}
+          {(observed || isRefreshing) && (
+            <div className="mt-3 text-xs text-white/55" aria-live="polite">
+              {observed && <>Updated {observed}</>}
+              {isRefreshing && (
+                <span className="text-white/60">{observed ? ' · ' : ''}Refreshing…</span>
+              )}
+            </div>
+          )}
         </header>
 
         <HourlyStrip periods={selected.weather?.forecast_periods} />

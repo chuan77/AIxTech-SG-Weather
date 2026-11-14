@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SingaporeWeatherClient } from './weather.js';
 
+// Tests exercise data handling, not pacing (covered in providerHttp.test.ts).
+const NO_PACING = { requestIntervalMs: 0, rateLimitRetryDelayMs: 0 };
+
 const readingTimestamps = {
   temperature: '2026-11-01T10:01:00Z',
   humidity: '2026-11-01T10:02:00Z',
@@ -124,7 +127,54 @@ function payloadFor(path: string) {
     };
   }
 
+  if (path === '/v2/real-time/api/weather') {
+    return {
+      code: 0,
+      data: {
+        records: [
+          {
+            datetime: '2026-11-01T10:05:00+08:00',
+            updatedTimestamp: '2026-11-01T10:10:00+08:00',
+            item: { type: 'observation', isStationData: true, readings: wbgtReadings },
+          },
+        ],
+      },
+    };
+  }
+
   throw new Error(`Unexpected weather API path: ${path}`);
+}
+
+const DEFAULT_WBGT_READINGS = [
+  {
+    station: { id: 'S128', name: 'Bishan Street', townCenter: 'Bishan Stadium' },
+    location: { latitude: '1.354825', longitude: '103.852219' },
+    wbgt: '29.3',
+    heatStress: 'Low',
+  },
+  {
+    station: { id: 'S139', name: 'Tuas Terminal Gateway', townCenter: 'Tuas Terminal Gateway' },
+    location: { latitude: '1.263757', longitude: '103.616417' },
+    wbgt: '31.5',
+    heatStress: 'Moderate',
+  },
+  {
+    // Closest to Bishan but not numeric, so it must be skipped.
+    station: { id: 'S999', name: 'Broken Sensor', townCenter: 'Broken Sensor' },
+    location: { latitude: '1.35', longitude: '103.85' },
+    wbgt: 'n/a',
+    heatStress: 'Low',
+  },
+];
+
+let wbgtReadings: unknown[] = DEFAULT_WBGT_READINGS;
+
+function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const rad = (deg: number) => (deg * Math.PI) / 180;
+  const h =
+    Math.sin(rad(lat2 - lat1) / 2) ** 2 +
+    Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
 }
 
 function stationReading(value: number, timestamp: string) {
@@ -173,12 +223,13 @@ function airQualityReadings(values: Record<string, number | string>) {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  wbgtReadings = DEFAULT_WBGT_READINGS;
 });
 
 describe('SingaporeWeatherClient', () => {
   it('combines the condition forecast with readings for the dashboard cards', async () => {
     const fetchMock = installFetchMock();
-    const client = new SingaporeWeatherClient();
+    const client = new SingaporeWeatherClient(NO_PACING);
 
     const snapshot = await client.getCurrentWeather(1.35, 103.85);
 
@@ -238,7 +289,7 @@ describe('SingaporeWeatherClient', () => {
 
   it('keeps available readings when an individual provider endpoint fails', async () => {
     installFetchMock('/v2/real-time/api/air-temperature');
-    const client = new SingaporeWeatherClient();
+    const client = new SingaporeWeatherClient(NO_PACING);
 
     const snapshot = await client.getCurrentWeather(1.35, 103.85);
 
@@ -250,7 +301,7 @@ describe('SingaporeWeatherClient', () => {
 
   it('keeps PSI when the separate PM2.5 endpoint fails', async () => {
     installFetchMock('/v2/real-time/api/pm25');
-    const client = new SingaporeWeatherClient();
+    const client = new SingaporeWeatherClient(NO_PACING);
 
     const snapshot = await client.getCurrentWeather(1.35, 103.85);
 
@@ -261,7 +312,7 @@ describe('SingaporeWeatherClient', () => {
 
   it('adds the PSI pollutant breakdown for the region from the existing psi call', async () => {
     const fetchMock = installFetchMock();
-    const client = new SingaporeWeatherClient();
+    const client = new SingaporeWeatherClient(NO_PACING);
 
     const snapshot = await client.getCurrentWeather(1.35, 103.85);
 
@@ -273,8 +324,8 @@ describe('SingaporeWeatherClient', () => {
       co_eight_hour_max: 0.4,
       air_quality_observed_at: '2026-11-01T10:05:00Z',
     });
-    // Same 11 upstream calls as before the pollutant breakdown existed.
-    expect(fetchMock).toHaveBeenCalledTimes(11);
+    // The pollutant breakdown adds no call; WBGT is the 12th (spec 005).
+    expect(fetchMock).toHaveBeenCalledTimes(12);
   });
 
   it('leaves only the missing pollutant null', async () => {
@@ -289,7 +340,7 @@ describe('SingaporeWeatherClient', () => {
         headers: { 'Content-Type': 'application/json' },
       });
     });
-    const client = new SingaporeWeatherClient();
+    const client = new SingaporeWeatherClient(NO_PACING);
 
     const snapshot = await client.getCurrentWeather(1.35, 103.85);
 
@@ -301,7 +352,7 @@ describe('SingaporeWeatherClient', () => {
 
   it('sets every pollutant to null when the psi call fails, without touching PM2.5', async () => {
     const fetchMock = installFetchMock('/v2/real-time/api/psi');
-    const client = new SingaporeWeatherClient();
+    const client = new SingaporeWeatherClient(NO_PACING);
 
     const snapshot = await client.getCurrentWeather(1.35, 103.85);
 
@@ -315,12 +366,12 @@ describe('SingaporeWeatherClient', () => {
       air_quality_observed_at: null,
       pm25_one_hourly: 9,
     });
-    expect(fetchMock).toHaveBeenCalledTimes(11);
+    expect(fetchMock).toHaveBeenCalledTimes(12);
   });
 
   it('retries the temperature reading once after a rate limit response', async () => {
     const fetchMock = installFetchMock(undefined, '/v2/real-time/api/air-temperature');
-    const client = new SingaporeWeatherClient();
+    const client = new SingaporeWeatherClient(NO_PACING);
 
     const snapshot = await client.getCurrentWeather(1.35, 103.85);
 
@@ -330,5 +381,65 @@ describe('SingaporeWeatherClient', () => {
         ([url]) => new URL(url.toString()).pathname === '/v2/real-time/api/air-temperature',
       ),
     ).toHaveLength(2);
+  });
+  it('adds the nearest WBGT station reading, skipping non-numeric values', async () => {
+    const fetchMock = installFetchMock();
+    const client = new SingaporeWeatherClient(NO_PACING);
+
+    const snapshot = await client.getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot).toMatchObject({
+      wbgt_c: 29.3,
+      heat_stress_level: 'Low',
+      wbgt_station_name: 'Bishan Street',
+      wbgt_observed_at: '2026-11-01T10:05:00+08:00',
+    });
+    expect(snapshot.wbgt_station_distance_km).toBeLessThan(1);
+    const wbgtCall = fetchMock.mock.calls
+      .map(([url]) => new URL(url.toString()))
+      .find((url) => url.pathname === '/v2/real-time/api/weather');
+    expect(wbgtCall?.searchParams.get('api')).toBe('wbgt');
+  });
+
+  it('picks the WBGT station by distance in km and stores it even when far', async () => {
+    installFetchMock();
+    const client = new SingaporeWeatherClient(NO_PACING);
+
+    const snapshot = await client.getCurrentWeather(1.3, 103.62);
+
+    expect(snapshot.wbgt_station_name).toBe('Tuas Terminal Gateway');
+    expect(snapshot.heat_stress_level).toBe('Moderate');
+    expect(snapshot.wbgt_station_distance_km).toBeCloseTo(
+      haversineKm(1.3, 103.62, 1.263757, 103.616417),
+      1,
+    );
+  });
+
+  it('leaves all WBGT fields null when no station has a reading', async () => {
+    wbgtReadings = [];
+    installFetchMock();
+    const client = new SingaporeWeatherClient(NO_PACING);
+
+    const snapshot = await client.getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot).toMatchObject({
+      wbgt_c: null,
+      heat_stress_level: null,
+      wbgt_station_name: null,
+      wbgt_station_distance_km: null,
+      wbgt_observed_at: null,
+    });
+  });
+
+  it('keeps other readings when the WBGT endpoint fails', async () => {
+    installFetchMock('/v2/real-time/api/weather');
+    const client = new SingaporeWeatherClient(NO_PACING);
+
+    const snapshot = await client.getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot.temperature_c).toBe(29.5);
+    expect(snapshot.uv_index).toBe(6);
+    expect(snapshot.wbgt_c).toBeNull();
+    expect(snapshot.wbgt_station_name).toBeNull();
   });
 });

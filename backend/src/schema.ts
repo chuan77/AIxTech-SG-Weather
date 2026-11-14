@@ -23,6 +23,11 @@ export interface WeatherSnapshot {
   so2_twenty_four_hourly: number | null;
   co_eight_hour_max: number | null;
   air_quality_observed_at: string | null;
+  wbgt_c: number | null;
+  heat_stress_level: string | null;
+  wbgt_station_name: string | null;
+  wbgt_station_distance_km: number | null;
+  wbgt_observed_at: string | null;
   forecast_periods: Array<{
     label: string;
     forecast: string;
@@ -64,6 +69,11 @@ export const locations = sqliteTable(
     so2TwentyFourHourly: real('so2_twenty_four_hourly'),
     coEightHourMax: real('co_eight_hour_max'),
     airQualityObservedAt: text('air_quality_observed_at'),
+    wbgtC: real('wbgt_c'),
+    heatStressLevel: text('heat_stress_level'),
+    wbgtStationName: text('wbgt_station_name'),
+    wbgtStationDistanceKm: real('wbgt_station_distance_km'),
+    wbgtObservedAt: text('wbgt_observed_at'),
     forecastPeriods: text('forecast_periods', { mode: 'json' })
       .$type<WeatherSnapshot['forecast_periods']>()
       .notNull(),

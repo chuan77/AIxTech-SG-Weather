@@ -40,3 +40,6 @@ pnpm-debug.log*
 
 # Sample API dumps (not committed)
 RealtimeWeatherReadingsacrossSingapore/
+
+# Stray DB/logs created when the server runs from inside backend/
+backend/backend/

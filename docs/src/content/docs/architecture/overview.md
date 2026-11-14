@@ -24,7 +24,7 @@ flowchart TB
     Logs["POST /api/logs"]
     WClient["SingaporeWeatherClient<br/>weather.ts"]
     LClient["SingaporeLightningClient<br/>lightning.ts<br/>2-minute memory cache"]
-    Http["ProviderRequester<br/>providerHttp.ts"]
+    Http["ProviderRequester<br/>providerHttp.ts<br/>one shared, rate-limited queue"]
     DB["db.ts<br/>Drizzle sqlite-proxy"]
     Logger["pino logger"]
   end

@@ -37,3 +37,9 @@
   - How far can the nearest WBGT station be before its value is not meaningful? (step 2)
   - Can the tile grid take the new readouts? Mockups during specification should confirm this.
   - How should pacing be shared between the weather and lightning clients? (step 2)
+
+## Step 2 gate (2026-11-14)
+
+- Step 1 (`specs/004-outdoor-comfort-tiles`) is built and the owner judged it useful, so step 2 proceeds as `specs/005-wbgt-heat-stress-tile`.
+- Answers to the carried-forward questions: Development key is configured (no Prod key; a ~10-15 s refresh is accepted); WBGT station must be within 10 km; weather and lightning clients must share one pacing stream, because they currently pace separately against the same key limit.
+- Next: hourly UV trend (research Priority 5) as its own feature. Station-reading map layers (Priority 4) are deferred to the next release.

@@ -1,15 +1,16 @@
 ---
 title: Derived tiles
-description: Feels-like temperature and sunrise/sunset, computed in the browser from stored data.
+description: Feels-like temperature, heat-stress display and sunrise/sunset, computed in the browser from stored data.
 sidebar:
   order: 3
 ---
 
-Two tiles are computed on the client and never stored or fetched. Both are pure modules with unit tests, which is the pattern for any logic worth testing in the frontend.
+Three tiles are computed on the client from stored data and make no calls of their own. All are pure modules with unit tests, which is the pattern for any logic worth testing in the frontend.
 
 ```mermaid
 flowchart LR
   Snap["Stored WeatherSnapshot<br/>temperature, humidity,<br/>wind speed, condition, rainfall"] --> FL["feelsLike.ts"] --> FLT["Feels like tile"]
+  WB["Stored WBGT fields<br/>value, level, station, distance"] --> HS["heatStress.ts<br/>10 km cut-off"] --> HST["Heat Stress tile"]
   Coords["Location latitude / longitude"] --> ST["sunTimes.ts"]
   Clock["useNow(60 s)<br/>today in Singapore"] --> ST --> SunT["Sunrise / Sunset tile"]
 ```
@@ -39,6 +40,28 @@ The value picks a comfort band. Lower bounds are inclusive.
 | Scorching | 37 | Minimal clothing and sun gear |
 
 An umbrella note appears when the 2-hour forecast mentions rain, showers or thunder, or the nearest station recorded more than 0.1 mm of rain.
+
+## Heat stress (`components/heatStress.ts`)
+
+The WBGT reading itself is official NEA data fetched on refresh (see [Weather provider](/backend/weather-provider/#upstream-calls)). `heatStressView(weather)` decides what the tile shows:
+
+```mermaid
+flowchart TD
+  Start["heatStressView(weather)"] --> A{"wbgt_c and distance<br/>are finite numbers?"}
+  A -- no --> NR["No reading"]
+  A -- yes --> B{"distance > 10 km?"}
+  B -- yes --> NN["No nearby station<br/>tooltip names the station"]
+  B -- no --> R["Reading: value, level,<br/>station · km · HH:mm"]
+  R --> G{"level"}
+  G -- Moderate / High --> Guide["plus one guidance line"]
+  G -- Low / other --> NoGuide["no guidance"]
+```
+
+- **Cut-off:** `WBGT_MAX_STATION_KM = 10`. Exactly 10.0 km counts as nearby. Against the current 30 stations, every main-island point checked is within about 6.5 km.
+- **Levels:** NEA's bands are Low below 31 °C, Moderate 31 to below 33 °C, High 33 °C and above. The tile shows NEA's label as stored. Matching is case-insensitive; an unknown label is shown as given, with no guidance.
+- **Guidance:** `HEAT_STRESS_GUIDANCE` holds one advisory-level line each for Moderate and High (reduce or minimise outdoor activity, shade, water). No medical advice.
+- **Styling:** High is emphasised more than Moderate using only `white/*` classes, so it follows every theme. A scale bar covers 25 to 35 °C.
+- **Naming:** only this tile uses the words "Heat Stress". `feelsLike.test.ts` checks that the feels-like tile never does.
 
 ## Sunrise and sunset (`components/sunTimes.ts`)
 
