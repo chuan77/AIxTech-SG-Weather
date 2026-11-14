@@ -124,6 +124,10 @@ export interface SingaporeLightningClientOptions {
   timeoutMs?: number;
   userAgent?: string;
   fetchImpl?: typeof fetch;
+  /** Shared requester, so all provider calls in the process are paced together. */
+  requester?: ProviderRequester;
+  requestIntervalMs?: number;
+  rateLimitRetryDelayMs?: number;
 }
 
 /**
@@ -136,7 +140,7 @@ export class SingaporeLightningClient implements LightningClient {
   private inFlight: Promise<LightningObservation> | null = null;
 
   constructor(private readonly options: SingaporeLightningClientOptions = {}) {
-    this.requester = new ProviderRequester(options);
+    this.requester = options.requester ?? new ProviderRequester(options);
   }
 
   async getRecentLightning(now: Date = new Date()): Promise<LightningObservation> {

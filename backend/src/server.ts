@@ -8,6 +8,7 @@ import { createLightningRouter } from './routes/lightning.js';
 import type { LightningClient } from './lightning.js';
 import { createFixtureLightningClient } from './lightningFixture.js';
 import { logger } from './logger.js';
+import { ProviderRequester } from './providerHttp.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;
@@ -54,14 +55,19 @@ export async function createApp(options: AppOptions = {}) {
     response.status(204).end();
   });
 
-  app.use('/api', createLocationsRouter({ weatherClient: options.weatherClient }));
-
   let lightningClient = options.lightningClient;
   if (!lightningClient && process.env.LIGHTNING_FIXTURE === 'demo' && process.env.NODE_ENV !== 'production') {
     logger.warn('LIGHTNING_FIXTURE=demo: serving fake lightning strikes (development only)');
     lightningClient = createFixtureLightningClient();
   }
-  app.use('/api', createLightningRouter({ lightningClient }));
+
+  // The provider's rate limit is per key, so every default client shares one paced requester.
+  const requester =
+    !options.weatherClient || !lightningClient
+      ? new ProviderRequester({ apiKey: process.env.WEATHER_API_KEY })
+      : undefined;
+  app.use('/api', createLocationsRouter({ weatherClient: options.weatherClient, requester }));
+  app.use('/api', createLightningRouter({ lightningClient, requester }));
 
   if (serveFrontend) {
     if (process.env.NODE_ENV === 'production') {

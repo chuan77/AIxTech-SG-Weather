@@ -15,6 +15,13 @@
       "when": 1794566537362,
       "tag": "0001_overrated_the_spike",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1794631201027,
+      "tag": "0002_old_richard_fisk",
+      "breakpoints": true
     }
   ]
 }

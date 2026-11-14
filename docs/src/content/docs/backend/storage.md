@@ -68,6 +68,11 @@ erDiagram
     real so2_twenty_four_hourly
     real co_eight_hour_max
     text air_quality_observed_at
+    real wbgt_c
+    text heat_stress_level
+    text wbgt_station_name
+    real wbgt_station_distance_km
+    text wbgt_observed_at
     text forecast_periods "JSON, not null"
     text daily_forecast "JSON, not null"
   }

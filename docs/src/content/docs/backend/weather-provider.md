@@ -1,6 +1,6 @@
 ---
 title: Weather provider
-description: How SingaporeWeatherClient turns 11 data.gov.sg calls into one WeatherSnapshot.
+description: How SingaporeWeatherClient turns 12 data.gov.sg calls into one WeatherSnapshot.
 sidebar:
   order: 2
 ---
@@ -15,7 +15,7 @@ The routes depend only on the `WeatherClient` interface (`routes/locations.ts`),
 
 ## Upstream calls
 
-One refresh makes 11 requests. They are started together with `Promise.all`, but the shared `ProviderRequester` spaces them 250 ms apart, so a refresh takes roughly 3 seconds or more.
+One refresh makes 12 requests. They are started together with `Promise.all`, but the shared `ProviderRequester` spaces them to fit the API key's rate limit (884 ms apart with a key), so a refresh takes about 10 seconds. See [Shared HTTP behaviour](#shared-http-behaviour).
 
 ```mermaid
 flowchart LR
@@ -32,6 +32,7 @@ flowchart LR
     PSI["psi"]
     PM["pm25"]
     T24["twenty-four-hr-forecast"]
+    WB["weather?api=wbgt"]
   end
 
   subgraph v1["api.data.gov.sg /v1/environment/"]
@@ -44,8 +45,9 @@ flowchart LR
   GCW --> PSI & PM -->|"nearest region"| AQ["PSI, PM2.5,<br/>PM10, O3, NO2, SO2, CO"]
   GCW --> T24 -->|"nearest region"| F24["forecast low/high,<br/>forecast_periods"]
   GCW --> D4 --> F4["daily_forecast"]
+  GCW --> WB -->|"nearest station<br/>by km"| HS["wbgt_c, heat_stress_level,<br/>station, distance"]
 
-  C & R & U & AQ & F24 & F4 --> Snap[("WeatherSnapshot")]
+  C & R & U & AQ & F24 & F4 & HS --> Snap[("WeatherSnapshot")]
 ```
 
 | Field group | Endpoint | Matching |
@@ -58,8 +60,11 @@ flowchart LR
 | `forecast_low_c`, `forecast_high_c` | `twenty-four-hr-forecast` | Island-wide general temperature |
 | `forecast_periods` | `twenty-four-hr-forecast` | Nearest of the five fixed regions, falling back to `central` |
 | `daily_forecast` | `4-day-weather-forecast` (legacy v1 host) | Island-wide |
+| `wbgt_c`, `heat_stress_level`, `wbgt_station_name`, `wbgt_station_distance_km`, `wbgt_observed_at` | `weather?api=wbgt` | Nearest station with a numeric WBGT, by great-circle distance in km |
 
-"Nearest" is the smallest squared difference in latitude and longitude. That is fine at Singapore's scale and avoids a haversine.
+For most endpoints, "nearest" is the smallest squared difference in latitude and longitude. That is fine for ranking at Singapore's scale. WBGT is the exception: it uses a haversine distance in km (`distanceKm`), because the tile hides readings from stations more than 10 km away and needs a real distance. The backend stores the nearest station and its distance even when it is far; the cut-off is applied in the browser (see [Derived tiles](/frontend/derived-tiles/#heat-stress-componentsheatstressts)).
+
+WBGT values arrive as strings (`"28.0"`) and are coerced with `Number()`; stations whose value is not numeric are skipped. `heat_stress_level` is NEA's label as published (`Low`, `Moderate`, `High`), not recomputed. `wbgt_observed_at` is the record's `datetime`.
 
 The pollutant breakdown comes from the same `psi` response as the PSI value, so it adds no extra call.
 
@@ -80,11 +85,21 @@ If the 2-hour forecast fails, the snapshot starts from an empty one with `condit
 
 ## Shared HTTP behaviour
 
-`backend/src/providerHttp.ts` holds `ProviderRequester`, used by both the weather and lightning clients. Each client creates its own instance, so spacing applies per client.
+`backend/src/providerHttp.ts` holds `ProviderRequester`. data.gov.sg limits requests per API key, not per client, so `createApp` builds **one** requester and passes it to both default clients (`requester` option). Weather refreshes and lightning loads then share one queue and cannot together go over the limit.
 
-- **Spacing:** requests are queued so they start at least 250 ms apart.
+```mermaid
+flowchart LR
+  W["SingaporeWeatherClient<br/>12 calls per refresh"] --> Q["one ProviderRequester<br/>(created in createApp)"]
+  L["SingaporeLightningClient<br/>up to 4 calls per load"] --> Q
+  Q -->|"starts spaced<br/>ceil(10000 / limit) + 50 ms"| DG[("data.gov.sg")]
+```
+
+- **Spacing:** request starts are at least `ceil(10000 / limit) + 50` ms apart, where `limit` is requests per 10 s: 12 with `WEATHER_API_KEY` (Development tier), 6 without, or `WEATHER_API_RATE_LIMIT` if set. That is 884 ms with a key and 1717 ms without.
 - **Timeout:** 8 seconds per request via `AbortController`.
-- **Rate limit:** one retry after 1 second on HTTP 429. A second 429 throws.
+- **Rate limit:** on HTTP 429, wait 10 seconds (as the provider's error body asks), then retry once. A second 429 throws.
+- **Overrides:** `requestIntervalMs` and `rateLimitRetryDelayMs` options replace the defaults. Tests set both to `0`.
+
+A lightning load that starts during a refresh waits its turn in the queue, so it can take as long as the refresh (about 10 s).
 - **Headers:** `Accept: application/json`, a `User-Agent` of `weather-starter/0.1 (educational project)`, and `x-api-key` when `WEATHER_API_KEY` is set.
 - **Errors:** everything becomes a `WeatherProviderError` with a safe message: rate limit, rejected key (401/403), other HTTP status, or "Unable to reach weather provider".
 
@@ -95,6 +110,6 @@ If the 2-hour forecast fails, the snapshot starts from an empty one with `condit
 3. Map it in `weatherToColumns` and `rowToRecord` in `backend/src/db.ts`, and add it to `defaultWeather`.
 4. Fetch it in `getCurrentWeather` inside `fetchOptional`, with a `null` fallback.
 5. Add it to `frontend/src/types.ts` and render it, typically as a tile in `Tiles.tsx`.
-6. Extend `backend/src/weather.test.ts` with a stubbed `fetch` response.
+6. Extend `backend/src/weather.test.ts` with a stubbed `fetch` response, and update the expected call count.
 
-Each new endpoint adds about 250 ms to every refresh.
+Each new endpoint adds one request interval (884 ms with a Development key) to every refresh.

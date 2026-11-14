@@ -182,6 +182,7 @@ All endpoints are on `https://api-open.data.gov.sg`. No API key is required for 
 | `GET /v2/real-time/api/wind-direction`         | [Realtime Weather Readings](https://data.gov.sg/collections/realtime-weather-readings/view) | Wind direction in degrees from weather stations.                                              |
 | `GET /v1/environment/24-hour-weather-forecast` | [Weather Forecast](https://data.gov.sg/collections/weather-forecast/view)                   | 24-hour forecast broken into time periods. Different response shape from the 2-hour endpoint. |
 | `GET /v1/environment/4-day-weather-forecast`   | [Weather Forecast](https://data.gov.sg/collections/weather-forecast/view)                   | 4-day outlook with temperature ranges and forecast text.                                      |
+| `GET /v2/real-time/api/weather?api=wbgt`        | Heat Stress (WBGT) | NEA heat-stress readings (WBGT and Low / Moderate / High) per station. |
 
 Optional API key:
 
@@ -189,6 +190,8 @@ Optional API key:
 export WEATHER_API_KEY=your_api_key_here
 npm run dev
 ```
+
+Requests to data.gov.sg are paced to fit the key's rate limit: 12 per 10 s with a key, 6 without. For another key tier, set `WEATHER_API_RATE_LIMIT` to its requests per 10 s (for example `30` for a Production key).
 
 ## Original Starter Exercises
 

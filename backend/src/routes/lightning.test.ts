@@ -2,10 +2,23 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { LightningClient, LightningObservation } from '../lightning.js';
 import { createFixtureLightningClient } from '../lightningFixture.js';
 import { WeatherProviderError } from '../providerHttp.js';
+
+// Counts ProviderRequester constructions so the test below can check createApp shares one.
+const requesterCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock('../providerHttp.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../providerHttp.js')>();
+  class CountingRequester extends actual.ProviderRequester {
+    constructor(...args: ConstructorParameters<typeof actual.ProviderRequester>) {
+      super(...args);
+      requesterCount.value += 1;
+    }
+  }
+  return { ...actual, ProviderRequester: CountingRequester };
+});
 
 const observation: LightningObservation = {
   strikes: [
@@ -87,5 +100,13 @@ describe('lightning API', () => {
       Math.round((now.getTime() - Date.parse(strike.occurred_at)) / 60_000),
     );
     expect(ages).toEqual([2, 30, 55]);
+  });
+  it('builds one provider requester shared by the default weather and lightning clients', async () => {
+    const { createApp } = await import('../server.js');
+    requesterCount.value = 0;
+
+    await createApp({ serveFrontend: false, enableRequestLogging: false });
+
+    expect(requesterCount.value).toBe(1);
   });
 });
