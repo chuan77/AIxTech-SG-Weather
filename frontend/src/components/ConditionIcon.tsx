@@ -1,5 +1,14 @@
-import { CloudIcon, RainIcon, SunIcon, ThunderIcon } from './icons';
+import { CloudIcon, RainIcon, SunIcon, ThunderIcon, type WeatherGlyph } from './icons';
 import { conditionToIcon, type PinIconKey } from './map/mapHelpers';
+
+/** Which weather glyph each condition key draws; shared with the map pins' HTML. */
+export const CONDITION_GLYPHS: Record<PinIconKey, WeatherGlyph> = {
+  thunder: 'thunder',
+  rain: 'rain',
+  cloud: 'cloud',
+  sun: 'sun',
+  unknown: 'cloud',
+};
 
 export const CONDITION_ICONS: Record<PinIconKey, typeof SunIcon> = {
   thunder: ThunderIcon,

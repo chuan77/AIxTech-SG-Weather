@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-14T11:31:47.992344+00:00",
+  "generatedAt": "2026-11-15T05:19:25.525534+00:00",
   "title": "Design System: AIxTech SG Weather",
   "extensions": {
     "colorMeta": {
@@ -575,12 +575,82 @@
           "#e8fcf9"
         ],
         "scope": "singapore"
+      },
+      "sun-glyph": {
+        "role": "accent",
+        "displayName": "Sun Glyph",
+        "canonical": "#fcd34d"
+      },
+      "sun-glyph-light": {
+        "role": "accent",
+        "displayName": "Sun Glyph (light themes)",
+        "canonical": "#b45309"
+      },
+      "error-fill": {
+        "role": "semantic",
+        "displayName": "Error Fill"
+      },
+      "error-edge": {
+        "role": "semantic",
+        "displayName": "Error Edge"
+      },
+      "glass-sky-top": {
+        "role": "neutral",
+        "displayName": "Glass Sky Top"
+      },
+      "glass-sky-mid": {
+        "role": "neutral",
+        "displayName": "Glass Sky Mid"
+      },
+      "glass-sky-low": {
+        "role": "neutral",
+        "displayName": "Glass Sky Low"
+      },
+      "radar-sky-top": {
+        "role": "neutral",
+        "displayName": "Radar Sky Top"
+      },
+      "radar-sky-base": {
+        "role": "neutral",
+        "displayName": "Radar Sky Base"
+      },
+      "sticker-peach-top": {
+        "role": "neutral",
+        "displayName": "Sticker Peach Top"
+      },
+      "sticker-peach-base": {
+        "role": "neutral",
+        "displayName": "Sticker Peach Base"
+      },
+      "radar-glow": {
+        "role": "decorative",
+        "displayName": "Radar Glow"
+      },
+      "sticker-mint-glow": {
+        "role": "decorative",
+        "displayName": "Sticker Mint Glow"
+      },
+      "sticker-lilac-glow": {
+        "role": "decorative",
+        "displayName": "Sticker Lilac Glow"
+      },
+      "memphis-pink-dot": {
+        "role": "decorative",
+        "displayName": "Memphis Pink Dot"
+      },
+      "memphis-teal-dot": {
+        "role": "decorative",
+        "displayName": "Memphis Teal Dot"
+      },
+      "storm-flash": {
+        "role": "decorative",
+        "displayName": "Storm Flash"
       }
     },
     "typographyMeta": {
       "display": {
         "displayName": "Display",
-        "purpose": "The hero's current temperature only; colour and weight come from the theme."
+        "purpose": "The hero's current temperature only, below the verdict; colour and weight come from the theme. 5rem on phones."
       },
       "headline": {
         "displayName": "Headline",
@@ -601,6 +671,14 @@
       "label": {
         "displayName": "Label",
         "purpose": "Uppercase tile and panel headers, always with an icon."
+      },
+      "display-md": {
+        "displayName": "Display (md and up)",
+        "purpose": "The same hero temperature from md up, 5.5rem."
+      },
+      "pin-label": {
+        "displayName": "Pin Label",
+        "purpose": "Map pin temperature labels, 13px (12px below 640px)."
       }
     },
     "shadows": [
@@ -654,11 +732,19 @@
       },
       {
         "name": "md",
-        "value": "768px"
+        "value": "768px wide and 500px tall (a phone held sideways stays below md)"
       },
       {
         "name": "lg",
         "value": "1024px"
+      },
+      {
+        "name": "pointer-fine",
+        "value": "(pointer: fine): desktop compaction is written md:pointer-fine:, so touch screens keep 44px targets"
+      },
+      {
+        "name": "pointer-coarse",
+        "value": "(pointer: coarse)"
       }
     ],
     "themes": [

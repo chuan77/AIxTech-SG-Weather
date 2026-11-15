@@ -43,6 +43,23 @@ colors:
   sky-heat-base: "#1e110e"
   sheet-lightning: "#ffe14a"
   clear-patch-teal: "#5eead4"
+  sun-glyph: "#fcd34d"
+  sun-glyph-light: "#b45309"
+  error-fill: "rgb(239 68 68 / 0.15)"
+  error-edge: "rgb(252 165 165 / 0.3)"
+  glass-sky-top: "#1d4475"
+  glass-sky-mid: "#183b67"
+  glass-sky-low: "#11305a"
+  radar-glow: "rgba(0, 229, 255, 0.08)"
+  radar-sky-top: "#0a1222"
+  radar-sky-base: "#070d1a"
+  sticker-mint-glow: "rgba(200, 235, 218, 0.8)"
+  sticker-lilac-glow: "rgba(214, 200, 245, 0.8)"
+  sticker-peach-top: "#ffd9c7"
+  sticker-peach-base: "#ffe9d6"
+  memphis-pink-dot: "rgba(255, 79, 163, 0.18)"
+  memphis-teal-dot: "rgba(0, 127, 121, 0.18)"
+  storm-flash: "rgba(232, 228, 255, 0.6)"
 typography:
   display:
     fontFamily: "ui-sans-serif, system-ui, sans-serif"
@@ -50,6 +67,17 @@ typography:
     fontWeight: 200
     lineHeight: 1
     letterSpacing: "-0.025em"
+  display-md:
+    fontFamily: "ui-sans-serif, system-ui, sans-serif"
+    fontSize: "5.5rem"
+    fontWeight: 200
+    lineHeight: 1
+    letterSpacing: "-0.025em"
+  pin-label:
+    fontFamily: "ui-sans-serif, system-ui, sans-serif"
+    fontSize: "0.8125rem"
+    fontWeight: 600
+    lineHeight: 1.25
   headline:
     fontFamily: "ui-sans-serif, system-ui, sans-serif"
     fontSize: "2.25rem"
@@ -250,6 +278,7 @@ Singapore Sky keeps the system stack, by user-confirmed scope. Its character com
 ## Layout
 
 - **Desktop (md: 768px wide and 500px tall, or more):** a fixed-width sidebar (22rem) next to a main panel, each scrolling on its own. The main column is centred with a maximum width of 64rem and 24px padding (32px from lg, 1024px). The theme picker sits at the top-right of the main panel and scrolls away with it, so it never covers a reading. When two or more saved places are out of date, a "Refresh N out-of-date places" button sits under the add row, above the cards it renews.
+- **Touch targets follow input, not width:** controls are 44px by default and compact only on a mouse, written `md:pointer-fine:…` (a Tailwind variant on `(pointer: fine)`). A touch tablet at desktop width keeps 44px targets; the map's zoom buttons grow to 44px on `(pointer: coarse)`.
 - **Phones (below md, which includes a phone held sideways):** a single column, and the whole page scrolls. The sidebar shrinks to one row of two buttons, Use my location and Add Location. Each is sized from its own label, so in any theme's font they sit side by side when they fit and stack when they don't, never truncating. Add Location stays in the row, pressed, while its form is open (the saved-place search is desktop-only). Switching and refreshing live in a one-row bottom dock within thumb reach. Up to four places show as a row of chips you swipe sideways; beyond four, the selected place shows as one button that opens a list sheet of every place in full-width 48px rows. A round Refresh button sits at the dock's end, inset from the safe area. When two or more places are out of date it carries a count badge and opens a sheet with "Refresh N out-of-date places" and "Refresh <place> only". Sheets rise from the dock, are non-modal, and close on Escape, an outside tap or a choice, returning focus to the dock button. The dock publishes its height as `--dock-height` so the page end, the undo toast and the sheets stay clear of it. Removing a place is a quiet text button at the end of its page, away from the dock. The theme picker moves to the end of the page.
 - **Rhythm:** sections are 12px apart, panels have 16px of internal padding, and controls within a group are 8px apart. The hero gets extra air above it (24px top, 8px bottom) to set it apart from the panels below.
 - **Order of content:** Singapore's outdoor questions come first. Hero reading (place; a stale notice when the reading is old; lightning within 10 km from a fresh check, with its own time; the verdict of storms, heat stress, UV from High and PSI; then temperature, condition with its icon and high/low), then the 24-hour forecast strip, the outdoor grid (a full-width Heat & Comfort panel that leads with NEA heat stress (WBGT, the verdict) beside a smaller feels-like, with one reconciling line when the two seem to disagree (air temperature is the hero's number and isn't repeated), then Rainfall, UV and Air Quality), the 4-day forecast, the map, the supporting readings (Wind, Humidity, Sun), and a footer naming the source. Grids are 2 columns, 4 from lg.
@@ -348,6 +377,8 @@ The page ground in Singapore Sky. `Layout` sets `data-sky` on `<html>` from the 
 - **Don't** change how the Apple theme looks as a side effect of other work. It changes only in deliberate theming work that follows Apple's current design language.
 - **Don't** use saturated colour for decoration or emphasis. It is reserved for data scales and map markers.
 - **Don't** put a second display-size number on the screen, or make the hero temperature heavier in Apple.
+- **Don't** hard-code a colour in a component. The sun glyph uses `text-sun` (`--sun`: amber on dark skies, #b45309 on Sticker and Memphis so it clears 3:1), and every failure message uses `.app-error` (`--error-bg`, `--error-border`, `--error-text`).
+- **Don't** shrink a control with a bare `md:` class; desktop compaction is `md:pointer-fine:` so touch screens keep 44px.
 - **Don't** add shadows to panels at rest in Apple.
 - **Don't** hard-code white, grey or slate text. Map overlay buttons use the `map-control` tokens.
 - **Don't** use translucent `bg-white/…` fills for pop-ups or floating controls.

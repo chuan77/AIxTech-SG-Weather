@@ -28,7 +28,7 @@ export function ThemeSelector({ placement }: ThemeSelectorProps) {
         id={selectId}
         value={theme.id}
         onChange={(event) => setThemeId(event.target.value)}
-        className="min-h-11 rounded-full border border-white/15 bg-white/[0.08] px-4 text-sm font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.14] md:min-h-0 md:px-3 md:py-1.5 md:text-xs"
+        className="min-h-11 rounded-full border border-white/15 bg-white/[0.08] px-4 text-sm font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.14] md:pointer-fine:min-h-0 md:pointer-fine:px-3 md:pointer-fine:py-1.5 md:pointer-fine:text-xs"
       >
         {THEMES.map((option) => (
           <option key={option.id} value={option.id} className="text-slate-900">

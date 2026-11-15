@@ -28,7 +28,8 @@ flowchart TD
   Hero --> Header["Area, verdict (storms, heat, UV, PSI),<br/>lightning nearby, temperature, H/L"]
   Hero --> HourlyStrip["HourlyStrip<br/>forecast_periods"]
   Hero --> TenDayForecast["TenDayForecast<br/>daily_forecast"]
-  Hero --> MapCard
+  Hero --> LazyMapCard["LazyMapCard<br/>loads Leaflet near view"]
+  LazyMapCard --> MapCard
   Hero --> OutdoorGrid
   Hero --> MoreReadingsGrid
   Hero --> RefreshBtn["Refresh button"]

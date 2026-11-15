@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   listLocations,
   createLocation,
@@ -114,8 +122,11 @@ export function StoreProvider({ children }: ProviderProps) {
 
   // A location waiting out its undo window is hidden everywhere but still held in state.
   const hiddenId = pendingDelete?.status === 'pending' ? pendingDelete.id : null;
-  const visibleLocations =
-    hiddenId === null ? locations : locations.filter((location) => location.id !== hiddenId);
+  const visibleLocations = useMemo(
+    () =>
+      hiddenId === null ? locations : locations.filter((location) => location.id !== hiddenId),
+    [locations, hiddenId],
+  );
 
   const effectiveSelectedId = (() => {
     if (visibleLocations.length === 0) return null;
@@ -377,43 +388,79 @@ export function StoreProvider({ children }: ProviderProps) {
     [refreshLightningData],
   );
 
-  const value: StoreValue = {
-    locations: visibleLocations,
-    selectedId: effectiveSelectedId,
-    isAdding,
-    isLoading,
-    refreshingId,
-    error,
-    loadError,
-    refreshError,
-    pendingDelete,
-    select: setSelectedId,
-    setAdding: (nextIsAdding) => {
-      setIsAdding(nextIsAdding);
-      if (nextIsAdding) logInteraction('location_form_opened');
-    },
-    create,
-    remove,
-    undoDelete,
-    dismissDelete,
-    holdDelete,
-    refresh,
-    bulkRefresh,
-    refreshAll,
-    stopRefreshAll,
-    clearBulkRefresh,
-    reload: async () => {
-      const next = await load();
-      if (next.length > 0) setSelectedId((current) => current ?? next[0].id);
-    },
-    lightning: {
-      enabled: lightningEnabled,
-      status: lightningStatus,
-      observation: lightningObservation,
-      setEnabled: setLightningEnabledAndLoad,
-      refresh: refreshLightningData,
-    },
-  };
+  const setAdding = useCallback((nextIsAdding: boolean) => {
+    setIsAdding(nextIsAdding);
+    if (nextIsAdding) logInteraction('location_form_opened');
+  }, []);
+
+  const reload = useCallback(async () => {
+    const next = await load();
+    if (next.length > 0) setSelectedId((current) => current ?? next[0].id);
+  }, [load]);
+
+  // One stable object per real change, so the one-minute clocks and unrelated updates don't
+  // re-render every component that reads the store.
+  const value = useMemo<StoreValue>(
+    () => ({
+      locations: visibleLocations,
+      selectedId: effectiveSelectedId,
+      isAdding,
+      isLoading,
+      refreshingId,
+      error,
+      loadError,
+      refreshError,
+      pendingDelete,
+      select: setSelectedId,
+      setAdding,
+      create,
+      remove,
+      undoDelete,
+      dismissDelete,
+      holdDelete,
+      refresh,
+      bulkRefresh,
+      refreshAll,
+      stopRefreshAll,
+      clearBulkRefresh,
+      reload,
+      lightning: {
+        enabled: lightningEnabled,
+        status: lightningStatus,
+        observation: lightningObservation,
+        setEnabled: setLightningEnabledAndLoad,
+        refresh: refreshLightningData,
+      },
+    }),
+    [
+      visibleLocations,
+      effectiveSelectedId,
+      isAdding,
+      isLoading,
+      refreshingId,
+      error,
+      loadError,
+      refreshError,
+      pendingDelete,
+      setAdding,
+      create,
+      remove,
+      undoDelete,
+      dismissDelete,
+      holdDelete,
+      refresh,
+      bulkRefresh,
+      refreshAll,
+      stopRefreshAll,
+      clearBulkRefresh,
+      reload,
+      lightningEnabled,
+      lightningStatus,
+      lightningObservation,
+      setLightningEnabledAndLoad,
+      refreshLightningData,
+    ],
+  );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }

@@ -2,7 +2,7 @@ import { useStore, useSelectedLocation } from '../state/store';
 import { ClockIcon, LocationIcon, RefreshIcon, ThunderIcon } from './icons';
 import { HourlyStrip } from './HourlyStrip';
 import { TenDayForecast } from './TenDayForecast';
-import { MapCard } from './map/MapCard';
+import { LazyMapCard } from './map/LazyMapCard';
 import { ConditionIcon } from './ConditionIcon';
 import { MoreReadingsGrid, OutdoorGrid } from './Tiles';
 import { ThemeSelector } from './ThemeSelector';
@@ -154,7 +154,7 @@ export function Hero() {
               onClick={() => void refresh(selected.id)}
               // A "Refresh all" run reaches this place in its turn.
               disabled={isRefreshing || bulkRefresh?.status === 'running'}
-              className="hidden items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
+              className="hidden items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] px-3 py-1.5 text-xs font-medium pointer-coarse:min-h-11 pointer-coarse:px-4 text-white/85 backdrop-blur-xl hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
             >
               <RefreshIcon className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
               <span>{isRefreshing ? 'Refreshing…' : 'Refresh'}</span>
@@ -163,7 +163,7 @@ export function Hero() {
           {failure && (
             <div
               role="alert"
-              className="mt-3 flex max-w-md flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-card border border-red-300/30 bg-red-500/15 px-4 py-2.5 text-sm text-red-100"
+              className="mt-3 flex max-w-md flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-card app-error px-4 py-2.5 text-sm"
             >
               <p className="min-w-0 text-balance">
                 Couldn’t refresh {area}. {asSentence(failure)}
@@ -172,7 +172,7 @@ export function Hero() {
               <button
                 type="button"
                 onClick={() => void refresh(selected.id)}
-                className="min-h-11 shrink-0 rounded-full border border-red-300/40 px-4 font-medium hover:bg-white/10 md:min-h-9"
+                className="min-h-11 shrink-0 rounded-full border border-[color:var(--error-border)] px-4 font-medium hover:bg-white/10 md:pointer-fine:min-h-9"
               >
                 Retry
               </button>
@@ -184,7 +184,7 @@ export function Hero() {
         <HourlyStrip periods={selected.weather?.forecast_periods} stale={isStale} />
         <OutdoorGrid weather={selected.weather} asOf={asOfWhen} />
         <TenDayForecast weather={selected.weather} asOf={asOfWhen} />
-        <MapCard />
+        <LazyMapCard />
         <MoreReadingsGrid location={selected} asOf={asOfWhen} />
 
         <footer className="mt-2 flex flex-col items-center pb-4 text-xs text-ink-muted md:pb-8">

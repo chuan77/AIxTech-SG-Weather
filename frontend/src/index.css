@@ -47,6 +47,11 @@ body,
   --button-bg-hover: #fff;
   --button-text: #0f172a;
   --error-text: #fee2e2;
+  /* Error box fill and edge; light themes deepen them with --error-text (see .app-error). */
+  --error-bg: rgb(239 68 68 / 0.15);
+  --error-border: rgb(252 165 165 / 0.3);
+  /* The sun glyph in the 24-hour strip: amber that reads on dark skies; light themes deepen it. */
+  --sun: #fcd34d;
   --map-filter: none;
   --font-body: ui-sans-serif, system-ui, sans-serif;
   /* Gauge fills (UV, PSI, WBGT). These defaults are exactly what the bars have always rendered. */
@@ -163,6 +168,13 @@ body,
   color: var(--error-text);
 }
 
+/* One error box for every failure message (refresh, add, delete, Refresh all, Use my location). */
+.app-error {
+  border: 1px solid var(--error-border);
+  background: var(--error-bg);
+  color: var(--error-text);
+}
+
 .weather-map .leaflet-tile-pane {
   filter: var(--map-filter);
 }
@@ -209,6 +221,7 @@ body,
   --button-bg-hover: #6842b8;
   --button-text: #fff;
   --error-text: #8a1c3a;
+  --sun: #b45309;
   --pin-label-border: #f2a9c0;
   --pin-label-bg: #fff8e1;
   --pin-label-text: #4a3b5c;
@@ -251,6 +264,7 @@ body,
   --button-bg-hover: #ffd400;
   --button-text: #111;
   --error-text: #8a1c1c;
+  --sun: #b45309;
   --pin-label-border: #111;
   --pin-label-bg: #fff;
   --pin-label-text: #111;
@@ -795,6 +809,16 @@ textarea {
   .weather-pin__label {
     font-size: 0.75rem;
     padding: 0.125rem 0.375rem;
+  }
+}
+
+/* Touch screens wide enough to show the zoom buttons (tablets) get finger-sized ones. */
+@media (pointer: coarse) {
+  .weather-map .leaflet-control-zoom a {
+    width: 44px;
+    height: 44px;
+    line-height: 44px;
+    font-size: 1.125rem;
   }
 }
 

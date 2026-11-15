@@ -25,12 +25,10 @@ export function Sidebar() {
 
   return (
     <aside
-      aria-labelledby="locations-heading"
+      // A named landmark, not a heading: the page's first heading is the place's h1.
+      aria-label="Saved locations"
       className="flex w-full shrink-0 flex-col gap-3 border-b app-sidebar border-white/5 md:w-[22rem] md:border-b-0 md:border-r p-4 backdrop-blur-2xl"
     >
-      <h2 id="locations-heading" className="sr-only">
-        Saved locations
-      </h2>
       {/* Phones switch places from the bottom dock, so this filter for the card list is desktop-only. */}
       <div className="relative hidden md:block">
         <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-muted" />
@@ -40,7 +38,7 @@ export function Sidebar() {
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"
           aria-label="Search saved locations"
-          className="min-h-11 w-full rounded-lg border border-white/10 bg-white/[0.08] py-2 pl-9 pr-3 text-sm text-white placeholder:text-ink-muted md:min-h-0"
+          className="min-h-11 w-full rounded-lg border border-white/10 bg-white/[0.08] py-2 pl-9 pr-3 text-sm text-white placeholder:text-ink-muted md:pointer-fine:min-h-0"
         />
       </div>
 
@@ -61,7 +59,7 @@ export function Sidebar() {
           <button
             type="button"
             onClick={() => void reload()}
-            className="min-h-11 shrink-0 rounded-lg border border-white/20 px-3 py-1 text-white/90 hover:bg-white/10 md:min-h-0"
+            className="min-h-11 shrink-0 rounded-lg border border-white/20 px-3 py-1 text-white/90 hover:bg-white/10 md:pointer-fine:min-h-0"
           >
             Retry
           </button>

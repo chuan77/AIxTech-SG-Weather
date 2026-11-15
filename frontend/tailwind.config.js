@@ -23,6 +23,8 @@ export default {
         white: 'rgb(var(--ink) / <alpha-value>)',
         // Secondary text that clears 4.5:1 on every theme's panels (see --ink-muted in index.css).
         'ink-muted': 'var(--ink-muted)',
+        // The sun glyph's colour, deepened on light themes so it clears 3:1 (see --sun).
+        sun: 'var(--sun)',
         sky: {
           50: '#f0f9ff',
           100: '#e0f2fe',
@@ -32,5 +34,12 @@ export default {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Size by input, not width: an iPad in landscape is `md` but still a finger. Desktop
+    // compaction is written `md:pointer-fine:…`, so touch screens keep 44px targets at any width.
+    function inputVariants({ addVariant }) {
+      addVariant('pointer-fine', '@media (pointer: fine)');
+      addVariant('pointer-coarse', '@media (pointer: coarse)');
+    },
+  ],
 };

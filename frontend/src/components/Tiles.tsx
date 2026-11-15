@@ -119,7 +119,7 @@ export function AirQualityTile({ weather, asOf }: WeatherProps) {
         aria-expanded={open}
         aria-controls="air-quality-detail"
         onClick={() => setOpen((value) => !value)}
-        className="mt-3 min-h-11 rounded-full border border-white/15 bg-white/[0.06] px-4 text-xs font-medium text-white/85 hover:bg-white/[0.12] md:min-h-0 md:px-3 md:py-1"
+        className="mt-3 min-h-11 rounded-full border border-white/15 bg-white/[0.06] px-4 text-xs font-medium text-white/85 hover:bg-white/[0.12] md:pointer-fine:min-h-0 md:pointer-fine:px-3 md:pointer-fine:py-1"
       >
         {open ? 'Hide details' : 'Details'}
       </button>

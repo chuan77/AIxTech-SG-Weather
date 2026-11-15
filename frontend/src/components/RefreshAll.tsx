@@ -76,7 +76,7 @@ export function RefreshAll({ placement, now }: RefreshAllProps) {
           <div
             className={`flex items-center gap-2 rounded-card px-3 py-2 text-xs leading-snug ${
               failedIds.length > 0
-                ? 'border border-red-300/30 bg-red-500/15 text-red-100'
+                ? 'app-error '
                 : 'text-ink-muted'
             }`}
           >
@@ -87,7 +87,7 @@ export function RefreshAll({ placement, now }: RefreshAllProps) {
                 type="button"
                 onClick={clearBulkRefresh}
                 aria-label="Dismiss refresh result"
-                className="-my-2 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-white/10 md:h-8 md:w-8"
+                className="-my-2 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-white/10 md:pointer-fine:h-8 md:pointer-fine:w-8"
               >
                 <CloseIcon className="h-3.5 w-3.5" />
               </button>

@@ -60,7 +60,8 @@ export function PhoneDock() {
     <>
       <nav
         ref={dockRef}
-        aria-label="Saved locations"
+        // Distinct from the sidebar's "Saved locations" landmark, which phones also show.
+        aria-label="Switch place and refresh"
         className="phone-dock app-popover fixed inset-x-0 bottom-0 z-40 flex items-center gap-1 border-t border-white/10 pb-[max(0.25rem,env(safe-area-inset-bottom))] pr-3 pt-2 md:hidden"
       >
         <div className="min-w-0 flex-1">

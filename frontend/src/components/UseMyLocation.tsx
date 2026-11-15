@@ -128,7 +128,7 @@ export function UseMyLocation() {
           role={message.tone === 'error' ? 'alert' : 'status'}
           className={`order-1 flex basis-full items-start gap-1 ${
             message.tone === 'error'
-              ? 'rounded-md border border-red-300/30 bg-red-500/15 py-1.5 pl-2.5 pr-1 text-xs text-red-100'
+              ? 'rounded-md app-error py-1.5 pl-2.5 pr-1 text-xs'
               : 'pl-0.5 text-xs text-ink-muted'
           }`}
         >
@@ -137,7 +137,7 @@ export function UseMyLocation() {
             type="button"
             onClick={() => setMessage(null)}
             aria-label="Dismiss"
-            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full hover:bg-white/10 md:min-h-6 md:min-w-6"
+            className="flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-full hover:bg-white/10 md:pointer-fine:min-h-6 md:pointer-fine:min-w-6"
           >
             <CloseIcon className="h-3.5 w-3.5" />
           </button>

@@ -64,7 +64,7 @@ export function HourlyStrip({ periods = [], stale = false }: HourlyStripProps) {
               <div className="text-xs font-medium text-white/85">{slot.label}</div>
               <ConditionIcon
                 condition={slot.forecast}
-                className={`h-7 w-7 ${isSun ? 'text-amber-300' : 'text-white/85'}`}
+                className={`h-7 w-7 ${isSun ? 'text-sun' : 'text-white/85'}`}
               />
               <div className="text-xs leading-snug text-white/90">{slot.forecast}</div>
             </div>

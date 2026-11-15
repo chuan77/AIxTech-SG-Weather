@@ -12,21 +12,64 @@ const base = {
   strokeLinejoin: 'round',
 } satisfies SVGProps<SVGSVGElement>;
 
-export function CloudIcon({ className = 'h-5 w-5' }: IconProps) {
+type Shape = { path: string } | { circle: { cx: number; cy: number; r: number } };
+
+/**
+ * The weather glyphs as data, so the React icons and the map pins' plain HTML (Leaflet takes a
+ * string) draw from one source, without shipping react-dom/server to render pins.
+ */
+export const WEATHER_SHAPES = {
+  cloud: [{ path: 'M7 18h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 11.4 3.5 3.5 0 0 0 7 18Z' }],
+  sun: [
+    { circle: { cx: 12, cy: 12, r: 4 } },
+    {
+      path: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4',
+    },
+  ],
+  rain: [
+    { path: 'M7 15h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 8.4 3.5 3.5 0 0 0 7 15Z' },
+    { path: 'M8 18l-1 3M12 18l-1 3M16 18l-1 3' },
+  ],
+  thunder: [
+    { path: 'M7 14h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 7.4 3.5 3.5 0 0 0 7 14Z' },
+    { path: 'm12 14-2 4h3l-2 4' },
+  ],
+} satisfies Record<string, Shape[]>;
+
+export type WeatherGlyph = keyof typeof WEATHER_SHAPES;
+
+function WeatherSvg({ glyph, className }: { glyph: WeatherGlyph; className: string }) {
   return (
     <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
-      <path d="M7 18h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 11.4 3.5 3.5 0 0 0 7 18Z" />
+      {(WEATHER_SHAPES[glyph] as Shape[]).map((shape, i) =>
+        'path' in shape ? (
+          <path key={i} d={shape.path} />
+        ) : (
+          <circle key={i} cx={shape.circle.cx} cy={shape.circle.cy} r={shape.circle.r} />
+        ),
+      )}
     </svg>
   );
 }
 
+/** The same glyph as an HTML string, for Leaflet's divIcon. Matches the React icon's markup. */
+export function weatherGlyphMarkup(glyph: WeatherGlyph, className: string): string {
+  const shapes = (WEATHER_SHAPES[glyph] as Shape[])
+    .map((shape) =>
+      'path' in shape
+        ? `<path d="${shape.path}"></path>`
+        : `<circle cx="${shape.circle.cx}" cy="${shape.circle.cy}" r="${shape.circle.r}"></circle>`,
+    )
+    .join('');
+  return `<svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" class="${className}" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">${shapes}</svg>`;
+}
+
+export function CloudIcon({ className = 'h-5 w-5' }: IconProps) {
+  return <WeatherSvg glyph="cloud" className={className} />;
+}
+
 export function SunIcon({ className = 'h-5 w-5' }: IconProps) {
-  return (
-    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
-      <circle cx="12" cy="12" r="4" />
-      <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4 7 17M17 7l1.4-1.4" />
-    </svg>
-  );
+  return <WeatherSvg glyph="sun" className={className} />;
 }
 
 export function HomeIcon({ className = 'h-3 w-3' }: IconProps) {
@@ -168,21 +211,11 @@ export function TrendIcon({ className = 'h-3.5 w-3.5' }: IconProps) {
 }
 
 export function RainIcon({ className = 'h-5 w-5' }: IconProps) {
-  return (
-    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
-      <path d="M7 15h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 8.4 3.5 3.5 0 0 0 7 15Z" />
-      <path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3" />
-    </svg>
-  );
+  return <WeatherSvg glyph="rain" className={className} />;
 }
 
 export function ThunderIcon({ className = 'h-5 w-5' }: IconProps) {
-  return (
-    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
-      <path d="M7 14h10a4 4 0 0 0 .8-7.92A6 6 0 0 0 6.1 7.4 3.5 3.5 0 0 0 7 14Z" />
-      <path d="m12 14-2 4h3l-2 4" />
-    </svg>
-  );
+  return <WeatherSvg glyph="thunder" className={className} />;
 }
 
 export function MapIcon({ className = 'h-3.5 w-3.5' }: IconProps) {

@@ -8,7 +8,7 @@ import { searchTowns } from './townSearch';
 import { savedNear } from './nearbySaved';
 
 const INPUT_CLASS =
-  'min-h-11 w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-ink-muted md:min-h-0';
+  'min-h-11 w-full min-w-0 rounded-md border border-white/15 bg-white/10 px-2 py-1.5 text-sm text-white placeholder:text-ink-muted md:pointer-fine:min-h-0';
 
 export function AddLocationForm() {
   const { isAdding, setAdding, create, locations, select } = useStore();
@@ -225,7 +225,7 @@ export function AddLocationForm() {
                     pick(match.town);
                   }}
                   onMouseEnter={() => setActiveIndex(index)}
-                  className={`flex min-h-11 cursor-pointer items-center px-2 py-1.5 text-sm text-white md:min-h-0 ${
+                  className={`flex min-h-11 cursor-pointer items-center px-2 py-1.5 text-sm text-white md:pointer-fine:min-h-0 ${
                     index === activeIndex ? 'bg-white/20' : ''
                   }`}
                 >
@@ -254,7 +254,7 @@ export function AddLocationForm() {
                   select(alreadySaved.id);
                   cancel();
                 }}
-                className="min-h-11 font-semibold underline underline-offset-2 md:min-h-0"
+                className="min-h-11 font-semibold underline underline-offset-2 md:pointer-fine:min-h-0"
               >
                 Show it
               </button>
@@ -299,20 +299,20 @@ export function AddLocationForm() {
           <button
             type="button"
             onClick={cancel}
-            className="min-h-11 rounded-md px-3 text-xs font-medium text-ink-muted hover:text-white md:min-h-0 md:px-2.5 md:py-1.5"
+            className="min-h-11 rounded-md px-3 text-xs font-medium text-ink-muted hover:text-white md:pointer-fine:min-h-0 md:pointer-fine:px-2.5 md:pointer-fine:py-1.5"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={submitting || needsPick}
-            className="app-primary-button min-h-11 rounded-md px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-h-0 md:px-3 md:py-1.5"
+            className="app-primary-button min-h-11 rounded-md px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:pointer-fine:min-h-0 md:pointer-fine:px-3 md:pointer-fine:py-1.5"
           >
             {submitting ? 'Adding…' : 'Add'}
           </button>
         </div>
         {submitError && (
-          <p className="rounded-md border border-red-300/30 bg-red-500/15 px-2.5 py-1.5 text-xs text-red-100">
+          <p className="rounded-md app-error px-2.5 py-1.5 text-xs">
             {submitError}
           </p>
         )}

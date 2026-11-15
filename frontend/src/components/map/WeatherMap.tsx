@@ -1,18 +1,15 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import L from 'leaflet';
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import type { Location } from '../../types';
 import { useTheme } from '../../theme/ThemeContext';
 import type { Basemap } from '../../theme/themes';
-import { CONDITION_ICONS } from '../ConditionIcon';
+import { pinMarkup } from './pinMarkup';
 import { prefersReducedMotion } from '../motion';
 import { LightningLayer } from './LightningLayer';
 import {
-  conditionToIcon,
   DEFAULT_ZOOM,
-  formatPinLabel,
   getBounds,
   isCoarsePointer,
   SINGAPORE_CENTER,
@@ -33,28 +30,9 @@ const FOCUS_ZOOM = 13;
 const PIN_WIDTH = 64;
 const PIN_HEIGHT = 56;
 
-function pinName(location: Location, isSelected: boolean): string {
-  const area =
-    location.weather?.area || `${location.latitude.toFixed(3)}, ${location.longitude.toFixed(3)}`;
-  const parts = [area, formatPinLabel(location), location.weather?.condition].filter(Boolean);
-  return `${parts.join(', ')}${isSelected ? ', selected' : ''}`;
-}
-
 function makePinIcon(location: Location, isSelected: boolean): L.DivIcon {
-  const Icon = CONDITION_ICONS[conditionToIcon(location.weather?.condition)];
-  const html = renderToStaticMarkup(
-    <div className={`weather-pin${isSelected ? ' weather-pin--selected' : ''}`}>
-      {/* The pin is a button; its name says which place, not just "30°". */}
-      <span className="sr-only">{pinName(location, isSelected)}</span>
-      <div className="weather-pin__label" aria-hidden="true">
-        <Icon className="h-3.5 w-3.5" />
-        <span>{formatPinLabel(location)}</span>
-      </div>
-      <div className="weather-pin__dot" />
-    </div>,
-  );
   return L.divIcon({
-    html,
+    html: pinMarkup(location, isSelected),
     className: 'weather-pin-wrapper',
     iconSize: [PIN_WIDTH, PIN_HEIGHT],
     iconAnchor: [PIN_WIDTH / 2, PIN_HEIGHT],
