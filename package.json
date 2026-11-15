@@ -16,6 +16,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit -p frontend/tsconfig.json && tsc --noEmit -p backend/tsconfig.json",
+    "verify": "npm run lint && bash scripts/verify-python.sh lint && npm run typecheck && bash scripts/verify-python.sh types && npm test && bash scripts/verify-python.sh test && npm run build",
     "docs:build": "npm run build -w docs"
   },
   "workspaces": [

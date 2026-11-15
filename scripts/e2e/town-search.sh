@@ -4,16 +4,17 @@
 # Drives the real form in Chrome with agent-browser, locating elements by ARIA role and
 # accessible name so it also guards the contract in specs/006-town-name-search/contracts.
 #
-# Usage (from the repo root, with the app running on a throwaway database):
-#   DATABASE_PATH=backend/e2e.db npm run reset
-#   DATABASE_PATH=backend/e2e.db npm run dev
+# Usage (from the repo root, after `npm run verify` has built frontend/dist):
 #   scripts/e2e/town-search.sh [us1|us2|us3|themes|a11y]   # no argument runs everything
 #
-# Not part of `npm test` or the pre-commit hook: it needs a running dev server and adds
-# locations (each add triggers the normal data.gov.sg create snapshot).
+# By default this starts its own temporary server on a fresh throwaway database and tears it
+# down on exit (scripts/e2e/lib.sh). E2E_BASE_URL=<url> uses a server you run instead.
+# Any uncaught page error or console.error while opening or switching views fails the run.
+#
+# Not part of `npm test` or the pre-commit hook: it adds locations (each add triggers the
+# normal data.gov.sg create snapshot).
 set -euo pipefail
 
-BASE_URL="${E2E_BASE_URL:-http://weather-starter.localhost:1355}"
 SESSION="${E2E_SESSION:-town-search}"
 OUT="e2e-artifacts/town-search"
 FILTER="${1:-all}"
@@ -22,12 +23,11 @@ mkdir -p "$OUT"
 PASSED=0
 FAILED=0
 
-ab() { agent-browser --session "$SESSION" "$@"; }
-cleanup() { agent-browser --session "$SESSION" close >/dev/null 2>&1 || true; }
-trap cleanup EXIT
-
 pass() { PASSED=$((PASSED + 1)); printf '  ok   %s\n' "$1"; }
 fail() { FAILED=$((FAILED + 1)); printf '  FAIL %s\n' "$1" >&2; }
+
+# shellcheck source=scripts/e2e/lib.sh
+. "$(dirname "$0")/lib.sh"
 check() { # check <description> <command...>
   local description="$1"
   shift
@@ -59,13 +59,18 @@ open_form() {
     ab find role button click --name "Add Location" >/dev/null
   fi
   ab wait '[role=combobox]' >/dev/null
+  assert_clean "open the add-location form"
 }
 
 town_type() { ab find role combobox fill --name "Town" "$1" >/dev/null; }
 pick_option() { ab find role option click --name "$1" >/dev/null; }
 press_add() { ab find role button click --name "Add" --exact >/dev/null; }
 # Escape first: an open town list overlays the buttons below it.
-cancel_form() { ab press Escape >/dev/null; ab find role button click --name "Cancel" >/dev/null; }
+cancel_form() {
+  ab press Escape >/dev/null
+  ab find role button click --name "Cancel" >/dev/null
+  assert_clean "close the add-location form"
+}
 shot() { ab screenshot "$OUT/$1.png" >/dev/null; }
 
 value_of() { js "document.querySelector('$1').value"; }
@@ -95,15 +100,15 @@ add_town() { # add_town <query> <name>: pick a town and add it
   pick_option "$2"
   press_add
   wait_saved "$2"
+  local saved=$?
+  assert_clean "add $2"
+  return $saved
 }
 
-# --- preflight ----------------------------------------------------------------------------
+# --- setup --------------------------------------------------------------------------------
 
-if ! locations_json >/dev/null; then
-  echo "Cannot reach $BASE_URL/api/locations." >&2
-  echo "Start the app with: DATABASE_PATH=backend/e2e.db npm run dev" >&2
-  exit 2
-fi
+e2e_start_server
+e2e_launch_browser
 
 runs() { [ "$FILTER" = "all" ] || [ "$FILTER" = "$1" ]; }
 
@@ -123,10 +128,12 @@ if runs us1; then
   shot us1-picked
   press_add
   wait_saved "Sengkang" || true
+  assert_clean "US1 add Sengkang"
   check "Add saves a location labelled Sengkang" eq "$(saved_count Sengkang)" "1"
   shot us1-added
   ab reload >/dev/null
   check "the Sengkang card survives a reload" wait_for_card "Sengkang"
+  assert_clean "US1 reload"
 
   for town in Woodlands Sembawang Punggol Bishan; do
     if [ "$(saved_count "$town")" = "0" ]; then add_town "$town" "$town" || true; fi
@@ -215,6 +222,7 @@ if runs themes; then
   theme_ids=$(js "[...document.querySelectorAll('select option')].map(o => o.value).join(' ')")
   for theme in $theme_ids; do
     ab eval "(() => { const s = [...document.querySelectorAll('select')].find(el => [...el.options].some(o => o.value === '$theme')); s.value = '$theme'; s.dispatchEvent(new Event('change', { bubbles: true })); })()" >/dev/null
+    assert_clean "switch to the $theme theme"
     open_form
     town_type "b"
     check "theme $theme shows the town list" has_option "Bishan"
@@ -238,6 +246,8 @@ if runs a11y; then
   check "axe finds no violations in the open form (see $OUT/a11y.json)" eq "$violations" "0"
   cancel_form
 fi
+
+assert_clean "end of run"
 
 echo
 echo "town-search: $PASSED passed, $FAILED failed"
