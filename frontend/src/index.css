@@ -136,6 +136,11 @@ body,
   color: var(--ink-stale);
 }
 
+/* Lightning near the place: the bolt takes the theme's lightning colour, the words stay ink. */
+.hero-lightning svg {
+  color: var(--lightning);
+}
+
 .app-sidebar {
   background: var(--sidebar-bg);
 }
@@ -502,7 +507,11 @@ body,
 
 [data-theme='singapore'] body {
   background:
-    radial-gradient(circle at var(--sun-at), var(--sky-sun) 0 calc(var(--sun-r) - 14px), transparent var(--sun-r)),
+    radial-gradient(
+      circle at var(--sun-at),
+      var(--sky-sun) 0 calc(var(--sun-r) - 14px),
+      transparent var(--sun-r)
+    ),
     radial-gradient(
       circle at var(--sun-at),
       color-mix(in srgb, var(--sky-sun) 45%, transparent) 0 calc(var(--sun-r) * 1.6),
@@ -789,8 +798,9 @@ textarea {
   }
 }
 
-/* Pinch to zoom on phones; the +/- buttons only crowd a small map. */
-@media (max-width: 767px) {
+/* Pinch to zoom on phones; the +/- buttons only crowd a small map.
+   The phone layout is anything below the `md` screen in tailwind.config.js, sideways phones included. */
+@media not all and (min-width: 768px) and (min-height: 500px) {
   .weather-map .leaflet-control-zoom {
     display: none;
   }
@@ -852,8 +862,15 @@ textarea {
 
 /* Phones: the bottom dock (place chips + Refresh) floats over the page, lifted by the
    floating-control shadow cast upward. */
-.phone-dock {
+.phone-dock,
+.dock-sheet {
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.28);
+}
+
+/* The dock Refresh count: ink on the dock's own surface, inverted, so it reads in every theme. */
+.dock-badge {
+  background: rgb(var(--ink));
+  color: var(--popover-bg);
 }
 
 /* The phone location switcher swipes sideways; a scrollbar under the chips is noise. */

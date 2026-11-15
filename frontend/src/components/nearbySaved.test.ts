@@ -23,6 +23,12 @@ describe('savedNear', () => {
     expect(savedNear([], 1.3294, 103.8021)).toBeNull();
   });
 
+  it('takes a tighter radius when asked', () => {
+    // ~150 m north of id 2: inside the 200 m default, outside a 100 m radius.
+    expect(savedNear(saved, 1.33075, 103.8021)?.id).toBe(2);
+    expect(savedNear(saved, 1.33075, 103.8021, 0.1)).toBeNull();
+  });
+
   it('picks the closest when several are in range', () => {
     const close = [at(3, 1.3296, 103.8021), at(4, 1.3294, 103.8022)];
     expect(savedNear(close, 1.3294, 103.80215)?.id).toBe(4);

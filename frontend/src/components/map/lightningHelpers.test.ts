@@ -4,6 +4,7 @@ import {
   formatStrikePopup,
   formatStrikeTime,
   isFresh,
+  nearestStrike,
   parseEnabled,
   serialiseEnabled,
   statusMessage,
@@ -159,5 +160,33 @@ describe('enabled preference', () => {
     expect(parseEnabled('false')).toBe(false);
     expect(parseEnabled(serialiseEnabled(false))).toBe(false);
     expect(parseEnabled(serialiseEnabled(true))).toBe(true);
+  });
+});
+
+describe('nearestStrike', () => {
+  // Bishan-ish; 0.01° of latitude is about 1.1 km.
+  const here = { lat: 1.35, lng: 103.85 };
+
+  it('picks the closest strike within 10 km from the last hour', () => {
+    const result = nearestStrike(
+      observation([
+        strike(5, { latitude: 1.39, longitude: 103.85 }), // ~4.4 km
+        strike(20, { latitude: 1.37, longitude: 103.85 }), // ~2.2 km
+        strike(90, { latitude: 1.35, longitude: 103.85 }), // on top, but over an hour old
+      ]),
+      here.lat,
+      here.lng,
+      NOW,
+    );
+    expect(result?.km).toBeCloseTo(2.2, 1);
+    expect(result?.occurredAt).toBe(iso(20));
+  });
+
+  it('ignores strikes beyond 10 km, a stale observation, and no observation', () => {
+    const far = observation([strike(5, { latitude: 1.47, longitude: 103.85 })]); // ~13 km
+    expect(nearestStrike(far, here.lat, here.lng, NOW)).toBeNull();
+    const stale = { ...observation([strike(5)]), stale: true };
+    expect(nearestStrike(stale, here.lat, here.lng, NOW)).toBeNull();
+    expect(nearestStrike(null, here.lat, here.lng, NOW)).toBeNull();
   });
 });

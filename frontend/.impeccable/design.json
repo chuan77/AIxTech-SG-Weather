@@ -1,0 +1,976 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-14T11:31:47.992344+00:00",
+  "title": "Design System: AIxTech SG Weather",
+  "extensions": {
+    "colorMeta": {
+      "ink": {
+        "role": "primary",
+        "displayName": "Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#262626",
+          "#434343",
+          "#616161",
+          "#7e7e7e",
+          "#9b9b9b",
+          "#b8b8b8",
+          "#d5d5d5",
+          "#f2f2f2"
+        ]
+      },
+      "sky-high": {
+        "role": "neutral",
+        "displayName": "Sky High",
+        "canonical": "#6f8aa8",
+        "tonalRamp": [
+          "#1d2630",
+          "#334354",
+          "#495f78",
+          "#5f7c9d",
+          "#829ab4",
+          "#a6b7c9",
+          "#cbd5df",
+          "#eff2f5"
+        ]
+      },
+      "sky-mid": {
+        "role": "neutral",
+        "displayName": "Sky Mid",
+        "canonical": "#5a7591",
+        "tonalRamp": [
+          "#1d262f",
+          "#344353",
+          "#4a6077",
+          "#607d9b",
+          "#839ab2",
+          "#a7b8c9",
+          "#cbd5df",
+          "#eff2f5"
+        ]
+      },
+      "sky-low": {
+        "role": "neutral",
+        "displayName": "Sky Low",
+        "canonical": "#4a627c",
+        "tonalRamp": [
+          "#1d2630",
+          "#324354",
+          "#486079",
+          "#5e7c9d",
+          "#829ab4",
+          "#a6b7ca",
+          "#cbd5e0",
+          "#eff2f5"
+        ]
+      },
+      "sky-deep": {
+        "role": "neutral",
+        "displayName": "Sky Deep",
+        "canonical": "#3c5066",
+        "tonalRamp": [
+          "#1c2630",
+          "#324355",
+          "#485f7a",
+          "#5d7c9e",
+          "#819ab5",
+          "#a6b7ca",
+          "#cad5e0",
+          "#eff2f6"
+        ]
+      },
+      "harbour-slate": {
+        "role": "neutral",
+        "displayName": "Harbour Slate",
+        "canonical": "#2c3f54",
+        "tonalRamp": [
+          "#1a2632",
+          "#2e4258",
+          "#425f7f",
+          "#567ca5",
+          "#7c99ba",
+          "#a2b7ce",
+          "#c8d4e2",
+          "#eef2f6"
+        ]
+      },
+      "midnight-text": {
+        "role": "neutral",
+        "displayName": "Midnight Text",
+        "canonical": "#0f172a",
+        "tonalRamp": [
+          "#141f38",
+          "#233663",
+          "#334e8e",
+          "#4265b9",
+          "#6b87ca",
+          "#96aada",
+          "#c1cde9",
+          "#ecf0f8"
+        ]
+      },
+      "pin-blue": {
+        "role": "secondary",
+        "displayName": "Pin Blue",
+        "canonical": "#3b82f6",
+        "tonalRamp": [
+          "#031e49",
+          "#063581",
+          "#084bb9",
+          "#0b62f0",
+          "#3f85f6",
+          "#77a8f9",
+          "#afccfb",
+          "#e7effe"
+        ]
+      },
+      "marigold-selected": {
+        "role": "secondary",
+        "displayName": "Marigold Selected",
+        "canonical": "#f59e0b",
+        "tonalRamp": [
+          "#492f03",
+          "#815305",
+          "#b97708",
+          "#f19b0a",
+          "#f7b23f",
+          "#f9c977",
+          "#fcdfaf",
+          "#fef5e7"
+        ]
+      },
+      "lightning-yellow": {
+        "role": "secondary",
+        "displayName": "Lightning Yellow",
+        "canonical": "#ffd21f",
+        "tonalRamp": [
+          "#4c3d00",
+          "#876c00",
+          "#c19a00",
+          "#fbc900",
+          "#ffd737",
+          "#ffe271",
+          "#ffeeab",
+          "#fffae6"
+        ]
+      },
+      "blush-error": {
+        "role": "neutral",
+        "displayName": "Blush Error",
+        "canonical": "#fee2e2",
+        "tonalRamp": [
+          "#4a0303",
+          "#820404",
+          "#bb0606",
+          "#f30808",
+          "#f83d3d",
+          "#fa7676",
+          "#fcaeae",
+          "#fee6e6"
+        ]
+      },
+      "scale-good": {
+        "role": "tertiary",
+        "displayName": "Scale Good",
+        "canonical": "#34d399",
+        "tonalRamp": [
+          "#0e3f2d",
+          "#186f4f",
+          "#229f71",
+          "#2dcf94",
+          "#5adbac",
+          "#8ae6c4",
+          "#baf0dc",
+          "#eafaf4"
+        ]
+      },
+      "scale-fair": {
+        "role": "tertiary",
+        "displayName": "Scale Fair",
+        "canonical": "#fde047",
+        "tonalRamp": [
+          "#4c4001",
+          "#857001",
+          "#bfa102",
+          "#f9d103",
+          "#fdde39",
+          "#fde772",
+          "#fef1ac",
+          "#fffbe6"
+        ]
+      },
+      "scale-caution": {
+        "role": "tertiary",
+        "displayName": "Scale Caution",
+        "canonical": "#fb923c",
+        "tonalRamp": [
+          "#4b2302",
+          "#843d03",
+          "#bd5704",
+          "#f67205",
+          "#fb913b",
+          "#fcb174",
+          "#fdd1ad",
+          "#fef1e6"
+        ]
+      },
+      "scale-danger": {
+        "role": "tertiary",
+        "displayName": "Scale Danger",
+        "canonical": "#ef4444",
+        "tonalRamp": [
+          "#460606",
+          "#7c0b0b",
+          "#b20f0f",
+          "#e81414",
+          "#ef4646",
+          "#f47c7c",
+          "#f8b2b2",
+          "#fde8e8"
+        ]
+      },
+      "scale-extreme": {
+        "role": "tertiary",
+        "displayName": "Scale Extreme",
+        "canonical": "#d946ef",
+        "tonalRamp": [
+          "#3e0646",
+          "#6d0b7c",
+          "#9d0fb2",
+          "#cc14e7",
+          "#d947ef",
+          "#e47cf4",
+          "#efb2f8",
+          "#fae8fd"
+        ]
+      },
+      "range-cool": {
+        "role": "tertiary",
+        "displayName": "Range Cool",
+        "canonical": "#7dd3fc",
+        "tonalRamp": [
+          "#02334b",
+          "#035a84",
+          "#0481bd",
+          "#06a8f6",
+          "#3bbdfa",
+          "#74d0fc",
+          "#ade3fd",
+          "#e6f7fe"
+        ]
+      },
+      "range-warm": {
+        "role": "tertiary",
+        "displayName": "Range Warm",
+        "canonical": "#fdba74",
+        "tonalRamp": [
+          "#4b2701",
+          "#854502",
+          "#be6303",
+          "#f88004",
+          "#fc9d39",
+          "#fdb973",
+          "#fed6ac",
+          "#fff3e6"
+        ]
+      },
+      "sidebar-shade": {
+        "role": "neutral",
+        "displayName": "Sidebar Shade",
+        "canonical": "rgba(0, 0, 0, 0.2)"
+      },
+      "glass-fill": {
+        "role": "neutral",
+        "displayName": "Glass Fill",
+        "canonical": "rgb(var(--ink) / 0.08)"
+      },
+      "glass-fill-raised": {
+        "role": "neutral",
+        "displayName": "Glass Fill Raised",
+        "canonical": "rgb(var(--ink) / 0.2)"
+      },
+      "glass-edge": {
+        "role": "neutral",
+        "displayName": "Glass Edge",
+        "canonical": "rgb(var(--ink) / 0.15)"
+      },
+      "glass-edge-raised": {
+        "role": "neutral",
+        "displayName": "Glass Edge Raised",
+        "canonical": "rgb(var(--ink) / 0.3)"
+      },
+      "porcelain-button": {
+        "role": "neutral",
+        "displayName": "Porcelain Button",
+        "canonical": "var(--button-bg)"
+      },
+      "flag-green": {
+        "role": "tertiary",
+        "displayName": "NEA Flag Green",
+        "canonical": "#3ecf7a",
+        "tonalRamp": [
+          "#0f3d22",
+          "#1a6a3b",
+          "#269755",
+          "#31c46e",
+          "#58d58c",
+          "#84e1ab",
+          "#b5edcc",
+          "#ebfaf1"
+        ],
+        "scope": "singapore"
+      },
+      "flag-yellow": {
+        "role": "tertiary",
+        "displayName": "NEA Flag Yellow",
+        "canonical": "#ffc93d",
+        "tonalRamp": [
+          "#4c3700",
+          "#856000",
+          "#bd8800",
+          "#f5b100",
+          "#ffc52e",
+          "#ffd466",
+          "#ffe5a3",
+          "#fff8e5"
+        ],
+        "scope": "singapore"
+      },
+      "flag-orange": {
+        "role": "tertiary",
+        "displayName": "NEA Flag Orange",
+        "canonical": "#ff8a2a",
+        "tonalRamp": [
+          "#4c2200",
+          "#853c00",
+          "#bd5500",
+          "#f56e00",
+          "#ff8c2e",
+          "#ffab66",
+          "#ffcda3",
+          "#fff1e5"
+        ],
+        "scope": "singapore"
+      },
+      "flag-red": {
+        "role": "tertiary",
+        "displayName": "NEA Flag Red",
+        "canonical": "#d62e1f",
+        "tonalRamp": [
+          "#430e0a",
+          "#741911",
+          "#a52318",
+          "#d62e1f",
+          "#e55548",
+          "#ec8379",
+          "#f3b4af",
+          "#fceae9"
+        ],
+        "scope": "singapore"
+      },
+      "flag-purple": {
+        "role": "tertiary",
+        "displayName": "NEA Flag Purple",
+        "canonical": "#9b5cff",
+        "tonalRamp": [
+          "#1e004c",
+          "#330085",
+          "#4900bd",
+          "#5f00f5",
+          "#7f2eff",
+          "#a166ff",
+          "#c7a3ff",
+          "#efe5ff"
+        ],
+        "scope": "singapore"
+      },
+      "flag-text-green": {
+        "role": "neutral",
+        "displayName": "Flag Text on Green",
+        "canonical": "#06210f",
+        "tonalRamp": [
+          "#0c411d",
+          "#147033",
+          "#1da049",
+          "#26cf5e",
+          "#4edf7e",
+          "#7ee7a1",
+          "#b1f1c7",
+          "#e9fbef"
+        ],
+        "scope": "singapore"
+      },
+      "flag-text-yellow": {
+        "role": "neutral",
+        "displayName": "Flag Text on Yellow",
+        "canonical": "#2b1a00",
+        "tonalRamp": [
+          "#4c2e00",
+          "#855000",
+          "#bd7200",
+          "#f59400",
+          "#ffac2e",
+          "#ffc366",
+          "#ffdba3",
+          "#fff5e5"
+        ],
+        "scope": "singapore"
+      },
+      "sky-calm-top": {
+        "role": "neutral",
+        "displayName": "Calm Sky Top",
+        "canonical": "#1a2833",
+        "tonalRamp": [
+          "#1a2833",
+          "#2d4558",
+          "#40627d",
+          "#537fa2",
+          "#759bb8",
+          "#9ab5cb",
+          "#c2d3e0",
+          "#eef3f6"
+        ],
+        "scope": "singapore"
+      },
+      "sky-calm-base": {
+        "role": "neutral",
+        "displayName": "Calm Sky Base",
+        "canonical": "#132029",
+        "tonalRamp": [
+          "#182934",
+          "#2a475b",
+          "#3c6581",
+          "#4e83a7",
+          "#709dbd",
+          "#96b8cf",
+          "#c0d4e2",
+          "#eef3f7"
+        ],
+        "scope": "singapore"
+      },
+      "sky-storm-top": {
+        "role": "neutral",
+        "displayName": "Storm Sky Top",
+        "canonical": "#363250",
+        "tonalRamp": [
+          "#201d2f",
+          "#373352",
+          "#4e4974",
+          "#665e97",
+          "#857eaf",
+          "#a6a1c4",
+          "#c9c7dc",
+          "#f0eff5"
+        ],
+        "scope": "singapore"
+      },
+      "sky-storm-base": {
+        "role": "neutral",
+        "displayName": "Storm Sky Base",
+        "canonical": "#151326",
+        "tonalRamp": [
+          "#1c1933",
+          "#312c58",
+          "#463f7e",
+          "#5a52a3",
+          "#7b74b9",
+          "#9e99cc",
+          "#c5c2e0",
+          "#efeef6"
+        ],
+        "scope": "singapore"
+      },
+      "sky-haze-top": {
+        "role": "neutral",
+        "displayName": "Haze Sky Top",
+        "canonical": "#2a241c",
+        "tonalRamp": [
+          "#2e271f",
+          "#504435",
+          "#71614b",
+          "#937e62",
+          "#ab9982",
+          "#c2b5a3",
+          "#dad2c8",
+          "#f5f3f0"
+        ],
+        "scope": "singapore"
+      },
+      "sky-haze-base": {
+        "role": "neutral",
+        "displayName": "Haze Sky Base",
+        "canonical": "#1d1913",
+        "tonalRamp": [
+          "#2e281e",
+          "#504534",
+          "#72624b",
+          "#948061",
+          "#ac9b81",
+          "#c2b6a3",
+          "#dbd3c8",
+          "#f5f3f0"
+        ],
+        "scope": "singapore"
+      },
+      "sky-heat-top": {
+        "role": "neutral",
+        "displayName": "Heat Sky Top",
+        "canonical": "#47291f",
+        "tonalRamp": [
+          "#351f17",
+          "#5c3528",
+          "#834c39",
+          "#aa624a",
+          "#bf826d",
+          "#d0a394",
+          "#e3c8bf",
+          "#f7f0ed"
+        ],
+        "scope": "singapore"
+      },
+      "sky-heat-base": {
+        "role": "neutral",
+        "displayName": "Heat Sky Base",
+        "canonical": "#1e110e",
+        "tonalRamp": [
+          "#341e18",
+          "#5a332a",
+          "#81493c",
+          "#a75f4e",
+          "#bc7f70",
+          "#cea197",
+          "#e2c7c0",
+          "#f7efee"
+        ],
+        "scope": "singapore"
+      },
+      "sheet-lightning": {
+        "role": "secondary",
+        "displayName": "Sheet Lightning",
+        "canonical": "#ffe14a",
+        "tonalRamp": [
+          "#4c4000",
+          "#856f00",
+          "#bd9d00",
+          "#f5cc00",
+          "#ffdc2e",
+          "#ffe666",
+          "#fff0a3",
+          "#fffbe5"
+        ],
+        "scope": "singapore"
+      },
+      "clear-patch-teal": {
+        "role": "secondary",
+        "displayName": "Clear-Patch Teal",
+        "canonical": "#5eead4",
+        "tonalRamp": [
+          "#09443a",
+          "#0f7565",
+          "#16a790",
+          "#1cd9bb",
+          "#46e7ce",
+          "#78eddb",
+          "#aef4e9",
+          "#e8fcf9"
+        ],
+        "scope": "singapore"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "The hero's current temperature only; colour and weight come from the theme."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The selected place name in the hero."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Location names on sidebar cards."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Forecast rows, fields, chips, tile explanations."
+      },
+      "caption": {
+        "displayName": "Caption",
+        "purpose": "Timestamps, sources, high/low pairs, helper lines."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase tile and panel headers, always with an icon."
+      }
+    },
+    "shadows": [
+      {
+        "name": "selected-lift",
+        "value": "0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.2)",
+        "purpose": "Selected location card or chip."
+      },
+      {
+        "name": "popover",
+        "value": "0 10px 15px -3px rgba(0,0,0,0.3)",
+        "purpose": "Town suggestion list."
+      },
+      {
+        "name": "floating-control",
+        "value": "0 8px 24px rgba(0,0,0,0.28)",
+        "purpose": "Phone Refresh pill."
+      },
+      {
+        "name": "map-marker",
+        "value": "0 2px 8px rgba(0,0,0,0.3)",
+        "purpose": "Pin labels over the basemap."
+      }
+    ],
+    "motion": [
+      {
+        "name": "state-transition",
+        "value": "150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Tailwind default transition on buttons, inputs, cards."
+      },
+      {
+        "name": "map-fullscreen-in",
+        "value": "180ms ease-out (opacity 0→1, scale 0.98→1)",
+        "purpose": "Fullscreen map entrance; disabled under prefers-reduced-motion."
+      },
+      {
+        "name": "sky-crossfade",
+        "value": "1.2s cubic-bezier(0.16, 1, 0.3, 1) on @property colour tokens (cumulus 1.4s; sun, smoke, horizon 1.6s; rain 0.9s)",
+        "purpose": "Singapore Sky state changes interpolate like weather moving in; snaps under prefers-reduced-motion."
+      },
+      {
+        "name": "sky-lightning",
+        "value": "1.1s ease-out, 0.5s delay, 1 iteration; opacity 0 -> 0.85 -> 0.1 -> 0.55 -> 0",
+        "purpose": "Singapore Sky's single authored motion: two soft sheet-lightning flashes on entering storm. Removed under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      }
+    ],
+    "themes": [
+      {
+        "id": "apple",
+        "label": "Apple",
+        "basemap": "voyager",
+        "note": "Normative. Slate sky gradient, white ink, 1rem radius, flat panels. Must stay visually unchanged."
+      },
+      {
+        "id": "glass",
+        "label": "Apple Glass",
+        "basemap": "voyager",
+        "note": "Brighter blue sky, 45% white card edges, 1.25rem radius, popover #1f4f86."
+      },
+      {
+        "id": "radar",
+        "label": "Midnight Radar",
+        "basemap": "dark_all",
+        "note": "Near-black navy console, cyan #00e5ff temperature, #1f6f8b edges with cyan glow, 0.375rem radius, JetBrains Mono."
+      },
+      {
+        "id": "sticker",
+        "label": "Pastel Sticker",
+        "basemap": "light_all",
+        "note": "Peach/mint/lilac ground, plum ink 74 59 92, opaque #fff8e1 cards with 6px pink drop, 1.75rem radius, purple #7a55c9 weight-800 temperature, Nunito."
+      },
+      {
+        "id": "memphis",
+        "label": "Neo-Memphis",
+        "basemap": "light_all",
+        "note": "Cream dotted ground, near-black ink, 2px black edges with 6px pink offset shadow, 0.75rem radius, teal #007f79 temperature, Poppins."
+      },
+      {
+        "id": "singapore",
+        "label": "Singapore Sky",
+        "basemap": "dark_all",
+        "note": "The only theme that reads data. data-sky on <html> from skyState(): storm (thunder now or in the period covering now) > haze (24h PSI > 100) > heat (NEA High WBGT, station within 10 km) > calm (also when data is missing). White ink, 85% ink-muted, 1.125rem radius, flat panels, system font stack, NEA flag pills and banded gauges, focus ring #ffe14a, selected pin #5eead4."
+      }
+    ],
+    "sky": {
+      "states": {
+        "calm": {
+          "trigger": "default, and whenever a reading is missing",
+          "stops": [
+            "#1a2833",
+            "#1c2e39",
+            "#1a2a35",
+            "#132029"
+          ],
+          "materials": "cumulus heads 10%, low blue-grey glow",
+          "temperatureColor": "#f2fafe",
+          "popover": "#2b4352"
+        },
+        "storm": {
+          "trigger": "thunder in the current condition or the forecast period covering now",
+          "stops": [
+            "#363250",
+            "#2a2742",
+            "#201d34",
+            "#151326"
+          ],
+          "materials": "cloud base 70%, violet underlight, rain sheets 10%, one-shot sheet lightning",
+          "temperatureColor": "#efeaff",
+          "popover": "#34304f"
+        },
+        "haze": {
+          "trigger": "24-hour PSI > 100",
+          "stops": [
+            "#2a241c",
+            "#2a251c",
+            "#27221a",
+            "#1d1913"
+          ],
+          "materials": "smoke veil 17%, dull sun disc 12%, panels frost at blur(32px) saturate(0.7)",
+          "temperatureColor": "#fff3df",
+          "popover": "#433a2b"
+        },
+        "heat": {
+          "trigger": "NEA High heat stress from a WBGT station within 10 km",
+          "stops": [
+            "#47291f",
+            "#3b231d",
+            "#2c1915",
+            "#1e110e"
+          ],
+          "materials": "horizon burn 30% from the bottom edge",
+          "temperatureColor": "#ffe9e0",
+          "popover": "#4a2b23"
+        }
+      },
+      "precedence": [
+        "storm",
+        "haze",
+        "heat",
+        "calm"
+      ],
+      "tokens": [
+        "--sky-1",
+        "--sky-2",
+        "--sky-3",
+        "--sky-4",
+        "--sky-glow-top",
+        "--sky-glow-low",
+        "--sky-cumulus",
+        "--sky-cloud",
+        "--sky-underlight",
+        "--sky-sun",
+        "--sky-smoke",
+        "--sky-horizon",
+        "--sky-rain",
+        "--sun-at",
+        "--sun-r"
+      ],
+      "sun": {
+        "desktop": {
+          "at": "84% 9%",
+          "r": "46px"
+        },
+        "phone": {
+          "at": "84% 27%",
+          "r": "32px"
+        }
+      },
+      "contrast": "85% ink clears 4.5:1 on a selected (20%) card at the sky's lightest point, effective material alphas included; rain masked out of the hero reading; worst case haze 4.58:1."
+    },
+    "gaugeScales": {
+      "default": {
+        "--scale-psi": "linear-gradient(to right, #34d399, #fde047, #ef4444)",
+        "--scale-wbgt": "linear-gradient(to right, #34d399, #fde047, #ef4444)",
+        "--scale-uv": "linear-gradient(to right, #34d399, #fde047, #d946ef)"
+      },
+      "singapore": {
+        "psi": "hard bands at 50 / 100 / 200 of 300: green, yellow, orange, red",
+        "wbgt": "hard bands at 31 / 33 over 25-35 °C: green, yellow, red",
+        "uv": "hard bands at 2 / 5 / 7 / 10 of 11: green, yellow, orange, red, purple",
+        "gap": "2px transparent between bands"
+      }
+    }
+  },
+  "components": [
+    {
+      "name": "Glass Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "The default themeable panel: frosted ink fill, hairline edge, card radius, flat at rest.",
+      "html": "<section class=\"ds-card\"><header class=\"ds-card-label\"><svg viewBox=\"0 0 24 24\" width=\"12\" height=\"12\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"12\" cy=\"12\" r=\"4\"/><path d=\"M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2\"/></svg>UV INDEX</header><div class=\"ds-card-value\">2</div><div class=\"ds-card-sub\">Low</div></section>",
+      "css": ".ds-card { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); display:flex; flex-direction:column; gap:12px; padding:16px; border-radius:var(--card-radius, 1rem); border:1px solid rgb(var(--ink, 255 255 255) / 0.15); background:rgb(var(--ink, 255 255 255) / 0.08); color:rgb(var(--ink, 255 255 255)); backdrop-filter: blur(24px); box-shadow: var(--card-shadow, none); width: 180px; } .ds-card-label { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; letter-spacing:0.14em; color:rgb(var(--ink, 255 255 255) / 0.6); } .ds-card-value { font-size:2.25rem; font-weight:300; line-height:1; font-variant-numeric: tabular-nums; } .ds-card-sub { font-size:0.875rem; color:rgb(var(--ink, 255 255 255) / 0.85); }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one solid button: confirms adding a location.",
+      "html": "<button class=\"ds-btn-primary\">Add</button>",
+      "css": ".ds-btn-primary { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); background: var(--button-bg, rgba(255,255,255,0.9)); color: var(--button-text, #0f172a); border:none; border-radius:6px; padding:6px 12px; font-size:0.75rem; font-weight:600; cursor:pointer; transition: background 150ms; } .ds-btn-primary:hover { background: var(--button-bg-hover, #fff); } .ds-btn-primary:focus-visible { outline:none; box-shadow: 0 0 0 2px rgb(var(--ink, 255 255 255) / 0.4); }"
+    },
+    {
+      "name": "Pill Button",
+      "kind": "button",
+      "refersTo": "button-pill",
+      "description": "Frosted pill for Refresh (desktop) and the theme picker.",
+      "html": "<button class=\"ds-btn-pill\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 12a9 9 0 1 1-3-6.7L21 8\"/><path d=\"M21 3v5h-5\"/></svg>Refresh</button>",
+      "css": ".ds-btn-pill { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); display:inline-flex; align-items:center; gap:6px; border-radius:9999px; border:1px solid rgb(var(--ink, 255 255 255) / 0.15); background:rgb(var(--ink, 255 255 255) / 0.08); color:rgb(var(--ink, 255 255 255) / 0.85); padding:6px 12px; font-size:0.75rem; font-weight:500; backdrop-filter: blur(24px); cursor:pointer; transition: background 150ms; } .ds-btn-pill:hover { background:rgb(var(--ink, 255 255 255) / 0.14); } .ds-btn-pill:focus-visible { outline:none; box-shadow: 0 0 0 2px rgb(var(--ink, 255 255 255) / 0.4); }"
+    },
+    {
+      "name": "Floating Refresh (phone)",
+      "kind": "button",
+      "refersTo": "button-refresh-mobile",
+      "description": "Opaque 48px pill fixed bottom-right on phones, within thumb reach.",
+      "html": "<button class=\"ds-btn-fab\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M21 12a9 9 0 1 1-3-6.7L21 8\"/><path d=\"M21 3v5h-5\"/></svg>Refresh</button>",
+      "css": ".ds-btn-fab { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); display:inline-flex; align-items:center; gap:8px; height:48px; padding:0 20px; border-radius:9999px; border:1px solid rgb(var(--ink, 255 255 255) / 0.15); background: var(--popover-bg, #2c3f54); color:rgb(var(--ink, 255 255 255) / 0.85); font-size:0.875rem; font-weight:500; box-shadow: 0 8px 24px rgba(0,0,0,0.28); cursor:pointer; } .ds-btn-fab:active { filter: brightness(1.15); } .ds-btn-fab:focus-visible { outline:none; box-shadow: 0 0 0 2px rgb(var(--ink, 255 255 255) / 0.4), 0 8px 24px rgba(0,0,0,0.28); }"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input-search",
+      "description": "Sidebar search with leading icon; filters saved locations.",
+      "html": "<label class=\"ds-search\"><svg viewBox=\"0 0 24 24\" width=\"16\" height=\"16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m20 20-3.5-3.5\"/></svg><input class=\"ds-search-input\" placeholder=\"Search\"></label>",
+      "css": ".ds-search { position:relative; display:block; width:260px; } .ds-search svg { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:rgb(var(--ink, 255 255 255) / 0.5); } .ds-search-input { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); width:100%; box-sizing:border-box; border-radius:8px; border:1px solid rgb(var(--ink, 255 255 255) / 0.1); background:rgb(var(--ink, 255 255 255) / 0.08); color:rgb(var(--ink, 255 255 255)); padding:8px 12px 8px 36px; font-size:0.875rem; } .ds-search-input::placeholder { color:rgb(var(--ink, 255 255 255) / 0.5); } .ds-search-input:focus-visible { outline:none; box-shadow: 0 0 0 2px rgb(var(--ink, 255 255 255) / 0.4); }"
+    },
+    {
+      "name": "Location Chip",
+      "kind": "chip",
+      "refersTo": "chip-location",
+      "description": "Phone location switcher chip; selected chip lifts and shows delete.",
+      "html": "<div class=\"ds-chips\"><div class=\"ds-chip is-selected\"><button class=\"ds-chip-main\"><span class=\"ds-chip-name\">Lim Chu Kang</span><span class=\"ds-chip-temp\">30°</span></button><button class=\"ds-chip-x\" aria-label=\"Delete\">×</button></div><div class=\"ds-chip\"><button class=\"ds-chip-main\"><span class=\"ds-chip-name\">Woodlands</span><span class=\"ds-chip-temp\">30°</span></button></div></div>",
+      "css": ".ds-chips { display:flex; gap:8px; } .ds-chip { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); display:flex; align-items:center; border-radius:var(--card-radius, 1rem); border:1px solid rgb(var(--ink, 255 255 255) / 0.1); background:rgb(var(--ink, 255 255 255) / 0.07); backdrop-filter: blur(24px); } .ds-chip.is-selected { border-color:rgb(var(--ink, 255 255 255) / 0.3); background:rgb(var(--ink, 255 255 255) / 0.2); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.2), 0 4px 6px -4px rgba(0,0,0,0.2); } .ds-chip-main { display:flex; align-items:center; gap:8px; min-height:44px; padding:8px 14px; background:none; border:none; color:rgb(var(--ink, 255 255 255)); cursor:pointer; font: inherit; } .ds-chip:not(.is-selected):active { background:rgb(var(--ink, 255 255 255) / 0.14); } .ds-chip-name { font-size:0.875rem; font-weight:600; } .ds-chip-temp { font-size:0.875rem; font-weight:300; font-variant-numeric: tabular-nums; color:rgb(var(--ink, 255 255 255) / 0.8); } .ds-chip-x { width:36px; height:36px; margin-right:4px; border:none; border-radius:9999px; background:none; color:rgb(var(--ink, 255 255 255) / 0.6); cursor:pointer; } .ds-chip-x:hover { background:rgb(var(--ink, 255 255 255) / 0.15); color:rgb(var(--ink, 255 255 255)); } .ds-chip-main:focus-visible, .ds-chip-x:focus-visible { outline:none; box-shadow: 0 0 0 2px rgb(var(--ink, 255 255 255) / 0.4); border-radius: inherit; }"
+    },
+    {
+      "name": "Hero Reading",
+      "kind": "custom",
+      "refersTo": "display",
+      "description": "The doorstep glance: place, giant hairline temperature, high/low, update time.",
+      "html": "<header class=\"ds-hero\"><h1 class=\"ds-hero-place\">Lim Chu Kang</h1><div class=\"ds-hero-temp\">30°</div><div class=\"ds-hero-hl\">H:33° L:24°</div><div class=\"ds-hero-updated\">Updated 6:04 PM</div></header>",
+      "css": ".ds-hero { font-family: var(--font-body, ui-sans-serif, system-ui, sans-serif); display:flex; flex-direction:column; align-items:center; text-align:center; color:rgb(var(--ink, 255 255 255)); padding:24px 0 8px; } .ds-hero-place { margin:0; font-size:2.25rem; font-weight:300; line-height:1.25; } .ds-hero-temp { margin-top:8px; font-size:6.5rem; line-height:1; letter-spacing:-0.025em; color: var(--temperature-color, #fff); font-weight: var(--temperature-weight, 200); } .ds-hero-hl { margin-top:4px; font-size:0.875rem; color:rgb(var(--ink, 255 255 255) / 0.7); font-variant-numeric: tabular-nums; } .ds-hero-updated { margin-top:12px; font-size:0.75rem; color:rgb(var(--ink, 255 255 255) / 0.55); }"
+    },
+    {
+      "name": "Data Gauge",
+      "kind": "custom",
+      "refersTo": "gauge",
+      "description": "6px data-scale bar with an ink marker; empty value shows no marker.",
+      "html": "<div class=\"ds-gauge\"><div class=\"ds-gauge-bar\"></div><div class=\"ds-gauge-dot\" style=\"left:18%\"></div></div>",
+      "css": ".ds-gauge { position:relative; width:200px; height:6px; } .ds-gauge-bar { height:6px; border-radius:9999px; opacity:0.8; background: linear-gradient(to right, #34d399, #fde047, #fb923c, #ef4444); } .ds-gauge-dot { position:absolute; top:50%; width:12px; height:12px; transform:translate(-50%,-50%); border-radius:9999px; border:2px solid rgb(var(--ink, 255 255 255)); background:rgb(var(--ink, 255 255 255)); box-shadow: 0 1px 3px rgba(0,0,0,0.4); }"
+    },
+    {
+      "name": "Heat-Stress Flags",
+      "kind": "chip",
+      "refersTo": "flag-low",
+      "description": "Singapore Sky NEA heat-stress pills; the scoped exception to the One Ink Rule. Hero shows only Moderate and High.",
+      "html": "<span class=\"ds-flag ds-flag-low\">Low</span> <span class=\"ds-flag ds-flag-moderate\">Moderate</span> <span class=\"ds-flag ds-flag-high\">High</span>",
+      "css": ".ds-flag { display:inline-block; border-radius:9999px; border:1px solid transparent; padding:0 0.5rem; font-size:0.875rem; font-weight:600; font-family: ui-sans-serif, system-ui, sans-serif; } .ds-flag-low { background:#3ecf7a; color:#06210f; } .ds-flag-moderate { background:#ffc93d; color:#2b1a00; } .ds-flag-high { background:#d62e1f; border-color:rgba(255,255,255,0.55); color:#fff; font-weight:700; }"
+    },
+    {
+      "name": "Banded Gauge (Singapore)",
+      "kind": "custom",
+      "refersTo": "gauge",
+      "description": "The WBGT gauge in Singapore Sky: hard NEA bands at 31 / 33 °C over 25-35 °C, marker on its band.",
+      "html": "<div class=\"ds-bgauge\"><div class=\"ds-bgauge-bar\"></div><div class=\"ds-bgauge-dot\" style=\"left:70%\"></div></div>",
+      "css": ".ds-bgauge { position:relative; width:200px; height:6px; } .ds-bgauge-bar { height:6px; border-radius:9999px; opacity:0.8; background: linear-gradient(to right, #3ecf7a 0 calc(60% - 1px), transparent 0 calc(60% + 1px), #ffc93d 0 calc(80% - 1px), transparent 0 calc(80% + 1px), #d62e1f 0); } .ds-bgauge-dot { position:absolute; top:50%; width:12px; height:12px; transform:translate(-50%,-50%); border-radius:9999px; border:2px solid #fff; background:#fff; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Doorstep Glance",
+    "overview": "**Creative North Star: \"The Doorstep Glance\"**\n\nEvery screen is designed for the moment just before someone steps outside. They have a few seconds and one hand free. The page answers with one large reading: the place name, a very large hairline-weight temperature, and the day's high and low with the time of the last update. Everything below it is quieter and lighter, and holds back until the user wants more detail. Hierarchy comes from size and how strong the ink is. Colour carries very little of it.\n\nThe default Apple theme puts frosted, translucent panels over a gradient of the day's sky, slate blue going darker towards the bottom. One ink colour (white in Apple) does all the work. Text, borders, fills and dividers are that same ink at different opacities, so the panels look like part of the sky rather than objects placed on top of it. Components are quiet but tactile. At rest they are faint frosted panels with hairline edges. When pressed or selected they clearly brighten and lift, and on touch screens every control is big enough for a thumb.\n\nThe visual identity sits in a swappable set of CSS variables, while the layout stays fixed. Five alternative themes (Apple Glass, Midnight Radar, Pastel Sticker, Neo-Memphis, Singapore Sky), six themes in all, replace the materials completely and keep the same structure and hierarchy. Apple is the reference theme. It changes only in deliberate theming work.\n\nSingapore Sky is the only theme that reads data. Its ground is not a fixed palette but the selected place's sky, repainted from that location's stored snapshot so the page answers \"can I go out?\" before any number is read. Four dark Singapore skies, chosen in strict precedence storm > haze > heat > calm: a bruised-violet 3 pm storm under a lumpy cloud base with slanted rain sheets (thunder in the current condition, or in the forecast period covering now); a smoky sepia haze with a smoke veil and a dull sun disc (24-hour PSI above 100); a scorched rust heat burning up from the bottom edge (NEA High heat stress from a WBGT station within 10 km); and a blue-grey calm with cumulus heads, which is also the answer whenever a reading is missing, so the sky never guesses. White ink, NEA flag colours on the heat-stress pills and banded gauges, and the system font stack: its character comes from the sky and the flags.",
+    "keyCharacteristics": [
+      "One huge, hairline-weight current temperature (6.5rem, weight 200) is the single focal point.",
+      "One ink colour, used at different opacities, makes every text colour, border and fill.",
+      "Translucent frosted panels with a 1rem radius and a hairline edge, with no shadow at rest.",
+      "Small, wide-tracked uppercase labels name each panel. The data, not the labels, does the talking.",
+      "Colour is reserved for data scales (UV, air quality, heat stress, temperature range) and map markers.",
+      "Phone first: the whole page scrolls on phones, controls are 44px or larger, and Refresh sits within thumb reach.",
+      "In Singapore Sky the ground itself is a reading: one of four sky states, crossfaded through registered colour tokens, with a single one-shot lightning flicker as its only authored motion."
+    ],
+    "rules": [
+      {
+        "name": "The One Ink Rule",
+        "body": "Every foreground colour is the theme's ink at some opacity. Never hard-code white, grey or slate for text or borders. Map overlay buttons take their colours from the theme's `--map-control-*` tokens.",
+        "section": "colors"
+      },
+      {
+        "name": "The Colour Means Data Rule",
+        "body": "Saturated hues encode a measurement (UV, PSI, heat stress, temperature range) or a map marker. They are never used for decoration, branding or emphasis.",
+        "section": "colors"
+      },
+      {
+        "name": "The Flag Text Exception",
+        "body": "NEA flag pills in Singapore Sky are the one scoped exception to the One Ink Rule. White ink cannot be read on green or yellow, so the Low flag uses fixed dark text (`flag-text-green`) and the Moderate flag fixed dark text (`flag-text-yellow`). The High flag keeps white on `flag-red`, with a light 1px border (white at 55%) because red on the dark sky is under 3:1 as an edge. The exception covers only these pills. It is consistent with the Colour Means Data Rule, since in this theme the flags and the sky itself carry data.",
+        "section": "colors"
+      },
+      {
+        "name": "The Sky Is Data Rule",
+        "body": "In Singapore Sky the ground is a measurement. It changes only through `skyState()` (storm > haze > heat > calm, calm when data is missing), never for decoration, time of day or mood. A new sky state needs a data trigger and a place in that precedence.",
+        "section": "colors"
+      },
+      {
+        "name": "The Lightest-Point Contrast Rule",
+        "body": "Every Singapore sky state is budgeted so that 85% ink clears 4.5:1 on a selected (20%) card at the sky's lightest point, with each material's effective alpha included. Rain is masked out of the hero reading. The worst case is haze at 4.58:1, so any brighter material or lighter stop must be rechecked against this budget.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Numbers Rule",
+        "body": "Every temperature, time, high/low and measurement uses `tabular-nums`, so values don't shift sideways when they update.",
+        "section": "typography"
+      },
+      {
+        "name": "The One Giant Rule",
+        "body": "Only the hero temperature is set at display size. Other numbers stay at title size or smaller, so the main reading is never in doubt.",
+        "section": "typography"
+      },
+      {
+        "name": "The Fixed Order Rule",
+        "body": "The order of the content is the same on every theme and every screen size. Phones change how things are shown (chips instead of cards, a floating Refresh), never what comes first.",
+        "section": "layout"
+      },
+      {
+        "name": "The Flat-At-Rest Rule",
+        "body": "In Apple, panels have no shadow at rest (`--card-shadow: none`). A shadow is a sign of state or of floating, never decoration.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Opaque Pop-up Rule",
+        "body": "Anything that floats over content (pop-ups, the floating Refresh) uses an opaque surface (`--popover-bg`), because translucent fills let the content underneath show through.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Quiet Low Rule",
+        "body": "In the hero's one-line summary only Moderate and High heat get a flag pill. Low stays plain text so it never outshouts a storm. The WBGT tile shows all three bands as flags.",
+        "section": "components"
+      }
+    ],
+    "dos": [
+      "Do derive every foreground colour from the ink token (`text-white/…`, `border-white/…`, `bg-white/…`), which follows the theme.",
+      "Do mark every themeable panel with `rounded-card`, so all six themes can restyle it.",
+      "Do keep touch targets at 44px or larger on phones, and keep Refresh and location switching within thumb reach.",
+      "Do show every reading with its update time and source, and use \"--\" for missing values.",
+      "Do use `tabular-nums` for every number that can change.",
+      "Do use the opaque pop-up surface (`--popover-bg`) for anything that floats over content.",
+      "Do give every gauge a `scale` and let the theme's `--scale-*` token fill it; in Singapore Sky, band it at the NEA cut-offs.",
+      "Do change a Singapore sky material by changing its colour token, so it crossfades; keep every material in the stack at all times.",
+      "Do recheck the lightest-point budget (85% ink at 4.5:1 on a 20% card, effective alphas included) whenever a sky stop or material gets brighter."
+    ],
+    "donts": [
+      "Don't change how the Apple theme looks as a side effect of other work. It changes only in deliberate theming work that follows Apple's current design language.",
+      "Don't use saturated colour for decoration or emphasis. It is reserved for data scales and map markers.",
+      "Don't put a second display-size number on the screen, or make the hero temperature heavier in Apple.",
+      "Don't add shadows to panels at rest in Apple.",
+      "Don't hard-code white, grey or slate text. Map overlay buttons use the `map-control` tokens.",
+      "Don't use translucent `bg-white/…` fills for pop-ups or floating controls.",
+      "Don't extend the flag-text exception beyond the NEA flag pills; everything else in Singapore Sky is ink.",
+      "Don't flag Low heat in the hero summary, or let rain cross the hero reading.",
+      "Don't add a second authored motion to Singapore Sky, or loop the lightning."
+    ]
+  }
+}

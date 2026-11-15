@@ -3,6 +3,7 @@ import { useId, useMemo, useState, type ReactNode } from 'react';
 import type { Location, WeatherSnapshot } from '../types';
 import { feelsLike, missingInputsText } from './feelsLike';
 import { heatStressView, type HeatStressTone } from './heatStress';
+import { heatReconcileLine } from './heatComfort';
 import { useNow } from './map/useNow';
 import { psiBand } from './outdoorSummary';
 import { formatSgtTime, singaporeDate, sunTimes } from './sunTimes';
@@ -44,10 +45,6 @@ export function TileShell({ icon, title, level = 3, className = '', children }: 
 
 function formatNumber(value: number | null | undefined, digits = 0): string {
   return isFiniteNumber(value) ? value.toFixed(digits) : '--';
-}
-
-function formatTemperature(value: number | null | undefined): number | string {
-  return isFiniteNumber(value) ? Math.round(value) : '--';
 }
 
 function knotsToKmh(value: number | null | undefined): number | null {
@@ -112,11 +109,7 @@ export function AirQualityTile({ weather, asOf }: WeatherProps) {
       <div className="mt-1 text-base text-white/85">
         {psiBand(weather?.psi_twenty_four_hourly) ?? 'Unavailable'}
       </div>
-      <ScaleBar
-        value={weather?.psi_twenty_four_hourly}
-        max={300}
-        scale="psi"
-      />
+      <ScaleBar value={weather?.psi_twenty_four_hourly} max={300} scale="psi" />
       <p className="mt-3 text-xs leading-snug text-ink-muted">
         PM2.5 {pm25} µg/m³ · {weather?.air_quality_region ?? 'nearest'} region
         {asOf && ` · reading from ${asOf}`}
@@ -140,7 +133,8 @@ export function AirQualityTile({ weather, asOf }: WeatherProps) {
                   <span className="text-xs text-ink-muted">{label}</span>
                   {isFiniteNumber(value) ? (
                     <span className="tabular-nums text-white/90">
-                      {pollutantFormat.format(value)} <span className="text-xs text-ink-muted">{unit}</span>
+                      {pollutantFormat.format(value)}{' '}
+                      <span className="text-xs text-ink-muted">{unit}</span>
                     </span>
                   ) : (
                     <span className="text-ink-muted">No reading</span>
@@ -217,7 +211,9 @@ function Compass({ speed, direction }: CompassProps) {
         />
       )}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-base font-light leading-none tabular-nums text-white/90">{speed}</span>
+        <span className="text-base font-light leading-none tabular-nums text-white/90">
+          {speed}
+        </span>
         <span className="text-[11px] text-ink-muted">km/h</span>
       </div>
     </div>
@@ -240,11 +236,7 @@ export function UVTile({ weather, asOf }: WeatherProps) {
         {formatNumber(weather?.uv_index)}
       </div>
       <div className="mt-1 text-base text-white/85">{uvLabel(weather?.uv_index)}</div>
-      <ScaleBar
-        value={weather?.uv_index}
-        max={11}
-        scale="uv"
-      />
+      <ScaleBar value={weather?.uv_index} max={11} scale="uv" />
       <p className="mt-3 text-xs leading-snug text-ink-muted">
         {asOf ? `Nationwide UVI reading from ${asOf}.` : 'Latest nationwide UVI reading.'}
       </p>
@@ -275,7 +267,9 @@ export function HumidityTile({ weather, asOf }: WeatherProps) {
         {formatNumber(weather?.humidity_percent)}%
       </div>
       <p className="mt-3 text-xs leading-snug text-ink-muted">
-        {asOf ? `Nearest humidity station, reading from ${asOf}.` : 'Nearest realtime humidity station.'}
+        {asOf
+          ? `Nearest humidity station, reading from ${asOf}.`
+          : 'Nearest realtime humidity station.'}
       </p>
     </TileShell>
   );
@@ -332,26 +326,13 @@ function ReadingColumn({ label, children }: ReadingColumnProps) {
   );
 }
 
-function AirTemperatureReading({ weather, asOf }: WeatherProps) {
-  return (
-    <>
-      <div className="text-4xl font-light leading-none tabular-nums text-white/95">
-        {formatTemperature(weather.temperature_c)}&deg;
-      </div>
-      <p className="mt-3 text-xs leading-snug text-ink-muted">
-        {asOf ? `Nearest station, reading from ${asOf}.` : 'Nearest realtime station.'}
-      </p>
-    </>
-  );
-}
-
-function FeelsLikeReading({ weather }: WeatherProps) {
+function FeelsLikeReading({ weather, asOf }: WeatherProps) {
   const result = feelsLike(weather);
   if (result.kind === 'no-reading') {
     return (
       <>
-        <div className="text-2xl font-light leading-tight text-white/85">No reading</div>
-        <p className="mt-3 text-xs leading-snug text-ink-muted">
+        <div className="text-xl font-light leading-tight text-white/85">No reading</div>
+        <p className="mt-2 text-xs leading-snug text-ink-muted">
           {missingInputsText(result.missing)}.
         </p>
       </>
@@ -359,36 +340,47 @@ function FeelsLikeReading({ weather }: WeatherProps) {
   }
   return (
     <>
-      <div className="flex items-baseline gap-2">
-        <span className="text-4xl font-light leading-none tabular-nums text-white/95">
+      {/* Supporting detail: smaller than heat stress, which is the verdict. */}
+      <div className="flex flex-wrap items-baseline gap-x-2">
+        <span className="text-2xl font-light leading-none tabular-nums text-white/90">
           {result.value.toFixed(1)}&deg;
         </span>
-        {result.approx && (
-          <span className="text-xs text-ink-muted" title="No wind reading; calculated for still air">
-            approx.
-          </span>
-        )}
+        <span className="text-sm text-white/85">{result.band.label}</span>
       </div>
-      <div className="mt-1 text-base text-white/85">{result.band.label}</div>
-      <p className="mt-3 text-xs leading-snug text-ink-muted">
-        {result.band.advice}
-        {result.umbrella && <span className="text-white/90"> Carry an umbrella.</span>}
-      </p>
+      {result.approx && (
+        <p className="mt-1 text-xs text-ink-muted">
+          Approximate: no wind reading, so still air is assumed.
+        </p>
+      )}
+      {asOf ? (
+        // Clothing advice is for now; an old reading only says what it was.
+        <p className="mt-2 text-xs leading-snug text-ink-muted">Reading from {asOf}.</p>
+      ) : (
+        <p className="mt-2 text-xs leading-snug text-ink-muted">
+          {result.band.advice}
+          {result.umbrella && <span className="text-white/90"> Carry an umbrella.</span>}
+        </p>
+      )}
     </>
   );
 }
 
-function HeatStressReading({ weather }: WeatherProps) {
+function HeatStressReading({ weather, asOf }: WeatherProps) {
   const view = heatStressView(weather);
   if (view.kind === 'no-reading') {
-    return <div className="text-2xl font-light leading-tight text-white/85">No reading</div>;
+    return (
+      <>
+        <div className="text-2xl font-light leading-tight text-white/85">No reading</div>
+        <p className="mt-3 text-xs leading-snug text-ink-muted">
+          No heat-stress reading came with this snapshot. Refresh to try again.
+        </p>
+      </>
+    );
   }
   if (view.kind === 'no-nearby-station') {
     return (
       <>
-        <div className="text-2xl font-light leading-tight text-white/85" title={view.tooltip}>
-          No nearby station
-        </div>
+        <div className="text-2xl font-light leading-tight text-white/85">No nearby station</div>
         <p className="mt-3 text-xs leading-snug text-ink-muted">{view.tooltip}.</p>
       </>
     );
@@ -407,41 +399,50 @@ function HeatStressReading({ weather }: WeatherProps) {
           </span>
         )}
       </div>
-      <ScaleBar
-        value={(weather.wbgt_c as number) - 25}
-        max={10}
-        scale="wbgt"
-      />
-      {view.guidance && <p className="mt-3 text-xs leading-snug text-ink-muted">{view.guidance}</p>}
+      <ScaleBar value={(weather.wbgt_c as number) - 25} max={10} scale="wbgt" />
+      {/* NEA's guidance is for now; a stale reading keeps its level but not its instructions. */}
+      {view.guidance && !asOf && (
+        <p className="mt-3 text-xs leading-snug text-ink-muted">{view.guidance}</p>
+      )}
       <p className="mt-3 flex flex-wrap gap-x-1 text-[11px] leading-snug text-ink-muted">
         <span>WBGT at {view.stationName ?? 'nearest station'}</span>
         <span>· {view.distanceKm} km</span>
-        {view.observedAt && <span>· {view.observedAt}</span>}
+        {asOf ? (
+          <span>· reading from {asOf}</span>
+        ) : (
+          view.observedAt && <span>· {view.observedAt}</span>
+        )}
       </p>
     </>
   );
 }
 
 /**
- * Air temperature, how it feels and NEA heat stress read together, because in Singapore
- * the question is rarely "how hot" but "how hard is it to be out in".
+ * NEA heat stress and how it feels, read together, because in Singapore the question is rarely
+ * "how hot" but "how hard is it to be out in". Heat stress (WBGT) leads: it is NEA's measure for
+ * outdoor activity. Air temperature is the hero's number, so it isn't repeated here.
  */
 export function HeatComfortPanel({
   weather,
   asOf,
   className = '',
 }: WeatherProps & { className?: string }) {
+  const feels = feelsLike(weather);
+  const heat = heatStressView(weather);
+  const reconcile =
+    feels.kind === 'value' && heat.kind === 'reading'
+      ? heatReconcileLine(feels.band.id, feels.band.label, heat.tone, heat.level, Boolean(asOf))
+      : null;
+
   return (
     <TileShell icon={<ThermometerIcon />} title="Heat & Comfort" className={className}>
-      <div className="grid grid-cols-1 divide-y divide-white/10 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-        <ReadingColumn label="Air temperature">
-          <AirTemperatureReading weather={weather} asOf={asOf} />
+      {reconcile && <p className="mb-3 text-sm leading-snug text-white/90">{reconcile}</p>}
+      <div className="grid grid-cols-1 divide-y divide-white/10 sm:grid-cols-[3fr_2fr] sm:divide-x sm:divide-y-0">
+        <ReadingColumn label="Heat stress (WBGT)">
+          <HeatStressReading weather={weather} asOf={asOf} />
         </ReadingColumn>
         <ReadingColumn label="Feels like">
-          <FeelsLikeReading weather={weather} />
-        </ReadingColumn>
-        <ReadingColumn label="Heat stress (WBGT)">
-          <HeatStressReading weather={weather} />
+          <FeelsLikeReading weather={weather} asOf={asOf} />
         </ReadingColumn>
       </div>
     </TileShell>

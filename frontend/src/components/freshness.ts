@@ -31,6 +31,19 @@ function calendarDaysBetween(earlier: Date, later: Date): number {
   return Math.round((b - a) / DAY_MS);
 }
 
+/**
+ * Saved places whose reading is stale or missing, in list order: what "Refresh all" renews.
+ * Fresh places are left alone, so a bulk run never re-fetches a reading that still answers "now".
+ */
+export function staleLocationIds(
+  locations: { id: number; weather?: { observed_at?: string | null } | null }[],
+  now: number,
+): number[] {
+  return locations
+    .filter((location) => readingFreshness(location.weather?.observed_at, now).kind !== 'fresh')
+    .map((location) => location.id);
+}
+
 /** Describes how old a stored reading is, so old snapshots never pass for current ones. */
 export function readingFreshness(iso: string | null | undefined, now: number): Freshness {
   if (!iso) return { kind: 'none' };

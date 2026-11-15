@@ -26,7 +26,7 @@ export function DeleteToast() {
     // Always mounted so screen readers pick up the message when it appears.
     <div
       aria-live={failed ? 'assertive' : 'polite'}
-      className="pointer-events-none fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+5rem)] z-50 flex justify-center md:bottom-6"
+      className="pointer-events-none fixed inset-x-4 bottom-[calc(var(--dock-height,4.25rem)+0.75rem)] z-50 flex justify-center md:bottom-6"
     >
       {pendingDelete && (
         <div

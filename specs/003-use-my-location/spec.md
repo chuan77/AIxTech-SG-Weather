@@ -63,17 +63,18 @@ A user who presses the button again from the same place does not get a second, n
 
 ### User Story 4 - Know the feature's browser support (Priority: P3)
 
-A user on Firefox or Safari sees a small, unobtrusive note beside the button saying the feature is not supported on those browsers. They are still free to try it, and manual entry is always available.
+A user on Firefox or Safari who presses the button and gets a failure learns, in that failure message, that the feature has only been tested in Chrome. Nothing warns them before they try, because the feature may well work there (iPhone Safari is the most common phone browser in Singapore), and manual entry is always available.
 
-**Why this priority**: Behaviour on those browsers was not verified, and the note sets expectations at low cost. It does not block the main flow.
+**Why this priority**: Behaviour on those browsers was not verified. A hint attached to a real failure sets expectations without telling users a working button is broken. It does not block the main flow.
 
-**Independent Test**: Open the add-location area in Firefox or Safari and confirm the note is visible; open it in Chrome and confirm it is not.
+**Independent Test**: In Firefox or Safari (or with the user agent overridden), confirm no note shows before pressing; make the position unavailable or time out and confirm the failure message ends with the Chrome-only hint. In Chrome, confirm the same failure has no hint.
 
 **Acceptance Scenarios**:
 
-1. **Given** the user is on Firefox or Safari, **When** the add-location area is shown, **Then** a small note states that "Use my location" is not supported on their browser.
-2. **Given** the user is on a supported browser, **When** the add-location area is shown, **Then** no such note appears.
-3. **Given** the note is shown, **When** the user presses the button anyway, **Then** the attempt proceeds as in User Story 1, with its normal success or failure messages.
+1. **Given** the user is on any browser, **When** the add-location area is shown, **Then** no browser-support note appears.
+2. **Given** the user is on Firefox or Safari, **When** finding the position fails as unavailable or timed out, **Then** the failure message adds that "Use my location" has only been tested in Chrome.
+3. **Given** the user is on Firefox or Safari, **When** the user denies permission, **Then** the denied message appears without the hint, since the cause is the user's choice, not the browser.
+4. **Given** the user is on Firefox or Safari, **When** the attempt succeeds, **Then** it proceeds as in User Story 1 with no hint.
 
 ---
 
@@ -100,7 +101,7 @@ A user on Firefox or Safari sees a small, unobtrusive note beside the button say
 - **FR-007**: Before adding, the system MUST compare the detected position with saved locations. If any saved location is within about 100 metres, it MUST NOT add a new one, MUST select the closest such location, and MUST show a brief message that the location is already saved.
 - **FR-008**: The feature MUST work when the app is served over plain HTTP from localhost (including the project's development address), without requiring HTTPS.
 - **FR-009**: The system MUST NOT write the user's precise coordinates to application logs or interaction logs for locations created through this control. It MAY log that the action occurred, its outcome category (success, already saved, or the failure type), and the resulting forecast area name, or a rounded position that cannot identify a specific building.
-- **FR-010**: On Firefox and Safari, the add-location area MUST show a small, unobtrusive note that the feature is not supported on those browsers. The note MUST NOT appear on other browsers and MUST NOT block use of the control.
+- **FR-010**: On Firefox and Safari, a failed attempt (position unavailable or timed out) MUST add to its failure message that the feature has only been tested in Chrome. No browser note MUST appear before an attempt, after a success, after a denial, or on other browsers, and nothing MUST block use of the control. *(Amended 2026-11-15: the original rule showed an "isn't supported" note up front, which told every iPhone Safari user a working button was broken; phones are a first-class context in PRODUCT.md.)*
 - **FR-011**: Failure and "already saved" messages MUST be dismissible or clear themselves on the next action, and MUST NOT prevent manual entry or another attempt.
 - **FR-012**: The feature MUST NOT track the user continuously, refresh automatically as the user moves, or request position at page load.
 - **FR-013**: The control, its messages and the browser note MUST follow the app's existing theming so they are legible in every theme.
@@ -124,7 +125,7 @@ A user on Firefox or Safari sees a small, unobtrusive note beside the button say
 
 ## Assumptions
 
-- The primary user is the app's owner or a developer using the app locally, on a desktop browser; Chrome is the verified browser. Behaviour on Firefox and Safari is unverified and unsupported for this version.
+- The primary user is the app's owner or a developer using the app locally, on a desktop browser; Chrome is the verified browser. Behaviour on Firefox and Safari is unverified for this version; it is mentioned only when an attempt there fails (FR-010).
 - Desktop position accuracy can be coarse (IP- or Wi-Fi-based) and may select a neighbouring forecast area; this is accepted. A real position request on the owner's machine is still to be run to see typical accuracy.
 - The saved entry is the user's reported position, not a snapped forecast-area point; the forecast area is shown as a label, as it is for typed coordinates today.
 - The "about 100 m" duplicate threshold is a starting default; the exact value and message wording may be tuned in planning.

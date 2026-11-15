@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { WeatherSnapshot } from '../types';
-import { outdoorSummary, psiBand, shortenPeriodLabel } from './outdoorSummary';
+import { outdoorSummary, psiBand, shortenPeriodLabel, uvBand } from './outdoorSummary';
 
 function snapshot(overrides: Partial<WeatherSnapshot> = {}): WeatherSnapshot {
   return {
@@ -71,5 +71,20 @@ describe('psiBand', () => {
 describe('shortenPeriodLabel', () => {
   it('keeps the start and drops the year', () => {
     expect(shortenPeriodLabel('6 pm 14 Nov 2026 to 12 am 15 Nov 2026')).toBe('6 pm 14 Nov');
+  });
+});
+
+describe('uvBand', () => {
+  it('names High and up, and stays quiet below 6', () => {
+    expect(uvBand(null)).toBeNull();
+    expect(uvBand(5.9)).toBeNull();
+    expect(uvBand(6)).toBe('High');
+    expect(uvBand(8)).toBe('Very high');
+    expect(uvBand(11)).toBe('Extreme');
+  });
+
+  it('joins the summary only when High or above', () => {
+    expect(outdoorSummary(snapshot({ uv_index: 3 }))).toBeNull();
+    expect(outdoorSummary(snapshot({ uv_index: 9 }))).toBe('UV very high');
   });
 });

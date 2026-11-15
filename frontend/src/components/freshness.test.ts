@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readingFreshness } from './freshness';
+import { readingFreshness, staleLocationIds } from './freshness';
 
 // 14 Nov 2026, 19:50 SGT
 const NOW = Date.parse('2026-11-14T19:50:00+08:00');
@@ -49,5 +49,24 @@ describe('readingFreshness', () => {
       kind: 'fresh',
       when: 'Yesterday 23:50',
     });
+  });
+});
+
+describe('staleLocationIds', () => {
+  const at = (iso: string | null) => ({ observed_at: iso });
+
+  it('picks stale and never-refreshed places, in list order, and skips fresh ones', () => {
+    const locations = [
+      { id: 1, weather: at('2026-11-14T19:00:00+08:00') }, // 50 min old: fresh
+      { id: 2, weather: at('2026-11-13T21:27:00+08:00') }, // yesterday: stale
+      { id: 3, weather: at(null) }, // never refreshed
+      { id: 4, weather: null },
+      { id: 5, weather: at('2026-11-14T16:50:00+08:00') }, // exactly 3 h: stale
+    ];
+    expect(staleLocationIds(locations, NOW)).toEqual([2, 3, 4, 5]);
+  });
+
+  it('is empty when every reading is current', () => {
+    expect(staleLocationIds([{ id: 1, weather: at('2026-11-14T19:45:00+08:00') }], NOW)).toEqual([]);
   });
 });

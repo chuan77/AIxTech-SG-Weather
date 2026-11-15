@@ -57,6 +57,10 @@ export interface CreateLocationPayload {
   longitude: number;
 }
 
+export interface CreateLocationOptions {
+  source?: 'geolocation';
+}
+
 export interface LightningStrike {
   id: string;
   latitude: number;
@@ -97,6 +101,20 @@ export interface PendingDelete {
   message?: string;
 }
 
+/** A failed refresh in a bulk run, named so the result can say which places missed out. */
+export interface BulkRefreshFailure extends LocationError {
+  name: string;
+}
+
+/** One "Refresh all" run: refreshes out-of-date places one at a time, stoppable between places. */
+export interface BulkRefresh {
+  status: 'running' | 'done' | 'stopped';
+  total: number;
+  /** Places attempted so far, successes and failures alike. */
+  done: number;
+  failed: BulkRefreshFailure[];
+}
+
 export interface StoreValue {
   locations: Location[];
   selectedId: number | null;
@@ -111,7 +129,8 @@ export interface StoreValue {
   pendingDelete: PendingDelete | null;
   select: (id: number | null) => void;
   setAdding: (isAdding: boolean) => void;
-  create: (payload: CreateLocationPayload) => Promise<void>;
+  /** `source: 'geolocation'` keeps the position out of interaction logs (specs/003 FR-009). */
+  create: (payload: CreateLocationPayload, options?: CreateLocationOptions) => Promise<void>;
   /** Hides the location at once and deletes it on the server after the undo window. */
   remove: (id: number) => void;
   undoDelete: () => void;
@@ -119,6 +138,13 @@ export interface StoreValue {
   /** Pauses the undo window while the viewer is reading or focused on the toast. */
   holdDelete: (held: boolean) => void;
   refresh: (id: number) => Promise<void>;
+  /** The current or last "Refresh all" run; null when there is nothing to show. */
+  bulkRefresh: BulkRefresh | null;
+  /** Refreshes each id in turn. Ignored while another bulk run is going. */
+  refreshAll: (ids: number[]) => Promise<void>;
+  /** Stops a bulk run after the place being refreshed now. */
+  stopRefreshAll: () => void;
+  clearBulkRefresh: () => void;
   reload: () => Promise<void>;
   lightning: LightningState;
 }

@@ -1,4 +1,5 @@
 import type { LightningObservation, LightningStatus, LightningStrike } from '../../types';
+import { distanceKm } from '../nearbySaved';
 
 export const LIGHTNING_FRESH_MS = 120_000;
 export const LIGHTNING_WINDOW_MS = 3_600_000;
@@ -97,4 +98,29 @@ export function parseEnabled(raw: string | null): boolean {
 
 export function serialiseEnabled(enabled: boolean): string {
   return enabled ? 'true' : 'false';
+}
+
+/** Within this distance a strike counts as "near" a place: the usual lightning-safety radius. */
+export const LIGHTNING_NEAR_KM = 10;
+
+/**
+ * The closest strike of the last hour within {@link LIGHTNING_NEAR_KM} of a place, or null. A stale
+ * observation (the provider fell behind) says nothing, and strikes past an hour old have dropped
+ * out, so an old check never reads as lightning now.
+ */
+export function nearestStrike(
+  observation: LightningObservation | null,
+  latitude: number,
+  longitude: number,
+  now: number,
+): { km: number; occurredAt: string } | null {
+  if (!observation || observation.stale) return null;
+  let best: { km: number; occurredAt: string } | null = null;
+  for (const strike of visibleStrikes(observation.strikes, now)) {
+    const km = distanceKm(latitude, longitude, strike.latitude, strike.longitude);
+    if (km <= LIGHTNING_NEAR_KM && (!best || km < best.km)) {
+      best = { km, occurredAt: strike.occurred_at };
+    }
+  }
+  return best;
 }

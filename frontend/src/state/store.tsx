@@ -15,6 +15,9 @@ import {
   serialiseEnabled,
 } from '../components/map/lightningHelpers';
 import type {
+  BulkRefresh,
+  BulkRefreshFailure,
+  CreateLocationOptions,
   CreateLocationPayload,
   LightningObservation,
   LightningStatus,
@@ -70,9 +73,20 @@ export function StoreProvider({ children }: ProviderProps) {
   const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [lightningEnabled, setLightningEnabled] = useState(readLightningEnabled);
   const [lightningStatus, setLightningStatus] = useState<LightningStatus>('idle');
-  const [lightningObservation, setLightningObservation] = useState<LightningObservation | null>(null);
+  const [lightningObservation, setLightningObservation] = useState<LightningObservation | null>(
+    null,
+  );
   const lightningObservationRef = useRef<LightningObservation | null>(null);
   const lightningInFlightRef = useRef(false);
+  const [bulkRefresh, setBulkRefresh] = useState<BulkRefresh | null>(null);
+  const bulkRunningRef = useRef(false);
+  const bulkStopRef = useRef(false);
+  // The bulk loop outlives many renders; it reads names and deletions from here, not a stale closure.
+  const locationsRef = useRef<Location[]>([]);
+
+  useEffect(() => {
+    locationsRef.current = locations;
+  }, [locations]);
 
   const load = useCallback(async (): Promise<Location[]> => {
     try {
@@ -109,27 +123,44 @@ export function StoreProvider({ children }: ProviderProps) {
   })();
 
   const create = useCallback(
-    async (payload: CreateLocationPayload) => {
+    async (payload: CreateLocationPayload, options?: CreateLocationOptions) => {
+      // A position from the browser is the user's whereabouts: its logs carry the source and
+      // the resulting area, never the coordinates (specs/003-use-my-location FR-009).
+      const fromGeolocation = options?.source === 'geolocation';
       setError(null);
-      logInteraction('location_create_submitted', payload);
+      logInteraction(
+        'location_create_submitted',
+        fromGeolocation ? { source: 'geolocation' } : payload,
+      );
       try {
         const created = await createLocation(payload);
         const next = await load();
         const targetId = created?.id ?? next[next.length - 1]?.id;
         if (targetId) setSelectedId(targetId);
         setIsAdding(false);
-        logInteraction('location_created', {
-          locationId: targetId,
-          latitude: created.latitude,
-          longitude: created.longitude,
-        });
+        logInteraction(
+          'location_created',
+          fromGeolocation
+            ? {
+                source: 'geolocation',
+                locationId: targetId,
+                area: next.find((l) => l.id === targetId)?.weather?.area ?? null,
+              }
+            : {
+                locationId: targetId,
+                latitude: created.latitude,
+                longitude: created.longitude,
+              },
+        );
       } catch (err) {
         setError(err);
-        logInteraction('location_create_failed', {
-          latitude: payload.latitude,
-          longitude: payload.longitude,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        });
+        const error = err instanceof Error ? err.message : 'Unknown error';
+        logInteraction(
+          'location_create_failed',
+          fromGeolocation
+            ? { source: 'geolocation', error }
+            : { latitude: payload.latitude, longitude: payload.longitude, error },
+        );
         throw err;
       }
     },
@@ -138,6 +169,8 @@ export function StoreProvider({ children }: ProviderProps) {
 
   const refresh = useCallback(
     async (id: number) => {
+      // A bulk run owns the refresh slot; it reaches this place in its turn.
+      if (bulkRunningRef.current) return;
       setRefreshingId(id);
       setError(null);
       setRefreshError(null);
@@ -159,6 +192,64 @@ export function StoreProvider({ children }: ProviderProps) {
     },
     [load],
   );
+
+  // "Refresh all": one deliberate tap renews every out-of-date place (constitution I still holds:
+  // nothing fetches without a user action). Places go one at a time, so the provider's request
+  // pacing applies and each card updates as its turn finishes.
+  const refreshAll = useCallback(
+    async (ids: number[]) => {
+      if (bulkRunningRef.current || ids.length === 0) return;
+      bulkRunningRef.current = true;
+      bulkStopRef.current = false;
+      setError(null);
+      setRefreshError(null);
+      const total = ids.length;
+      const failed: BulkRefreshFailure[] = [];
+      let done = 0;
+      setBulkRefresh({ status: 'running', total, done, failed: [] });
+      logInteraction('locations_refresh_all_clicked', { count: total });
+
+      for (const id of ids) {
+        if (bulkStopRef.current) break;
+        const location = locationsRef.current.find((l) => l.id === id);
+        // Removed (or waiting out its undo window) since the run began: nothing to renew.
+        if (location && pendingDeleteRef.current?.id !== id) {
+          setRefreshingId(id);
+          try {
+            await refreshLocation(id);
+            await load();
+          } catch (err) {
+            failed.push({
+              id,
+              name: locationName(location),
+              message: errorMessage(err, 'Could not reach the weather service.'),
+            });
+          }
+        }
+        done += 1;
+        setBulkRefresh({ status: 'running', total, done, failed: [...failed] });
+      }
+
+      const stopped = bulkStopRef.current && done < total;
+      setRefreshingId(null);
+      setBulkRefresh({ status: stopped ? 'stopped' : 'done', total, done, failed });
+      logInteraction('locations_refresh_all_finished', {
+        attempted: done,
+        failed: failed.length,
+        stopped,
+      });
+      bulkRunningRef.current = false;
+    },
+    [load],
+  );
+
+  const stopRefreshAll = useCallback(() => {
+    if (bulkRunningRef.current) bulkStopRef.current = true;
+  }, []);
+
+  const clearBulkRefresh = useCallback(() => {
+    if (!bulkRunningRef.current) setBulkRefresh(null);
+  }, []);
 
   const clearDeleteTimer = useCallback(() => {
     if (deleteTimerRef.current !== null) clearTimeout(deleteTimerRef.current);
@@ -307,6 +398,10 @@ export function StoreProvider({ children }: ProviderProps) {
     dismissDelete,
     holdDelete,
     refresh,
+    bulkRefresh,
+    refreshAll,
+    stopRefreshAll,
+    clearBulkRefresh,
     reload: async () => {
       const next = await load();
       if (next.length > 0) setSelectedId((current) => current ?? next[0].id);

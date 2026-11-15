@@ -46,7 +46,7 @@ colors:
 typography:
   display:
     fontFamily: "ui-sans-serif, system-ui, sans-serif"
-    fontSize: "6.5rem"
+    fontSize: "5rem"
     fontWeight: 200
     lineHeight: 1
     letterSpacing: "-0.025em"
@@ -176,7 +176,7 @@ The visual identity sits in a swappable set of CSS variables, while the layout s
 Singapore Sky is the only theme that reads data. Its ground is not a fixed palette but the selected place's sky, repainted from that location's stored snapshot so the page answers "can I go out?" before any number is read. Four dark Singapore skies, chosen in strict precedence storm > haze > heat > calm: a bruised-violet 3 pm storm under a lumpy cloud base with slanted rain sheets (thunder in the current condition, or in the forecast period covering now); a smoky sepia haze with a smoke veil and a dull sun disc (24-hour PSI above 100); a scorched rust heat burning up from the bottom edge (NEA High heat stress from a WBGT station within 10 km); and a blue-grey calm with cumulus heads, which is also the answer whenever a reading is missing, so the sky never guesses. White ink, NEA flag colours on the heat-stress pills and banded gauges, and the system font stack: its character comes from the sky and the flags.
 
 **Key Characteristics:**
-- One huge, hairline-weight current temperature (6.5rem, weight 200) is the single focal point.
+- The hero leads with a verdict, not a number: a title-size line answering "can I go out?" (storms, heat stress, UV from High, PSI), with lightning near the place above it when a fresh check found any. Below it, one large hairline-weight temperature (5rem, 5.5rem from md, weight 200) is still the only display-size number. *(Decided 2026-11-15, approved by the owner as deliberate theming work, Apple included: in Singapore the temperature barely moves, so it no longer holds the headline.)*
 - One ink colour, used at different opacities, makes every text colour, border and fill.
 - Translucent frosted panels with a 1rem radius and a hairline edge, with no shadow at rest.
 - Small, wide-tracked uppercase labels name each panel. The data, not the labels, does the talking.
@@ -234,7 +234,8 @@ The base is a cool slate-blue sky gradient with white ink. Saturated colour appe
 Singapore Sky keeps the system stack, by user-confirmed scope. Its character comes from the sky and the flags, not from a display face. Only the temperature colour shifts with the sky (a cool white in calm, a violet white in storm, a warm white in haze and heat), at the Apple weight of 200.
 
 ### Hierarchy
-- **Display** (200, 6.5rem, line-height 1, tracking −0.025em): the current temperature in the hero, used once per screen. Its colour and weight come from the theme (`--temperature-color`, `--temperature-weight`).
+- **Display** (200, 5rem, 5.5rem from md, line-height 1, tracking −0.025em): the current temperature in the hero, used once per screen, below the verdict.
+- **Verdict** (400, 1.25rem, 1.5rem from md, line-height snug, balanced): the hero's outdoor summary at full ink (muted and dated with "As of …:" when stale). Each part is an unbreakable unit ending in its "·", so a wrapped line never starts with a separator. Its colour and weight come from the theme (`--temperature-color`, `--temperature-weight`).
 - **Headline** (300, 2.25rem, 1.25): the selected place name above the temperature.
 - **Title** (600, 1.125rem): location names on sidebar cards. Card temperatures sit beside them at weight 300, 1.875rem.
 - **Body** (400, 0.875rem): forecast rows, form fields, chips and tile values that need explanation.
@@ -248,10 +249,10 @@ Singapore Sky keeps the system stack, by user-confirmed scope. Its character com
 
 ## Layout
 
-- **Desktop (md, 768px and up):** a fixed-width sidebar (22rem) next to a main panel, each scrolling on its own. The main column is centred with a maximum width of 64rem and 24px padding (32px from lg, 1024px). The theme picker sits at the top-right of the main panel and scrolls away with it, so it never covers a reading.
-- **Phones (below 768px):** a single column, and the whole page scrolls. The sidebar shrinks to the Add Location button (the saved-place search is desktop-only). Switching and refreshing live in a bottom dock within thumb reach: a row of location chips you swipe sideways, and a round Refresh button at its end, inset from the safe area. Removing a place is a quiet text button at the end of its page, away from the dock. The theme picker moves to the end of the page.
+- **Desktop (md: 768px wide and 500px tall, or more):** a fixed-width sidebar (22rem) next to a main panel, each scrolling on its own. The main column is centred with a maximum width of 64rem and 24px padding (32px from lg, 1024px). The theme picker sits at the top-right of the main panel and scrolls away with it, so it never covers a reading. When two or more saved places are out of date, a "Refresh N out-of-date places" button sits under the add row, above the cards it renews.
+- **Phones (below md, which includes a phone held sideways):** a single column, and the whole page scrolls. The sidebar shrinks to one row of two buttons, Use my location and Add Location. Each is sized from its own label, so in any theme's font they sit side by side when they fit and stack when they don't, never truncating. Add Location stays in the row, pressed, while its form is open (the saved-place search is desktop-only). Switching and refreshing live in a one-row bottom dock within thumb reach. Up to four places show as a row of chips you swipe sideways; beyond four, the selected place shows as one button that opens a list sheet of every place in full-width 48px rows. A round Refresh button sits at the dock's end, inset from the safe area. When two or more places are out of date it carries a count badge and opens a sheet with "Refresh N out-of-date places" and "Refresh <place> only". Sheets rise from the dock, are non-modal, and close on Escape, an outside tap or a choice, returning focus to the dock button. The dock publishes its height as `--dock-height` so the page end, the undo toast and the sheets stay clear of it. Removing a place is a quiet text button at the end of its page, away from the dock. The theme picker moves to the end of the page.
 - **Rhythm:** sections are 12px apart, panels have 16px of internal padding, and controls within a group are 8px apart. The hero gets extra air above it (24px top, 8px bottom) to set it apart from the panels below.
-- **Order of content:** Singapore's outdoor questions come first. Hero reading (place, temperature, condition with its icon, high/low, and a one-line summary of storms, heat stress and PSI), then the 24-hour forecast strip, the outdoor grid (a full-width Heat & Comfort panel with air temperature, feels-like and WBGT side by side, then Rainfall, UV and Air Quality), the 4-day forecast, the map, the supporting readings (Wind, Humidity, Sun), and a footer naming the source. Grids are 2 columns, 4 from lg.
+- **Order of content:** Singapore's outdoor questions come first. Hero reading (place; a stale notice when the reading is old; lightning within 10 km from a fresh check, with its own time; the verdict of storms, heat stress, UV from High and PSI; then temperature, condition with its icon and high/low), then the 24-hour forecast strip, the outdoor grid (a full-width Heat & Comfort panel that leads with NEA heat stress (WBGT, the verdict) beside a smaller feels-like, with one reconciling line when the two seem to disagree (air temperature is the hero's number and isn't repeated), then Rainfall, UV and Air Quality), the 4-day forecast, the map, the supporting readings (Wind, Humidity, Sun), and a footer naming the source. Grids are 2 columns, 4 from lg.
 - **Condition icons:** every condition glyph (hero, hourly strip, 4-day rows, sidebar cards, phone chips, map pins) comes from `ConditionIcon`, which wraps `conditionToIcon`. Do not pick weather icons by hand.
 
 - **Singapore Sky:** the layout is unchanged; the sky behind the hero carries the state. The haze sun hangs top-right on desktop and beside the hero on phones. Rain sheets fade in from 22% down the screen (below the cloud base) and are masked out of an ellipse over the hero reading, wider and lower on phones, so they never cross the temperature.
@@ -286,7 +287,9 @@ Softly rounded panels, small-radius form controls and fully round pills. Every t
 - **Primary (Add):** porcelain fill with midnight text, 6px × 12px padding, caption size, semibold. On hover it goes fully opaque. It is the only solid button in the interface.
 - **Pill (Refresh on desktop, beside "Updated …" in the hero; theme picker):** a frosted fill at 8% with a 15% edge, caption size, medium weight. Hover raises the fill to 14%.
 - **Refresh on phones:** a 48px round button at the end of the bottom dock, icon-only with an accessible name ("Refresh Sentosa"). The icon spins while refreshing.
+- **Refresh all:** a full-width 44px button ("Refresh 9 out-of-date places"), shown only when two or more places are stale or never refreshed: under the add row on desktop, inside the dock's refresh sheet on phones, where the dock also keeps a hidden status line so a run folded away mid-way is still announced. It renews them one at a time; a polite status line counts progress ("Refreshing 3 of 9…") beside a "Stop after this place" button, then reports the result. Failures name the places and offer Retry in the error tone; a clean result clears itself after six seconds. Single Refresh buttons are disabled while a run is going.
 - **Map overlay (fullscreen, lightning):** 44px round buttons, dark glass (black at 40%, 55% on hover) with literal white icons, so they stay readable on any basemap.
+- **Sidebar entry pair (Use my location, Add Location):** two equal frosted card buttons sharing one row at the top of the sidebar, each with a leading icon (crosshair, plus). Use my location reads "Finding you…" and is disabled while busy; it is never disabled for any other reason, including on browsers it doesn't support.
 - **Ghost (Cancel, delete ×):** no fill. The ink brightens on hover, and delete gets a round 15% wash.
 - **Focus:** a solid 2px outline in the theme's `--focus-ring` colour, offset 2px.
 
@@ -306,7 +309,7 @@ Softly rounded panels, small-radius form controls and fully round pills. Every t
 - **Search:** an 8px radius, a frosted 8% fill, a 10% edge, a leading search icon at 50% ink, and a placeholder at 50%.
 - **Form fields:** a 6px radius, a 10% fill, a 15% edge and a 40% placeholder, with an 11px label above in 60% ink.
 - **Focus:** the shared `--focus-ring` outline.
-- **Error:** a blush message on a 15% red wash with a red-tinted border, placed right next to the field or card it belongs to.
+- **Error:** a blush message on a 15% red wash with a red-tinted border, placed right next to the field or card it belongs to. The Use my location messages use the same box directly under the button row; its "Already saved" line is plain muted ink, since it is information, not a failure. Both carry a dismiss ×.
 
 ### Navigation
 There is no navigation bar. Places are switched with the sidebar's location cards on desktop (title-size name, light temperature, condition and high/low below a divider) and with the chip row on phones. Selection uses `aria-pressed`, and in light themes the selected item gets `data-selected` and a stronger fill.

@@ -53,6 +53,17 @@ export function PlusIcon({ className = 'h-4 w-4' }: IconProps) {
   );
 }
 
+/** Crosshair for "Use my location": a ring, a centre dot and four cardinal ticks. */
+export function LocateIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
+      <circle cx="12" cy="12" r="7" />
+      <circle cx="12" cy="12" r="1.5" />
+      <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+    </svg>
+  );
+}
+
 export function SearchIcon({ className = 'h-4 w-4' }: IconProps) {
   return (
     <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
@@ -194,6 +205,14 @@ export function CloseIcon({ className = 'h-3.5 w-3.5' }: IconProps) {
   return (
     <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
       <path d="M6 6l12 12M18 6 6 18" />
+    </svg>
+  );
+}
+
+export function ChevronUpIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M6 15l6-6 6 6" />
     </svg>
   );
 }

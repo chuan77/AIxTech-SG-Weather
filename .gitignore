@@ -46,3 +46,7 @@ backend/backend/
 
 # Browser test output (agent-browser / chrome-devtools)
 e2e-artifacts/
+
+# Impeccable design-hook cache (per machine)
+.impeccable/hook.cache.json
+**/.impeccable/hook.cache.json

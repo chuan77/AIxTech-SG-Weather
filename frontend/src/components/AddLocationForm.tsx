@@ -26,6 +26,7 @@ export function AddLocationForm() {
   const optionId = (index: number) => `${idPrefix}-town-${index}`;
   const townInputRef = useRef<HTMLInputElement>(null);
   const openButtonRef = useRef<HTMLButtonElement>(null);
+  const formId = `${idPrefix}-form`;
   // Set when the form closes from inside it, so focus goes back to "Add Location", not <body>.
   const returnFocus = useRef(false);
 
@@ -135,19 +136,27 @@ export function AddLocationForm() {
     }
   };
 
-  if (!isAdding) {
-    return (
-      <button
-        ref={openButtonRef}
-        type="button"
-        onClick={() => setAdding(true)}
-        className="flex min-h-11 w-full items-center justify-center gap-2 rounded-card border border-white/15 bg-white/[0.07] px-3 py-2.5 text-sm font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.12]"
-      >
-        <PlusIcon />
-        <span>Add Location</span>
-      </button>
-    );
-  }
+  // Stays in the row while the form is open (pressed, and a second press closes it), so the
+  // row never reflows under the pointer. Sized from its label so the row wraps, not truncates.
+  const openButton = (
+    <button
+      ref={openButtonRef}
+      type="button"
+      onClick={() => (isAdding ? cancel() : setAdding(true))}
+      aria-expanded={isAdding}
+      aria-controls={isAdding ? formId : undefined}
+      className={`flex min-h-11 flex-auto items-center justify-center gap-2 whitespace-nowrap rounded-card border px-3 py-2.5 text-sm font-medium backdrop-blur-xl ${
+        isAdding
+          ? 'border-white/30 bg-white/20 text-white'
+          : 'border-white/15 bg-white/[0.07] text-white/85 hover:bg-white/[0.12]'
+      }`}
+    >
+      <PlusIcon />
+      <span>Add Location</span>
+    </button>
+  );
+
+  if (!isAdding) return openButton;
 
   const statusText = !hasQuery
     ? ''
@@ -156,151 +165,158 @@ export function AddLocationForm() {
       : `${matches.length} ${matches.length === 1 ? 'town' : 'towns'} found`;
 
   return (
-    <form
-      onSubmit={onSubmit}
-      // Escape closes the form, unless the town list took it first to close itself.
-      onKeyDown={(event) => {
-        if (event.key === 'Escape' && !event.defaultPrevented) {
-          event.preventDefault();
-          cancel();
-        }
-      }}
-      className="relative z-10 grid gap-2.5 rounded-card border border-white/15 bg-white/[0.1] p-3 backdrop-blur-xl"
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
-        New location
-      </p>
-      <div className="relative grid min-w-0 gap-1">
-        <label htmlFor={townInputId} className="text-[11px] text-ink-muted">
-          Town
-        </label>
-        <input
-          ref={townInputRef}
-          id={townInputId}
-          name="town"
-          type="text"
-          role="combobox"
-          autoComplete="off"
-          aria-autocomplete="list"
-          aria-expanded={showList}
-          aria-controls={listboxId}
-          aria-activedescendant={showList && activeIndex >= 0 ? optionId(activeIndex) : undefined}
-          value={townQuery}
-          onChange={(e) => onTownChange(e.target.value)}
-          onKeyDown={onTownKeyDown}
-          onBlur={() => setListOpen(false)}
-          onFocus={() => setListOpen(hasQuery && pickedTown === null)}
-          placeholder="Search a town, e.g. Sengkang"
-          className={INPUT_CLASS}
-        />
-        {showList && (
-          <ul
-            id={listboxId}
-            role="listbox"
-            aria-label="Matching towns"
-            className="app-popover absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-white/15 py-1 shadow-lg shadow-black/30"
-          >
-            {matches.map((match, index) => (
-              <li
-                key={match.town.name}
-                id={optionId(index)}
-                role="option"
-                aria-selected={index === activeIndex}
-                // mousedown + preventDefault keeps focus so the pick runs before blur closes the list
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  pick(match.town);
-                }}
-                onMouseEnter={() => setActiveIndex(index)}
-                className={`flex min-h-11 cursor-pointer items-center px-2 py-1.5 text-sm text-white md:min-h-0 ${
-                  index === activeIndex ? 'bg-white/20' : ''
-                }`}
-              >
-                {match.town.name}
-              </li>
-            ))}
-          </ul>
-        )}
-        <span className="sr-only" aria-live="polite">
-          {statusText}
-        </span>
-        {hasQuery && matches.length === 0 && (
-          <p className="text-xs text-ink-muted">No matching town</p>
-        )}
-        {needsPick && matches.length > 0 && (
-          <p className="text-xs text-ink-muted">Pick a town from the list, or enter coordinates.</p>
-        )}
-        {alreadySaved && (
-          <p className="flex flex-wrap items-center gap-x-2 text-xs text-white/90">
-            <span>{pickedTown?.name} is already saved.</span>
-            <button
-              type="button"
-              onClick={() => {
-                select(alreadySaved.id);
-                cancel();
-              }}
-              className="min-h-11 font-semibold underline underline-offset-2 md:min-h-0"
+    <>
+      {openButton}
+      <form
+        id={formId}
+        onSubmit={onSubmit}
+        // Escape closes the form, unless the town list took it first to close itself.
+        onKeyDown={(event) => {
+          if (event.key === 'Escape' && !event.defaultPrevented) {
+            event.preventDefault();
+            cancel();
+          }
+        }}
+        // Its own full-width line, after the button row and any "Use my location" message.
+        className="relative z-10 order-2 grid basis-full gap-2.5 rounded-card border border-white/15 bg-white/[0.1] p-3 backdrop-blur-xl"
+      >
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-muted">
+          New location
+        </p>
+        <div className="relative grid min-w-0 gap-1">
+          <label htmlFor={townInputId} className="text-[11px] text-ink-muted">
+            Town
+          </label>
+          <input
+            ref={townInputRef}
+            id={townInputId}
+            name="town"
+            type="text"
+            role="combobox"
+            autoComplete="off"
+            aria-autocomplete="list"
+            aria-expanded={showList}
+            aria-controls={listboxId}
+            aria-activedescendant={showList && activeIndex >= 0 ? optionId(activeIndex) : undefined}
+            value={townQuery}
+            onChange={(e) => onTownChange(e.target.value)}
+            onKeyDown={onTownKeyDown}
+            onBlur={() => setListOpen(false)}
+            onFocus={() => setListOpen(hasQuery && pickedTown === null)}
+            placeholder="Search a town, e.g. Sengkang"
+            className={INPUT_CLASS}
+          />
+          {showList && (
+            <ul
+              id={listboxId}
+              role="listbox"
+              aria-label="Matching towns"
+              className="app-popover absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-white/15 py-1 shadow-lg shadow-black/30"
             >
-              Show it
-            </button>
+              {matches.map((match, index) => (
+                <li
+                  key={match.town.name}
+                  id={optionId(index)}
+                  role="option"
+                  aria-selected={index === activeIndex}
+                  // mousedown + preventDefault keeps focus so the pick runs before blur closes the list
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    pick(match.town);
+                  }}
+                  onMouseEnter={() => setActiveIndex(index)}
+                  className={`flex min-h-11 cursor-pointer items-center px-2 py-1.5 text-sm text-white md:min-h-0 ${
+                    index === activeIndex ? 'bg-white/20' : ''
+                  }`}
+                >
+                  {match.town.name}
+                </li>
+              ))}
+            </ul>
+          )}
+          <span className="sr-only" aria-live="polite">
+            {statusText}
+          </span>
+          {hasQuery && matches.length === 0 && (
+            <p className="text-xs text-ink-muted">No matching town</p>
+          )}
+          {needsPick && matches.length > 0 && (
+            <p className="text-xs text-ink-muted">
+              Pick a town from the list, or enter coordinates.
+            </p>
+          )}
+          {alreadySaved && (
+            <p className="flex flex-wrap items-center gap-x-2 text-xs text-white/90">
+              <span>{pickedTown?.name} is already saved.</span>
+              <button
+                type="button"
+                onClick={() => {
+                  select(alreadySaved.id);
+                  cancel();
+                }}
+                className="min-h-11 font-semibold underline underline-offset-2 md:min-h-0"
+              >
+                Show it
+              </button>
+            </p>
+          )}
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <label className="grid min-w-0 gap-1">
+            <span className="text-[11px] text-ink-muted">Latitude</span>
+            <input
+              name="latitude"
+              type="number"
+              step="any"
+              value={latitude}
+              onChange={(e) => {
+                setLatitude(e.target.value);
+                setPickedTown(null);
+              }}
+              placeholder="1.3508"
+              required
+              className={INPUT_CLASS}
+            />
+          </label>
+          <label className="grid min-w-0 gap-1">
+            <span className="text-[11px] text-ink-muted">Longitude</span>
+            <input
+              name="longitude"
+              type="number"
+              step="any"
+              value={longitude}
+              onChange={(e) => {
+                setLongitude(e.target.value);
+                setPickedTown(null);
+              }}
+              placeholder="103.8390"
+              required
+              className={INPUT_CLASS}
+            />
+          </label>
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={cancel}
+            className="min-h-11 rounded-md px-3 text-xs font-medium text-ink-muted hover:text-white md:min-h-0 md:px-2.5 md:py-1.5"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={submitting || needsPick}
+            className="app-primary-button min-h-11 rounded-md px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-h-0 md:px-3 md:py-1.5"
+          >
+            {submitting ? 'Adding…' : 'Add'}
+          </button>
+        </div>
+        {submitError && (
+          <p className="rounded-md border border-red-300/30 bg-red-500/15 px-2.5 py-1.5 text-xs text-red-100">
+            {submitError}
           </p>
         )}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="grid min-w-0 gap-1">
-          <span className="text-[11px] text-ink-muted">Latitude</span>
-          <input
-            name="latitude"
-            type="number"
-            step="any"
-            value={latitude}
-            onChange={(e) => {
-              setLatitude(e.target.value);
-              setPickedTown(null);
-            }}
-            placeholder="1.3508"
-            required
-            className={INPUT_CLASS}
-          />
-        </label>
-        <label className="grid min-w-0 gap-1">
-          <span className="text-[11px] text-ink-muted">Longitude</span>
-          <input
-            name="longitude"
-            type="number"
-            step="any"
-            value={longitude}
-            onChange={(e) => {
-              setLongitude(e.target.value);
-              setPickedTown(null);
-            }}
-            placeholder="103.8390"
-            required
-            className={INPUT_CLASS}
-          />
-        </label>
-      </div>
-      <div className="flex items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={cancel}
-          className="min-h-11 rounded-md px-3 text-xs font-medium text-ink-muted hover:text-white md:min-h-0 md:px-2.5 md:py-1.5"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={submitting || needsPick}
-          className="app-primary-button min-h-11 rounded-md px-4 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-60 md:min-h-0 md:px-3 md:py-1.5"
-        >
-          {submitting ? 'Adding…' : 'Add'}
-        </button>
-      </div>
-      {submitError && (
-        <p className="rounded-md border border-red-300/30 bg-red-500/15 px-2.5 py-1.5 text-xs text-red-100">
-          {submitError}
-        </p>
-      )}
-    </form>
+      </form>
+    </>
   );
 }

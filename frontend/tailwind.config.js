@@ -5,6 +5,16 @@ export default {
     files: ['./index.html', './src/**/*.{ts,tsx}'],
   },
   theme: {
+    // `md` means "two panes fit", not just "wide": a phone held sideways (390-430px tall) is wider
+    // than 768px but keeps the phone layout, the thumb dock and 44px touch targets.
+    // Hand-written phone-layout queries in index.css negate this same query; change them together.
+    screens: {
+      sm: '640px',
+      md: { raw: '(min-width: 768px) and (min-height: 500px)' },
+      lg: '1024px',
+      xl: '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       borderRadius: { card: 'var(--card-radius)' },
       fontFamily: { sans: ['var(--font-body)'] },

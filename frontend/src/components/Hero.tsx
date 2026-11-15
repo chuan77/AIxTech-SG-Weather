@@ -1,20 +1,21 @@
 import { useStore, useSelectedLocation } from '../state/store';
-import { ClockIcon, LocationIcon, RefreshIcon } from './icons';
+import { ClockIcon, LocationIcon, RefreshIcon, ThunderIcon } from './icons';
 import { HourlyStrip } from './HourlyStrip';
 import { TenDayForecast } from './TenDayForecast';
 import { MapCard } from './map/MapCard';
 import { ConditionIcon } from './ConditionIcon';
 import { MoreReadingsGrid, OutdoorGrid } from './Tiles';
 import { ThemeSelector } from './ThemeSelector';
-import { Fragment } from 'react';
 import { outdoorSummaryParts } from './outdoorSummary';
 import { asSentence, formatTemperature } from './format';
 import { readingFreshness } from './freshness';
-import { singaporeDate } from './sunTimes';
+import { formatSgtTime, singaporeDate } from './sunTimes';
+import { nearestStrike } from './map/lightningHelpers';
 import { useNow } from './map/useNow';
 
 export function Hero() {
-  const { locations, refresh, refreshingId, refreshError, remove } = useStore();
+  const { locations, refresh, refreshingId, refreshError, remove, bulkRefresh, lightning } =
+    useStore();
   const selected = useSelectedLocation();
   // A one-minute tick lets a reading turn stale while the page stays open.
   const now = useNow(60_000, selected?.weather?.observed_at);
@@ -57,11 +58,15 @@ export function Hero() {
       ? `As of ${freshness.when.startsWith('Yesterday') ? 'y' + freshness.when.slice(1) : freshness.when}:`
       : null;
   const failure = refreshError?.id === selected.id && !isRefreshing ? refreshError.message : null;
+  const strike = lightning.enabled
+    ? nearestStrike(lightning.observation, selected.latitude, selected.longitude, now)
+    : null;
 
   return (
     <main id="weather" tabIndex={-1} className="relative flex-1 outline-none md:overflow-y-auto">
       <div className="mx-auto flex max-w-5xl flex-col gap-3 p-6 lg:p-8">
-        <header className="flex flex-col items-center pt-6 pb-2 text-center">
+        {/* Short screens (a phone held sideways) drop the hero's top air so the reading clears the dock. */}
+        <header className="flex flex-col items-center pt-6 pb-2 text-center [@media(max-height:500px)]:pt-0">
           {isHome && (
             <div className="mb-2 flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
               <LocationIcon className="h-3 w-3" />
@@ -69,8 +74,60 @@ export function Hero() {
             </div>
           )}
           <h1 className="text-4xl font-light leading-tight text-white">{area}</h1>
+          {/* An old snapshot says so before its verdict is read as today's answer. */}
+          {isStale && !isRefreshing && (
+            <p className="mt-3 inline-flex max-w-md items-center gap-2 rounded-card border border-white/20 bg-white/10 px-3 py-1.5 text-left text-xs font-medium text-white/90">
+              <ClockIcon className="h-3.5 w-3.5 shrink-0" />
+              <span className="text-balance">
+                Reading from {freshness.age === 'Yesterday' ? 'yesterday' : freshness.age}. Refresh
+                for current conditions.
+              </span>
+            </p>
+          )}
+          {/* Lightning near the place outranks everything. It carries its own time: it comes from
+              its own check, not from this place's snapshot, so a stale snapshot can't date it. */}
+          {strike && (
+            <p className="hero-lightning mt-3 inline-flex items-center gap-2 text-xl font-medium leading-snug text-white md:text-2xl">
+              <ThunderIcon className="h-5 w-5 shrink-0 md:h-6 md:w-6" />
+              <span>
+                Lightning {strike.km < 1 ? 'under 1' : strike.km.toFixed(0)} km away
+                <span className="font-normal text-ink-muted">
+                  {' '}
+                  at {formatSgtTime(new Date(strike.occurredAt))}
+                </span>
+              </span>
+            </p>
+          )}
+          {/* The verdict leads: "can I go out?" is the question, not "how hot". Each part is one
+              unbreakable unit that ends with its separator, so a wrap leaves the "·" at the end of
+              a line and never starts one with it. */}
+          {summary.length > 0 && (
+            <p
+              className={`hero-verdict mt-3 max-w-xl text-balance text-xl leading-snug md:text-2xl ${asOf ? 'text-ink-muted' : 'text-white'}`}
+            >
+              {asOf && <span className="font-medium">{asOf} </span>}
+              {summary.map((part, i) => (
+                <span key={part.text} className="inline-block">
+                  {/* Only a heat warning earns a flag here; "low" stays plain so it never
+                      outshouts a storm in the same line. The WBGT tile shows every band. */}
+                  {part.heatTone === 'moderate' || part.heatTone === 'high' ? (
+                    <span className={`heat-tone heat-tone--${part.heatTone}`}>{part.text}</span>
+                  ) : (
+                    part.text
+                  )}
+                  {i < summary.length - 1 && (
+                    <>
+                      <span className="sr-only">,</span>
+                      <span aria-hidden="true">&nbsp;·&nbsp;</span>
+                    </>
+                  )}
+                </span>
+              ))}
+            </p>
+          )}
+          {/* Still the one display-size number, but second: in Singapore it barely moves. */}
           <div
-            className={`hero-temperature mt-2 text-[6.5rem] leading-none tracking-tight text-white ${isStale ? 'hero-temperature--stale' : ''}`}
+            className={`hero-temperature mt-4 text-[5rem] leading-none tracking-tight text-white md:text-[5.5rem] ${isStale ? 'hero-temperature--stale' : ''}`}
           >
             {temperature}
           </div>
@@ -83,38 +140,11 @@ export function Hero() {
           <div className="mt-0.5 text-sm text-ink-muted tabular-nums">
             H:{high} L:{low}
           </div>
-          {/* An old snapshot says so before its summary is read as today's answer. */}
-          {isStale && !isRefreshing && (
-            <p className="mt-3 inline-flex max-w-md items-center gap-2 rounded-card border border-white/20 bg-white/10 px-3 py-1.5 text-left text-xs font-medium text-white/90">
-              <ClockIcon className="h-3.5 w-3.5 shrink-0" />
-              <span className="text-balance">
-                Reading from {freshness.age === 'Yesterday' ? 'yesterday' : freshness.age}.
-                Refresh for current conditions.
-              </span>
-            </p>
-          )}
-          {summary.length > 0 && (
-            <p
-              className={`mt-3 max-w-md text-balance text-sm leading-snug ${asOf ? 'text-ink-muted' : 'text-white/90'}`}
-            >
-              {asOf && <span className="font-medium">{asOf} </span>}
-              {summary.map((part, i) => (
-                <Fragment key={part.text}>
-                  {i > 0 && ' · '}
-                  {/* Only a heat warning earns a flag here; "low" stays plain so it never
-                      outshouts a storm in the same line. The WBGT tile shows every band. */}
-                  {part.heatTone === 'moderate' || part.heatTone === 'high' ? (
-                    <span className={`heat-tone heat-tone--${part.heatTone}`}>{part.text}</span>
-                  ) : (
-                    part.text
-                  )}
-                </Fragment>
-              ))}
-            </p>
-          )}
           {/* Refresh sits beside the time it renews. Phones refresh from the bottom dock instead. */}
           <div className="mt-3 flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
             <p className="text-xs text-ink-muted tabular-nums" aria-live="polite">
+              {/* Naming the place makes a switch audible: this line changes with the selection. */}
+              <span className="sr-only">{area}, </span>
               {observed ? <>Updated {observed}</> : 'Not refreshed yet'}
               {isStale && !isRefreshing && <span className="sr-only">, {freshness.age}</span>}
               {isRefreshing && ' · Refreshing…'}
@@ -122,7 +152,8 @@ export function Hero() {
             <button
               type="button"
               onClick={() => void refresh(selected.id)}
-              disabled={isRefreshing}
+              // A "Refresh all" run reaches this place in its turn.
+              disabled={isRefreshing || bulkRefresh?.status === 'running'}
               className="hidden items-center gap-1.5 rounded-full border border-white/15 bg-white/[0.08] px-3 py-1.5 text-xs font-medium text-white/85 backdrop-blur-xl hover:bg-white/[0.14] disabled:cursor-not-allowed disabled:opacity-60 md:inline-flex"
             >
               <RefreshIcon className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />

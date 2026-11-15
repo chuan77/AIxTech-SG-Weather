@@ -22,6 +22,14 @@ export function psiBand(psi: number | null | undefined): string | null {
   return 'Hazardous';
 }
 
+/** NEA UV index bands from High up (6+); null below that or with no reading. */
+export function uvBand(uv: number | null | undefined): string | null {
+  if (!isFiniteNumber(uv) || uv < 6) return null;
+  if (uv < 8) return 'High';
+  if (uv < 11) return 'Very high';
+  return 'Extreme';
+}
+
 const THUNDER = /thunder/i;
 
 /**
@@ -50,7 +58,7 @@ function stormPart(
 }
 
 /**
- * The hero's one-line answer to "can I go out?": storms, heat stress and PSI.
+ * The hero's answer to "can I go out?": storms, heat stress, UV (High and up) and PSI.
  * Parts with no reading are left out rather than guessed; null when nothing is known.
  */
 export function outdoorSummary(weather: WeatherSnapshot): string | null {
@@ -74,6 +82,10 @@ export function outdoorSummaryParts(weather: WeatherSnapshot, today?: string): S
   const heat = heatStressView(weather);
   if (heat.kind === 'reading' && heat.level)
     parts.push({ text: `Heat stress ${heat.level.toLowerCase()}`, heatTone: heat.tone });
+
+  // UV earns a place only from High up; Low and Moderate change nobody's plans.
+  const uv = uvBand(weather.uv_index);
+  if (uv) parts.push({ text: `UV ${uv.toLowerCase()}` });
 
   const band = psiBand(weather.psi_twenty_four_hourly);
   if (band)

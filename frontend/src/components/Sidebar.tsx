@@ -3,7 +3,9 @@ import { useStore } from '../state/store';
 import { SearchIcon } from './icons';
 import { SidebarCard } from './SidebarCard';
 import { AddLocationForm } from './AddLocationForm';
+import { UseMyLocation } from './UseMyLocation';
 import { useNow } from './map/useNow';
+import { RefreshAll } from './RefreshAll';
 
 export function Sidebar() {
   const { locations, isLoading, loadError, reload } = useStore();
@@ -42,7 +44,13 @@ export function Sidebar() {
         />
       </div>
 
-      <AddLocationForm />
+      {/* Two ways in, side by side: the browser's position, or a town / coordinates. */}
+      <div className="flex flex-wrap gap-2">
+        <UseMyLocation />
+        <AddLocationForm />
+      </div>
+
+      <RefreshAll placement="sidebar" now={now} />
 
       {loadError && (
         <div

@@ -5,14 +5,14 @@ import { THEMES } from '../theme/themes';
 interface ThemeSelectorProps {
   /**
    * `panel` (md and up): top-right of the main panel, scrolling away with it so it never sits
-   * over a reading. `page-end` (phones): in flow at the end of the page, above the floating Refresh.
+   * over a reading. `page-end` (phones): in flow at the end of the page, clear of the dock.
    */
   placement: 'panel' | 'page-end';
 }
 
 const PLACEMENT_CLASS: Record<ThemeSelectorProps['placement'], string> = {
   panel: 'absolute right-4 top-4 z-30 hidden md:flex',
-  'page-end': 'flex justify-center px-4 pb-[calc(5rem+env(safe-area-inset-bottom))] md:hidden',
+  'page-end': 'flex justify-center px-4 pb-[calc(var(--dock-height,4.25rem)+0.75rem)] md:hidden',
 };
 
 export function ThemeSelector({ placement }: ThemeSelectorProps) {

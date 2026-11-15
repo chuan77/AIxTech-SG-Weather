@@ -52,7 +52,12 @@ export function LightningControl({ className }: LightningControlProps) {
           className="absolute bottom-8 left-2 z-[1000] max-w-[70%] rounded-xl map-control px-3 py-1.5 text-xs backdrop-blur-xl"
         >
           {lightning.status === 'idle' ? (
-            <button type="button" onClick={() => void lightning.refresh()} className="underline">
+            // On phones the negative margin grows the tap area to 44px without growing the strip.
+            <button
+              type="button"
+              onClick={() => void lightning.refresh()}
+              className="-my-3 inline-flex min-h-11 items-center underline md:my-0 md:min-h-0"
+            >
               {message.text}
             </button>
           ) : (

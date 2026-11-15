@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "codex-grid-background",
+        "value": "*",
+        "files": [
+          "frontend/src/index.css"
+        ],
+        "createdAt": "2026-11-15T01:00:12.602Z",
+        "reason": "Neo-Memphis polka-dot background (radial-gradient dots), intentional theme pattern, not grid lines"
+      }
+    ]
+  }
+}
