@@ -25,6 +25,9 @@ body,
   --pin-dot-border: #fff;
   --pin-dot-selected: #f59e0b;
   --lightning: #ffd21f;
+  /* Strike-mark outline: never faded, so it carries the 3:1 contrast on the light voyager map
+     (measured 2026-11-15 around the oldest strike: median 14.3:1, worst pixel 6.5:1). */
+  --lightning-outline: #141928;
   --scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --card-radius: 1rem;
   --card-border: rgba(255, 255, 255, 0.15);
@@ -88,6 +91,7 @@ body,
   --pin-label-selected-text: #14325a;
   --pin-dot-selected: #ffd479;
   --lightning: #ffd21f;
+  --lightning-outline: #141928; /* voyager: median 15.1:1, worst 10.8:1 */
   --scrollbar-thumb: rgba(255, 255, 255, 0.3);
 }
 
@@ -118,6 +122,9 @@ body,
   --pin-dot-border: #d6f6ff;
   --pin-dot-selected: #ffb000;
   --lightning: #fff35c;
+  /* Dark basemap: a bright outline keeps every strike findable while only the fill fades
+     (dark_all: median 16.8:1, worst 6.4:1). */
+  --lightning-outline: #fff35c;
   --scrollbar-thumb: rgba(0, 229, 255, 0.25);
 }
 
@@ -231,6 +238,7 @@ body,
   --pin-dot-border: #fff;
   --pin-dot-selected: #7a55c9;
   --lightning: #ff4d8d;
+  --lightning-outline: #3b0f2a; /* light_all: median 16.2:1, worst 12.6:1 */
   --scrollbar-thumb: rgba(74, 59, 92, 0.3);
 }
 
@@ -274,6 +282,7 @@ body,
   --pin-dot-border: #111;
   --pin-dot-selected: #007f79;
   --lightning: #ff3d6e;
+  --lightning-outline: #111111; /* light_all: median 17.3:1, worst 13.4:1 */
   --scrollbar-thumb: rgba(17, 17, 17, 0.3);
 }
 
@@ -425,6 +434,9 @@ body,
   /* A clear-patch teal: distinct from the lightning yellow strikes on the same map. */
   --pin-dot-selected: #5eead4;
   --lightning: #ffe14a;
+  /* Dark basemap: a bright outline keeps every strike findable while only the fill fades
+     (dark_all: median 14.8:1, worst 5.6:1). */
+  --lightning-outline: #ffe14a;
   --scrollbar-thumb: rgba(214, 208, 255, 0.22);
 
   /* NEA flag colours, banded at the official cut-offs so the marker sits on its band's colour.
@@ -759,6 +771,31 @@ textarea {
 .weather-pin-wrapper {
   background: none;
   border: none;
+}
+
+/* Lightning strike marks: a filled bolt in the theme's colours (strikeMarker.ts). Only the fill
+   fades with age, down to the theme's --lightning-fill-floor; the outline never fades, so the mark
+   keeps its contrast against the basemap at every age. */
+.strike-mark-wrapper {
+  background: none;
+  border: none;
+}
+
+.strike-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: var(--lightning);
+  fill-opacity: calc(
+    var(--lightning-fill-floor, 0.25) + (1 - var(--lightning-fill-floor, 0.25)) *
+      var(--strike-fresh, 1)
+  );
+  stroke: var(--lightning-outline);
+  stroke-opacity: 1;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  paint-order: stroke;
 }
 
 .weather-pin {

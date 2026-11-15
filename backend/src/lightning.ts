@@ -1,5 +1,10 @@
 import { logger } from './logger.js';
-import { ProviderRequester, WeatherProviderError } from './providerHttp.js';
+import {
+  createRequestStats,
+  ProviderRequester,
+  WeatherProviderError,
+  type RequestStats,
+} from './providerHttp.js';
 
 export interface LightningStrike {
   id: string;
@@ -18,9 +23,34 @@ export interface LightningObservation {
   stale: boolean;
 }
 
+/**
+ * Where one lightning refresh spent its time (diagnostics only: logged and sent as Server-Timing,
+ * never shown in the dashboard). Numbers and fixed enums only, so nothing secret can leak.
+ */
+export interface LightningTiming {
+  /** cache: under 2 min old; shared: joined a load already in flight; fetch: fetched now. */
+  served: 'cache' | 'shared' | 'fetch';
+  totalMs: number;
+  /** Wall time inside provider page fetches (0 unless `fetch`). */
+  providerMs: number;
+  pages: number;
+  requests: number;
+  pacingWaitMs: number;
+  retries: number;
+  retryWaitMs: number;
+  strikes: number;
+  /** stale: a previous window was served after a failure. */
+  outcome: 'ok' | 'empty' | 'stale' | 'error';
+  /** A fixed category, never a message or URL. */
+  errorKind?: string;
+}
+
 export interface LightningClient {
-  /** Strikes from the 60 minutes before `now`, newest first. Throws WeatherProviderError on failure. */
-  getRecentLightning(now?: Date): Promise<LightningObservation>;
+  /**
+   * Strikes from the 60 minutes before `now`, newest first. Throws WeatherProviderError on failure.
+   * A client may fill `timing` with what the call cost; the route reports it.
+   */
+  getRecentLightning(now?: Date, timing?: Partial<LightningTiming>): Promise<LightningObservation>;
 }
 
 export const LIGHTNING_WINDOW_MINUTES = 60;
@@ -106,6 +136,24 @@ export function normaliseStrikes(records: LightningRecord[], now: Date): Lightni
   return [...byId.values()].sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
 }
 
+/** A fixed category for an error: provider messages and URLs never reach logs or headers. */
+function errorKind(error: unknown): string {
+  if (!(error instanceof WeatherProviderError)) return 'unexpected';
+  const message = error.message;
+  if (/rate limit/i.test(message)) return 'rate_limited';
+  if (/rejected/i.test(message)) return 'rejected';
+  if (/Unable to reach/i.test(message)) return 'unreachable';
+  if (/no records/i.test(message)) return 'bad_response';
+  const status = /HTTP (\d{3})/.exec(message);
+  if (status) return `status_${status[1]}`;
+  return 'provider_error';
+}
+
+function outcomeOf(observation: LightningObservation): LightningTiming['outcome'] {
+  if (observation.stale) return 'stale';
+  return observation.strikes.length > 0 ? 'ok' : 'empty';
+}
+
 function singaporeDate(ms: number): string {
   return new Date(ms + SGT_OFFSET_MS).toISOString().slice(0, 10);
 }
@@ -143,21 +191,69 @@ export class SingaporeLightningClient implements LightningClient {
     this.requester = options.requester ?? new ProviderRequester(options);
   }
 
-  async getRecentLightning(now: Date = new Date()): Promise<LightningObservation> {
-    if (this.cached && now.getTime() - this.cached.fetchedAtMs < FRESH_MS) {
-      return trimObservation(this.cached.observation, now);
-    }
-    if (this.inFlight) return this.inFlight;
+  async getRecentLightning(
+    now: Date = new Date(),
+    timing: Partial<LightningTiming> = {},
+  ): Promise<LightningObservation> {
+    const startedAt = performance.now();
+    const noRequests = { providerMs: 0, pages: 0, ...createRequestStats() };
 
-    this.inFlight = this.load(now).finally(() => {
+    if (this.cached && now.getTime() - this.cached.fetchedAtMs < FRESH_MS) {
+      const observation = trimObservation(this.cached.observation, now);
+      this.report(timing, startedAt, { served: 'cache', ...noRequests }, observation);
+      return observation;
+    }
+    if (this.inFlight) {
+      try {
+        const observation = await this.inFlight;
+        this.report(timing, startedAt, { served: 'shared', ...noRequests }, observation);
+        return observation;
+      } catch (error) {
+        this.report(timing, startedAt, { served: 'shared', ...noRequests }, null, error);
+        throw error;
+      }
+    }
+
+    this.inFlight = this.load(now, timing, startedAt).finally(() => {
       this.inFlight = null;
     });
     return this.inFlight;
   }
 
-  private async load(now: Date): Promise<LightningObservation> {
+  /** Completes `timing` and logs it once per call. */
+  private report(
+    timing: Partial<LightningTiming>,
+    startedAt: number,
+    cost: Pick<LightningTiming, 'served' | 'providerMs' | 'pages'> & RequestStats,
+    observation: LightningObservation | null,
+    error?: unknown,
+  ): void {
+    Object.assign(timing, cost, {
+      totalMs: Math.round(performance.now() - startedAt),
+      providerMs: Math.round(cost.providerMs),
+      strikes: observation?.strikes.length ?? 0,
+      outcome: observation ? outcomeOf(observation) : 'error',
+    });
+    if (error !== undefined) timing.errorKind = errorKind(error);
+    logger.info({ ...timing }, 'lightning refresh timing');
+  }
+
+  private async load(
+    now: Date,
+    timing: Partial<LightningTiming>,
+    startedAt: number,
+  ): Promise<LightningObservation> {
+    const stats = createRequestStats();
+    const progress = { pages: 0 };
+    const providerStartedAt = performance.now();
+    const cost = () => ({
+      served: 'fetch' as const,
+      providerMs: performance.now() - providerStartedAt,
+      pages: progress.pages,
+      ...stats,
+    });
     try {
-      const { records, providerUpdatedAt } = await this.fetchRecords(now);
+      const { records, providerUpdatedAt } = await this.fetchRecords(now, stats, progress);
       const observation: LightningObservation = {
         strikes: normaliseStrikes(records, now),
         window_minutes: LIGHTNING_WINDOW_MINUTES,
@@ -166,19 +262,29 @@ export class SingaporeLightningClient implements LightningClient {
         stale: false,
       };
       this.cached = { observation, fetchedAtMs: now.getTime() };
+      this.report(timing, startedAt, cost(), observation);
       return observation;
     } catch (error) {
       logger.warn({ err: error }, 'lightning data source unavailable');
-      if (this.cached) return { ...trimObservation(this.cached.observation, now), stale: true };
-      throw error instanceof WeatherProviderError
-        ? error
-        : new WeatherProviderError('Unable to read lightning data');
+      if (this.cached) {
+        const stale = { ...trimObservation(this.cached.observation, now), stale: true };
+        this.report(timing, startedAt, cost(), stale, error);
+        return stale;
+      }
+      const failure =
+        error instanceof WeatherProviderError
+          ? error
+          : new WeatherProviderError('Unable to read lightning data');
+      this.report(timing, startedAt, cost(), null, failure);
+      throw failure;
     }
   }
 
   /** Newest first. Walks today's pages, then the previous SGT date once if the window reaches it. */
   private async fetchRecords(
     now: Date,
+    stats: RequestStats,
+    progress: { pages: number },
   ): Promise<{ records: LightningRecord[]; providerUpdatedAt: string | null }> {
     const cutoffMs = now.getTime() - WINDOW_MS;
     const today = singaporeDate(now.getTime());
@@ -193,7 +299,8 @@ export class SingaporeLightningClient implements LightningClient {
       let token: string | null = null;
 
       for (let page = 0; page < maxPages; page += 1) {
-        const payload = await this.fetchPage(date, token);
+        progress.pages += 1;
+        const payload = await this.fetchPage(date, token, stats);
         const pageRecords = payload.data?.records;
         if (!Array.isArray(pageRecords)) {
           throw new WeatherProviderError('Lightning response has no records');
@@ -214,11 +321,16 @@ export class SingaporeLightningClient implements LightningClient {
     return { records, providerUpdatedAt };
   }
 
-  private async fetchPage(date: string, token: string | null): Promise<LightningPayload> {
+  private async fetchPage(
+    date: string,
+    token: string | null,
+    stats: RequestStats,
+  ): Promise<LightningPayload> {
     const base = this.options.baseUrl ?? 'https://api-open.data.gov.sg';
     const tokenQuery = token ? `&paginationToken=${encodeURIComponent(token)}` : '';
     const payload = await this.requester.getJson<LightningPayload>(
       `${base}/v2/real-time/api/weather?api=lightning&date=${date}${tokenQuery}`,
+      stats,
     );
     if (payload.code !== undefined && payload.code !== 0) {
       throw new WeatherProviderError(payload.errorMsg ?? 'Lightning provider returned an error');

@@ -101,6 +101,37 @@ describe('lightning API', () => {
     );
     expect(ages).toEqual([2, 30, 55]);
   });
+  it('sends a Server-Timing total on success', async () => {
+    const app = await buildApp({ getRecentLightning: async () => observation });
+    const response = await request(app).post('/api/lightning/refresh');
+    expect(response.status).toBe(200);
+    expect(response.headers['server-timing']).toMatch(/^total;dur=\d+/);
+  });
+
+  it('passes through what the client measured', async () => {
+    const app = await buildApp({
+      getRecentLightning: async (_now, timing) => {
+        Object.assign(timing ?? {}, { served: 'fetch', providerMs: 1200, pacingWaitMs: 900, retries: 0, retryWaitMs: 0, requests: 2, pages: 2 });
+        return observation;
+      },
+    });
+    const header = (await request(app).post('/api/lightning/refresh')).headers['server-timing'];
+    expect(header).toContain('provider;dur=1200;desc="fetch"');
+    expect(header).toContain('requests;desc="2"');
+  });
+
+  it('sends Server-Timing on a 502 too, with nothing secret in it', async () => {
+    const app = await buildApp({
+      getRecentLightning: async () => {
+        throw new WeatherProviderError('Weather provider rejected request (check API key)');
+      },
+    });
+    const response = await request(app).post('/api/lightning/refresh');
+    expect(response.status).toBe(502);
+    expect(response.headers['server-timing']).toMatch(/^total;dur=\d+/);
+    expect(response.headers['server-timing']).not.toMatch(/http|\?|key/i);
+  });
+
   it('builds one provider requester shared by the default weather and lightning clients', async () => {
     const { createApp } = await import('../server.js');
     requesterCount.value = 0;

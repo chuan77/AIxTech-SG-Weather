@@ -10,7 +10,17 @@ interface ApiError {
   detail?: string;
 }
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+/** A failed request; `response` is kept so callers can read diagnostics such as Server-Timing. */
+class ApiRequestError extends Error {
+  constructor(
+    message: string,
+    readonly response: Response | null,
+  ) {
+    super(message);
+  }
+}
+
+async function send(endpoint: string, options: RequestInit = {}): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${endpoint}`, {
@@ -19,12 +29,17 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     });
   } catch {
     // fetch only rejects when the request never got a response; the browser's text ("Failed to fetch") means nothing to people.
-    throw new Error('The server couldn’t be reached. Check your connection.');
+    throw new ApiRequestError('The server couldn’t be reached. Check your connection.', null);
   }
   if (!response.ok) {
     const error = (await response.json().catch(() => ({}))) as ApiError;
-    throw new Error(error.detail || 'Request failed');
+    throw new ApiRequestError(error.detail || 'Request failed', response);
   }
+  return response;
+}
+
+async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const response = await send(endpoint, options);
   if (response.status === 204) return null as T;
   return (await response.json()) as T;
 }
@@ -45,8 +60,21 @@ export function deleteLocationOnUnload(id: number) {
 export const refreshLocation = (id: number) =>
   request<Location>(`/locations/${id}/refresh`, { method: 'POST' });
 
-export const refreshLightning = () =>
-  request<LightningObservation>('/lightning/refresh', { method: 'POST' });
+/** The server's Server-Timing header from a lightning refresh, or null (developer diagnostics). */
+export function serverTimingOf(error: unknown): string | null {
+  return error instanceof ApiRequestError ? (error.response?.headers.get('Server-Timing') ?? null) : null;
+}
+
+export async function refreshLightning(): Promise<{
+  observation: LightningObservation;
+  serverTiming: string | null;
+}> {
+  const response = await send('/lightning/refresh', { method: 'POST' });
+  return {
+    observation: (await response.json()) as LightningObservation,
+    serverTiming: response.headers.get('Server-Timing'),
+  };
+}
 
 export function logInteraction(event: string, metadata: object = {}) {
   const page = typeof window === 'undefined' ? undefined : window.location.pathname;

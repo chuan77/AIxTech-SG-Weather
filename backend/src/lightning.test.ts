@@ -3,6 +3,7 @@ import {
   normaliseStrikes,
   SingaporeLightningClient,
   type LightningRecord,
+  type LightningTiming,
 } from './lightning.js';
 import { WeatherProviderError } from './providerHttp.js';
 
@@ -276,5 +277,72 @@ describe('SingaporeLightningClient', () => {
     const withKey = pagedFetch([{ records: windowRecords(0) }]);
     await new SingaporeLightningClient({ ...NO_PACING, apiKey: 'secret', fetchImpl: withKey as never }).getRecentLightning(NOW);
     expect((withKey.mock.calls[0][1]?.headers as Record<string, string>)['x-api-key']).toBe('secret');
+  });
+});
+
+describe('SingaporeLightningClient timing', () => {
+  const SECRET_HINTS = /http|api-open|x-api-key/i;
+
+  it('reports a fresh fetch with pages, requests and the strike count', async () => {
+    const fetchMock = pagedFetch([{ records: windowRecords(0, [4, 40]), token: 'next' }, { records: windowRecords(50) }]);
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: fetchMock as never });
+    const timing: Partial<LightningTiming> = {};
+
+    const observation = await client.getRecentLightning(NOW, timing);
+
+    expect(timing).toMatchObject({ served: 'fetch', pages: 2, requests: 2, retries: 0, outcome: 'ok' });
+    expect(timing.strikes).toBe(observation.strikes.length);
+    expect(timing.totalMs).toBeGreaterThanOrEqual(0);
+    expect(timing.providerMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('reports an empty window as outcome empty', async () => {
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: pagedFetch([{ records: windowRecords(0) }]) as never });
+    const timing: Partial<LightningTiming> = {};
+    await client.getRecentLightning(NOW, timing);
+    expect(timing).toMatchObject({ served: 'fetch', strikes: 0, outcome: 'empty' });
+  });
+
+  it('reports a cache hit with no pages or requests', async () => {
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: pagedFetch([{ records: windowRecords(0, [4]) }]) as never });
+    await client.getRecentLightning(NOW);
+    const timing: Partial<LightningTiming> = {};
+    await client.getRecentLightning(new Date(NOW.getTime() + 60_000), timing);
+    expect(timing).toMatchObject({ served: 'cache', pages: 0, requests: 0, strikes: 1, outcome: 'ok' });
+  });
+
+  it('reports one fetch and one shared call for concurrent callers', async () => {
+    const client = new SingaporeLightningClient({ ...NO_PACING, fetchImpl: pagedFetch([{ records: windowRecords(0) }]) as never });
+    const first: Partial<LightningTiming> = {};
+    const second: Partial<LightningTiming> = {};
+    await Promise.all([client.getRecentLightning(NOW, first), client.getRecentLightning(NOW, second)]);
+    expect([first.served, second.served].sort()).toEqual(['fetch', 'shared']);
+    expect(second.pages ?? 0).toBe(0);
+  });
+
+  it('reports a stale fallback with a safe error kind', async () => {
+    const ok = pagedFetch([{ records: windowRecords(0, [4]) }]);
+    const client = new SingaporeLightningClient({ ...NO_PACING,
+      fetchImpl: (async (...args: Parameters<typeof fetch>) => {
+        if (ok.mock.calls.length === 0) return ok(...args);
+        throw new Error('network down at https://api-open.data.gov.sg/?x-api-key=secret');
+      }) as never,
+    });
+    await client.getRecentLightning(NOW);
+    const timing: Partial<LightningTiming> = {};
+    await client.getRecentLightning(new Date(NOW.getTime() + 180_000), timing);
+    expect(timing).toMatchObject({ served: 'fetch', outcome: 'stale', strikes: 1 });
+    expect(timing.errorKind).toBeTruthy();
+    expect(timing.errorKind).not.toMatch(SECRET_HINTS);
+  });
+
+  it('reports an error when failing with nothing cached', async () => {
+    const client = new SingaporeLightningClient({ ...NO_PACING,
+      fetchImpl: (async () => new Response('{}', { status: 500 })) as never,
+    });
+    const timing: Partial<LightningTiming> = {};
+    await expect(client.getRecentLightning(NOW, timing)).rejects.toBeInstanceOf(WeatherProviderError);
+    expect(timing).toMatchObject({ served: 'fetch', outcome: 'error', strikes: 0 });
+    expect(timing.errorKind).not.toMatch(SECRET_HINTS);
   });
 });

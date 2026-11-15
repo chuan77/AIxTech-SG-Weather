@@ -3,6 +3,7 @@ import { SingaporeLightningClient } from './lightning.js';
 import {
   ProviderRequester,
   WeatherProviderError,
+  createRequestStats,
   defaultRequestIntervalMs,
 } from './providerHttp.js';
 import { SingaporeWeatherClient } from './weather.js';
@@ -116,5 +117,47 @@ describe('shared requester', () => {
 
     expect(startedAt.length).toBeGreaterThanOrEqual(13);
     for (const gap of gaps(startedAt)) expect(gap).toBeGreaterThanOrEqual(500);
+  });
+});
+
+describe('ProviderRequester request stats', () => {
+  it('counts one request and no retries for a plain success', async () => {
+    const { fetchImpl } = recordingFetch();
+    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 0, rateLimitRetryDelayMs: 0 });
+    const stats = createRequestStats();
+
+    await settle(requester.getJson('https://x.test/a', stats));
+
+    expect(stats).toMatchObject({ requests: 1, retries: 0, retryWaitMs: 0 });
+    expect(stats.pacingWaitMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('counts a 429 retry as a second request and records its wait', async () => {
+    const { fetchImpl } = recordingFetch([429, 200]);
+    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 0, rateLimitRetryDelayMs: 500 });
+    const stats = createRequestStats();
+
+    await settle(requester.getJson('https://x.test/a', stats));
+
+    expect(stats.requests).toBe(2);
+    expect(stats.retries).toBe(1);
+    expect(stats.retryWaitMs).toBeGreaterThanOrEqual(500);
+  });
+
+  it('records time spent waiting for a pacing slot', async () => {
+    const { fetchImpl } = recordingFetch();
+    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 50, rateLimitRetryDelayMs: 0 });
+    const first = createRequestStats();
+    const second = createRequestStats();
+
+    await settle(Promise.all([requester.getJson('https://x.test/a', first), requester.getJson('https://x.test/b', second)]));
+
+    expect(second.pacingWaitMs).toBeGreaterThan(0);
+  });
+
+  it('still works without stats', async () => {
+    const { fetchImpl } = recordingFetch();
+    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 0 });
+    await expect(settle(requester.getJson('https://x.test/a'))).resolves.toBeDefined();
   });
 });

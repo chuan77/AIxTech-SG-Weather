@@ -7,9 +7,6 @@ export const LIGHTNING_STORAGE_KEY = 'weather-starter.lightning.enabled';
 
 const MINUTE_MS = 60_000;
 const SGT_OFFSET_MS = 8 * 3_600_000;
-const MAX_RADIUS = 8;
-const MIN_RADIUS = 5;
-const MIN_OPACITY = 0.15;
 
 /** True when the data was fetched under 2 minutes ago, so a repeat action can reuse it. */
 export function isFresh(
@@ -33,15 +30,6 @@ function ageMinutes(occurredAt: string, now: number): number {
   const occurred = Date.parse(occurredAt);
   if (!Number.isFinite(occurred)) return 60;
   return Math.min(60, Math.max(0, (now - occurred) / MINUTE_MS));
-}
-
-/** Newer strikes are larger and more opaque; both fade linearly over the 60-minute window. */
-export function strikeStyle(occurredAt: string, now: number): { opacity: number; radius: number } {
-  const fraction = ageMinutes(occurredAt, now) / 60;
-  return {
-    opacity: 1 - (1 - MIN_OPACITY) * fraction,
-    radius: MAX_RADIUS - (MAX_RADIUS - MIN_RADIUS) * fraction,
-  };
 }
 
 /** Clock time in Singapore (the map only covers Singapore), for example "9:38 pm". */

@@ -85,8 +85,13 @@ export interface LightningState {
   status: LightningStatus;
   observation: LightningObservation | null;
   setEnabled: (enabled: boolean) => void;
-  /** Loads the last hour of strikes; a no-op while the data is under 2 minutes old. */
-  refresh: () => Promise<void>;
+  /**
+   * Loads the last hour of strikes; a no-op while the data is under 2 minutes old. `trigger` only
+   * labels the developer-console timing record (default 'refresh').
+   */
+  refresh: (trigger?: 'toggle' | 'refresh' | 'prompt') => Promise<void>;
+  /** Called by a map once it has drawn `observation`; completes that refresh's timing record. */
+  reportDrawn: (observation: LightningObservation) => void;
 }
 
 export interface LocationError {

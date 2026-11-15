@@ -55,7 +55,7 @@ export function LightningControl({ className }: LightningControlProps) {
             // Negative margins grow the tap area (44px on touch, 24px with a mouse) without growing the strip.
             <button
               type="button"
-              onClick={() => void lightning.refresh()}
+              onClick={() => void lightning.refresh('prompt')}
               className="-my-3 inline-flex min-h-11 items-center underline md:pointer-fine:-my-1 md:pointer-fine:min-h-6"
             >
               {message.text}

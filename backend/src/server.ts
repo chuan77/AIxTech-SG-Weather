@@ -6,7 +6,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
 import { createLightningRouter } from './routes/lightning.js';
 import type { LightningClient } from './lightning.js';
-import { createFixtureLightningClient } from './lightningFixture.js';
+import { createBusyLightningClient, createFixtureLightningClient } from './lightningFixture.js';
 import { logger } from './logger.js';
 import { ProviderRequester } from './providerHttp.js';
 
@@ -59,6 +59,10 @@ export async function createApp(options: AppOptions = {}) {
   if (!lightningClient && process.env.LIGHTNING_FIXTURE === 'demo' && process.env.NODE_ENV !== 'production') {
     logger.warn('LIGHTNING_FIXTURE=demo: serving fake lightning strikes (development only)');
     lightningClient = createFixtureLightningClient();
+  }
+  if (!lightningClient && process.env.LIGHTNING_FIXTURE === 'busy' && process.env.NODE_ENV !== 'production') {
+    logger.warn('LIGHTNING_FIXTURE=busy: serving ~370 fake lightning strikes (development only)');
+    lightningClient = createBusyLightningClient();
   }
 
   // The provider's rate limit is per key, so every default client shares one paced requester.

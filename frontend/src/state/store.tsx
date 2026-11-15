@@ -14,6 +14,7 @@ import {
   deleteLocationOnUnload,
   refreshLocation,
   refreshLightning,
+  serverTimingOf,
   logInteraction,
 } from '../api';
 import {
@@ -22,6 +23,13 @@ import {
   parseEnabled,
   serialiseEnabled,
 } from '../components/map/lightningHelpers';
+import {
+  buildReusedRecord,
+  buildTimingRecord,
+  logRefreshTiming,
+  type LightningTimingOutcome,
+  type LightningTrigger,
+} from '../components/map/lightningTiming';
 import type {
   BulkRefresh,
   BulkRefreshFailure,
@@ -86,6 +94,16 @@ export function StoreProvider({ children }: ProviderProps) {
   );
   const lightningObservationRef = useRef<LightningObservation | null>(null);
   const lightningInFlightRef = useRef(false);
+  // The refresh whose timing record waits for a map to report it drew the new strikes.
+  const lightningTimingRef = useRef<{
+    observation: LightningObservation;
+    trigger: LightningTrigger;
+    startedAt: number;
+    respondedAt: number;
+    serverTiming: string | null;
+    outcome: LightningTimingOutcome;
+    fallback: ReturnType<typeof setTimeout>;
+  } | null>(null);
   const [bulkRefresh, setBulkRefresh] = useState<BulkRefresh | null>(null);
   const bulkRunningRef = useRef(false);
   const bulkStopRef = useRef(false);
@@ -357,33 +375,84 @@ export function StoreProvider({ children }: ProviderProps) {
   }, [clearDeleteTimer]);
 
   // Lightning is island-wide and fetched only on a user action (never on mount); see constitution I.
-  const refreshLightningData = useCallback(async () => {
-    if (lightningInFlightRef.current) return;
-    if (isFresh(lightningObservationRef.current, Date.now())) return;
-
-    lightningInFlightRef.current = true;
-    setLightningStatus('loading');
-    logInteraction('lightning_refreshed');
-    try {
-      const next = await refreshLightning();
-      lightningObservationRef.current = next;
-      setLightningObservation(next);
-      if (next.stale) setLightningStatus('unavailable');
-      else setLightningStatus(next.strikes.length > 0 ? 'ok' : 'empty');
-    } catch {
-      // Keep any strikes loaded earlier on screen; only the status changes.
-      setLightningStatus('unavailable');
-    } finally {
-      lightningInFlightRef.current = false;
-    }
+  const finishLightningTiming = useCallback((drawnAt: number | null) => {
+    const pending = lightningTimingRef.current;
+    if (!pending) return;
+    lightningTimingRef.current = null;
+    clearTimeout(pending.fallback);
+    logRefreshTiming(
+      buildTimingRecord({ ...pending, drawnAt, strikes: pending.observation.strikes.length }),
+    );
   }, []);
+
+  const reportLightningDrawn = useCallback(
+    (observation: LightningObservation) => {
+      if (lightningTimingRef.current?.observation === observation) {
+        finishLightningTiming(performance.now());
+      }
+    },
+    [finishLightningTiming],
+  );
+
+  const refreshLightningData = useCallback(
+    async (trigger: LightningTrigger = 'refresh') => {
+      if (lightningInFlightRef.current) return;
+      const current = lightningObservationRef.current;
+      if (isFresh(current, Date.now())) {
+        const strikes = current?.strikes.length ?? 0;
+        const outcome = current?.stale ? 'unavailable' : strikes > 0 ? 'ok' : 'empty';
+        logRefreshTiming(buildReusedRecord(trigger, strikes, outcome));
+        return;
+      }
+
+      lightningInFlightRef.current = true;
+      setLightningStatus('loading');
+      logInteraction('lightning_refreshed');
+      const startedAt = performance.now();
+      try {
+        const { observation: next, serverTiming } = await refreshLightning();
+        const outcome = next.stale ? 'unavailable' : next.strikes.length > 0 ? 'ok' : 'empty';
+        finishLightningTiming(null);
+        lightningTimingRef.current = {
+          observation: next,
+          trigger,
+          startedAt,
+          respondedAt: performance.now(),
+          serverTiming,
+          outcome,
+          // No map on screen to report drawing (or the layer is off): log what is known.
+          fallback: setTimeout(() => finishLightningTiming(null), 5_000),
+        };
+        lightningObservationRef.current = next;
+        setLightningObservation(next);
+        setLightningStatus(outcome);
+      } catch (error) {
+        // Keep any strikes loaded earlier on screen; only the status changes.
+        setLightningStatus('unavailable');
+        logRefreshTiming(
+          buildTimingRecord({
+            trigger,
+            startedAt,
+            respondedAt: performance.now(),
+            drawnAt: null,
+            strikes: 0,
+            outcome: 'unavailable',
+            serverTiming: serverTimingOf(error),
+          }),
+        );
+      } finally {
+        lightningInFlightRef.current = false;
+      }
+    },
+    [finishLightningTiming],
+  );
 
   const setLightningEnabledAndLoad = useCallback(
     (enabled: boolean) => {
       setLightningEnabled(enabled);
       writeLightningEnabled(enabled);
       logInteraction('lightning_toggled', { enabled });
-      if (enabled) void refreshLightningData();
+      if (enabled) void refreshLightningData('toggle');
     },
     [refreshLightningData],
   );
@@ -430,6 +499,7 @@ export function StoreProvider({ children }: ProviderProps) {
         observation: lightningObservation,
         setEnabled: setLightningEnabledAndLoad,
         refresh: refreshLightningData,
+        reportDrawn: reportLightningDrawn,
       },
     }),
     [
@@ -459,6 +529,7 @@ export function StoreProvider({ children }: ProviderProps) {
       lightningObservation,
       setLightningEnabledAndLoad,
       refreshLightningData,
+      reportLightningDrawn,
     ],
   );
 

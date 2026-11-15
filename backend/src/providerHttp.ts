@@ -13,6 +13,22 @@ export function defaultRequestIntervalMs(apiKey?: string): number {
   return Math.ceil(10_000 / limit) + 50;
 }
 
+/** What one or more getJson calls cost: pass the same object to several calls to sum them. */
+export interface RequestStats {
+  /** HTTP attempts actually sent (a 429 retry counts as 2). */
+  requests: number;
+  /** Time spent waiting for a pacing slot. */
+  pacingWaitMs: number;
+  /** 429 retries taken. */
+  retries: number;
+  /** Time spent in the retry delay. */
+  retryWaitMs: number;
+}
+
+export function createRequestStats(): RequestStats {
+  return { requests: 0, pacingWaitMs: 0, retries: 0, retryWaitMs: 0 };
+}
+
 export interface ProviderRequesterOptions {
   apiKey?: string;
   timeoutMs?: number;
@@ -40,9 +56,14 @@ export class ProviderRequester {
     this.intervalMs = options.requestIntervalMs ?? defaultRequestIntervalMs(options.apiKey);
   }
 
-  async getJson<T>(url: string): Promise<T> {
+  async getJson<T>(url: string, stats?: RequestStats): Promise<T> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
+      const queuedAt = Date.now();
       await this.waitForRequestSlot();
+      if (stats) {
+        stats.pacingWaitMs += Date.now() - queuedAt;
+        stats.requests += 1;
+      }
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), this.options.timeoutMs ?? 8000);
 
@@ -58,9 +79,13 @@ export class ProviderRequester {
         });
 
         if (response.status === 429 && attempt === 0) {
-          await new Promise((resolve) =>
-            setTimeout(resolve, this.options.rateLimitRetryDelayMs ?? RATE_LIMIT_RETRY_DELAY_MS),
-          );
+          const retryDelayMs = this.options.rateLimitRetryDelayMs ?? RATE_LIMIT_RETRY_DELAY_MS;
+          const waitStartedAt = Date.now();
+          await new Promise((resolve) => setTimeout(resolve, retryDelayMs));
+          if (stats) {
+            stats.retries += 1;
+            stats.retryWaitMs += Date.now() - waitStartedAt;
+          }
           continue;
         }
 

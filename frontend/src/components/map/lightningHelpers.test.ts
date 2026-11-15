@@ -8,7 +8,6 @@ import {
   parseEnabled,
   serialiseEnabled,
   statusMessage,
-  strikeStyle,
   visibleStrikes,
 } from './lightningHelpers';
 
@@ -66,30 +65,6 @@ describe('isFresh', () => {
   it('is false without data or with an unparseable time', () => {
     expect(isFresh(null, NOW)).toBe(false);
     expect(isFresh({ fetched_at: 'nope' }, NOW)).toBe(false);
-  });
-});
-
-describe('strikeStyle', () => {
-  it('is strongest now and weakest at 60 minutes', () => {
-    expect(strikeStyle(iso(0), NOW)).toEqual({ opacity: 1, radius: 8 });
-    const half = strikeStyle(iso(30), NOW);
-    expect(half.opacity).toBeCloseTo(0.575);
-    expect(half.radius).toBeCloseTo(6.5);
-    const oldest = strikeStyle(iso(60), NOW);
-    expect(oldest.opacity).toBeCloseTo(0.15);
-    expect(oldest.radius).toBeCloseTo(5);
-  });
-
-  it('clamps a future strike to the newest style', () => {
-    expect(strikeStyle(iso(-3), NOW)).toEqual({ opacity: 1, radius: 8 });
-  });
-
-  it('fades strictly with age', () => {
-    const [a, b, c] = [2, 30, 55].map((age) => strikeStyle(iso(age), NOW));
-    expect(a.opacity).toBeGreaterThan(b.opacity);
-    expect(b.opacity).toBeGreaterThan(c.opacity);
-    expect(a.radius).toBeGreaterThan(b.radius);
-    expect(b.radius).toBeGreaterThan(c.radius);
   });
 });
 
