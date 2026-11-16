@@ -9,6 +9,10 @@ export default defineConfig({
     env: {
       NODE_ENV: 'test',
       LOG_LEVEL: 'silent',
+      // Never let tests reach a hosted database, even if .env holds real Turso values.
+      // dotenv does not override variables that already exist, so these blanks win.
+      TURSO_DATABASE_URL: '',
+      TURSO_AUTH_TOKEN: '',
     },
   },
 });

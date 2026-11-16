@@ -29,6 +29,7 @@ This feature exposes no new HTTP API. The existing endpoints (`/health`, `/api/*
 |---|---|
 | `Dockerfile` | Builds a runnable image from a clean checkout with no secrets. Exposes the server on `$PORT` |
 | `.dockerignore` | Keeps `.env*`, `*.db*`, `node_modules`, `docs`, `specs`, `.specify`, `.claude`, `.git` and sample dumps out of the build context |
+| `.vercelignore` | Keeps `.env*`, `*.db*`, sample dumps and non-runtime folders out of the source uploaded by `vercel deploy` |
 | `vercel.json` | `framework: container`, `regions: ["sin1"]`, `git.deploymentEnabled: false` |
 | `.github/workflows/ci.yml` | Job `verify` runs on push and PR to `main`. Job `deploy` needs `verify`, runs only on push to `main`, one at a time in order |
 | `.env.example` | Lists every variable above with comments. No real values: Turso lines use the placeholders `libsql://XXXXXX` and `XXXX`, commented out so a fresh copy stays in local mode |

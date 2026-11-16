@@ -1,7 +1,6 @@
 import 'dotenv/config';
 import compression from 'compression';
 import express from 'express';
-import pinoHttpModule from 'pino-http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
@@ -12,11 +11,12 @@ import {
   createFixtureLightningClient,
   createStormLightningClient,
 } from './lightningFixture.js';
+import { resolveListenConfig } from './listenConfig.js';
 import { logger } from './logger.js';
+import { createRequestLogger } from './requestLogging.js';
 import { ProviderRequester } from './providerHttp.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const pinoHttp = pinoHttpModule.default ?? pinoHttpModule;
 const FRONTEND_EVENT_PATTERN = /^[a-z][a-z0-9_.:-]{1,63}$/;
 
 interface AppOptions {
@@ -32,7 +32,7 @@ export async function createApp(options: AppOptions = {}) {
   const enableRequestLogging = options.enableRequestLogging ?? process.env.NODE_ENV !== 'test';
 
   if (enableRequestLogging) {
-    app.use(pinoHttp({ logger }));
+    app.use(createRequestLogger(logger));
   }
 
   // gzip or brotli when the browser accepts it: a storm's lightning window is about 6.4 MB as plain
@@ -133,10 +133,24 @@ export async function createApp(options: AppOptions = {}) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const port = Number(process.env.PORT ?? 3000);
+  const { host, port } = resolveListenConfig(process.env);
   const app = await createApp();
 
-  app.listen(port, '127.0.0.1', () => {
-    logger.info({ url: `http://127.0.0.1:${port}` }, 'Weather Starter listening');
+  const server = app.listen(port, host, () => {
+    logger.info({ url: `http://${host}:${port}` }, 'Weather Starter listening');
+  });
+
+  // The hosting platform sends SIGTERM before stopping an idle or replaced instance and allows
+  // 30 s: stop taking requests, let in-flight ones finish, close the database, exit. Ctrl+C
+  // (SIGINT) keeps Node's default so local development stops at once.
+  process.once('SIGTERM', () => {
+    logger.info('shutting down');
+    setTimeout(() => process.exit(1), 25_000).unref();
+    server.close(async () => {
+      const { closeDatabase } = await import('./db.js');
+      closeDatabase();
+      process.exit(0);
+    });
+    server.closeIdleConnections();
   });
 }

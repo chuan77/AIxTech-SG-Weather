@@ -1,17 +1,17 @@
 <!--
 Sync Impact Report (temporary; remove before commit)
-- Version change: 1.2.0 → 1.3.0
-- Modified principles: V. Theme-Driven UI. The `apple` theme is no longer frozen ("MUST stay
-  visually unchanged"); it may now change deliberately to follow Apple's current design language.
-  Added a WCAG 2.1 AA contrast requirement for every theme and panel state, and named the
-  `text-ink-muted`, `--focus-ring` and `--map-control-*` tokens. Removed the `text-[#fff]`
-  exception for map buttons, which now take theme colours.
+- Version change: 1.3.0 → 1.4.0
+- Modified principles: none.
+- Modified sections: Technical Constraints. Storage may now be a hosted libSQL (Turso) database
+  through the same Drizzle `sqlite-proxy` path when `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`
+  are set. `node:sqlite` stays the store for local development, tests and browser checks, which
+  never use the hosted database. `DATABASE_PATH` applies only in local mode.
 - Added sections: none
 - Removed sections: none
-- Reason: the colorize contrast pass darkened Apple's sky so secondary text reaches 4.5:1,
-  bringing the Apple theme in line with Apple's updated design system.
-- Synced: docs/theming.md, docs/src/content/docs/frontend/theming.md, frontend/PRODUCT.md,
-  frontend/DESIGN.md, THEMES.md.
+- Reason: spec 010 hosts the app on Vercel's Container runtime, whose disk is temporary, so saved
+  locations need a hosted store to survive idle shutdowns and redeploys.
+- Synced: docs/architecture.md, docs/src/content/docs/backend/storage.md,
+  docs/src/content/docs/configuration.md, docs/deployment.md (spec 010 tasks T028, T032, T033).
 - Follow-up TODOs: none.
 -->
 # Weather Starter Constitution
@@ -77,11 +77,15 @@ Rationale: untested routes and unlinted code are caught before they enter histor
 ## Technical Constraints
 
 - Stack: Node with npm workspaces (`frontend`, `backend`), React 18, Tailwind 3, Vite, Express,
-  Drizzle over Node's built-in `node:sqlite`, and vitest.
+  Drizzle's `sqlite-proxy` driver, and vitest.
+- Storage: Drizzle's `sqlite-proxy` over Node's built-in `node:sqlite` for local development and
+  tests, or over a hosted libSQL (Turso) database when `TURSO_DATABASE_URL` and
+  `TURSO_AUTH_TOKEN` are set; tests and browser checks never use the hosted database;
+  `DATABASE_PATH` applies only to local mode.
 - Schema changes MUST be made in `backend/src/schema.ts` and shipped as a generated Drizzle
   migration (`npm run db:generate`) in `backend/drizzle/`.
-- The server runs from the repo root; the database path is relative to `process.cwd()` unless
-  `DATABASE_PATH` is set.
+- The server runs from the repo root; in local mode the database path is relative to
+  `process.cwd()` unless `DATABASE_PATH` is set.
 - Optional keys (for example `VITE_CARTO_API_KEY`) MUST degrade gracefully when absent, and
   secrets MUST NOT be committed.
 - `RealtimeWeatherReadingsacrossSingapore/` sample dumps MUST NOT be committed.
@@ -112,4 +116,4 @@ Every plan and review MUST check compliance with the principles; any deviation M
 in writing in the plan or pull request. `CLAUDE.md` and `docs/` provide runtime development
 guidance and MUST NOT contradict this document.
 
-**Version**: 1.3.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-14
+**Version**: 1.4.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-16

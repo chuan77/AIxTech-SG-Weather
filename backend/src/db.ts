@@ -1,9 +1,9 @@
-import { DatabaseSync } from 'node:sqlite';
-import { mkdirSync } from 'node:fs';
-import { dirname, join } from 'node:path';
+import { join } from 'node:path';
 import { and, desc, eq } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migrate } from 'drizzle-orm/sqlite-proxy/migrator';
+import { createLocalAdapter, createTursoAdapter, type DatabaseAdapter } from './dbAdapter.js';
+import { resolveDatabaseConfig, type DatabaseConfig } from './dbConfig.js';
 import { logger } from './logger.js';
 import { locations, type WeatherSnapshot } from './schema.js';
 
@@ -50,31 +50,54 @@ const defaultWeather: WeatherSnapshot = {
   daily_forecast: [],
 };
 
-const databasePath = process.env.DATABASE_PATH ?? join(process.cwd(), 'backend', 'weather.db');
-mkdirSync(dirname(databasePath), { recursive: true });
+// Local file by default; the hosted Turso database when TURSO_DATABASE_URL and TURSO_AUTH_TOKEN
+// are set (see dbConfig.ts). If the database cannot be opened or migrated, log why and fail fast.
+// Nothing is ever deleted or recreated, so existing saved locations are left untouched.
+let adapter: DatabaseAdapter;
 
-// If the database cannot be opened or migrated, log why and fail fast. The file is never
-// deleted or recreated, so existing saved locations are left untouched.
-let sqlite: DatabaseSync;
+/** Where the database is, for logs: the local path, never a Turso URL or token. */
+function describe(config: DatabaseConfig) {
+  return config.kind === 'local'
+    ? { kind: config.kind, databasePath: config.path }
+    : { kind: config.kind };
+}
+
+async function countMigrations(): Promise<number> {
+  const table = await adapter.query(
+    "SELECT count(*) FROM sqlite_master WHERE type = 'table' AND name = '__drizzle_migrations'",
+    [],
+    'get',
+  );
+  if (Number(table.rows?.[0] ?? 0) === 0) return 0;
+  const applied = await adapter.query('SELECT count(*) FROM __drizzle_migrations', [], 'get');
+  return Number(applied.rows?.[0] ?? 0);
+}
 
 async function openDatabase() {
+  let config: DatabaseConfig | undefined;
   try {
-    sqlite = new DatabaseSync(databasePath);
-    sqlite.exec('PRAGMA journal_mode = WAL');
-    const database = drizzle(sqliteCallback, { schema: { locations } });
+    config = resolveDatabaseConfig(process.env, process.cwd());
+    adapter =
+      config.kind === 'local'
+        ? createLocalAdapter(config.path)
+        : createTursoAdapter(config.url, config.authToken);
+    const database = drizzle(adapter.query, { schema: { locations } });
+    const before = await countMigrations();
     await migrate(
       database,
       async (migrationQueries) => {
-        for (const query of migrationQueries) {
-          const trimmed = query.trim();
-          if (trimmed) sqlite.exec(trimmed);
-        }
+        await adapter.batch(migrationQueries.map((query) => query.trim()).filter(Boolean));
       },
       { migrationsFolder: join(process.cwd(), 'backend', 'drizzle') },
     );
+    const migrationsApplied = (await countMigrations()) - before;
+    logger.info({ ...describe(config), migrationsApplied }, 'database ready');
     return database;
   } catch (error) {
-    logger.error({ err: error, databasePath }, 'could not open or migrate the database');
+    logger.error(
+      { err: error, ...(config ? describe(config) : {}) },
+      'could not open or migrate the database',
+    );
     throw error;
   }
 }
@@ -154,12 +177,12 @@ export async function deleteLocation(id: number): Promise<boolean> {
 }
 
 export function closeDatabase(): void {
-  sqlite.close();
+  adapter.close();
 }
 
 export async function resetStore(): Promise<void> {
   await db.delete(locations).run();
-  sqlite.prepare("DELETE FROM sqlite_sequence WHERE name = 'locations'").run();
+  await adapter.execute("DELETE FROM sqlite_sequence WHERE name = 'locations'");
 }
 
 function weatherToColumns(weather: WeatherSnapshot) {
@@ -236,26 +259,4 @@ function rowToRecord(row: LocationRow): LocationRecord {
       daily_forecast: row.dailyForecast,
     },
   };
-}
-
-async function sqliteCallback(
-  sql: string,
-  params: unknown[],
-  method: 'run' | 'all' | 'values' | 'get',
-): Promise<{ rows: unknown[] }> {
-  const statement = sqlite.prepare(sql);
-  const bindings = params as never[];
-  if (method === 'run') {
-    statement.run(...bindings);
-    return { rows: [] };
-  }
-  if (method === 'get') {
-    const row = statement.get(...bindings) as Record<string, unknown> | undefined;
-    return { rows: row ? Object.values(row) : (undefined as unknown as unknown[]) };
-  }
-  const rows = statement.all(...bindings) as Record<string, unknown>[];
-  if (method === 'values') {
-    return { rows: rows.map((row) => Object.values(row)) };
-  }
-  return { rows: rows.map((row) => Object.values(row)) };
 }

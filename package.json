@@ -26,6 +26,7 @@
     "docs"
   ],
   "dependencies": {
+    "@libsql/client": "^0.18.0",
     "@vitejs/plugin-react": "^5.1.4",
     "compression": "1.8.2",
     "dotenv": "^17.4.2",

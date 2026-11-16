@@ -11,11 +11,15 @@ The backend loads `.env` from the repo root through `dotenv/config`. `.env.examp
 | --- | --- | --- | --- |
 | `WEATHER_API_KEY` | unset | `server.ts`, `routes/locations.ts`, `routes/lightning.ts` | Sent as `x-api-key` to data.gov.sg for higher rate limits. Optional. With a key, requests are paced for 12 per 10 s; without, for 6 per 10 s, so a refresh is slower. |
 | `WEATHER_API_RATE_LIMIT` | unset | `providerHttp.ts` | Requests per 10 s that the key allows, for a tier other than Development (for example `30` for a Production key). Invalid values are ignored. |
-| `DATABASE_PATH` | `backend/weather.db` | `db.ts`, `drizzle.config.ts`, `scripts/reset.mjs` | SQLite file location, relative to the working directory. |
-| `PORT` | `3000` | `server.ts` | Listen port on `127.0.0.1`. Portless sets this in development. |
+| `DATABASE_PATH` | `backend/weather.db` | `dbConfig.ts`, `drizzle.config.ts`, `scripts/reset.mjs` | SQLite file location, relative to the working directory. Local mode only. |
+| `TURSO_DATABASE_URL` | unset | `dbConfig.ts` | Hosted Turso database (`libsql://…`). Set it together with `TURSO_AUTH_TOKEN` to use Turso instead of the local file. Ignored by tests and e2e checks. |
+| `TURSO_AUTH_TOKEN` | unset | `dbConfig.ts` | Secret token for that database. Never logged. |
+| `DATABASE_REQUIRE_REMOTE` | unset | `dbConfig.ts` | `true` makes starting without Turso an error. The container image sets it. |
+| `HOST` | `127.0.0.1` | `listenConfig.ts` | Listen address. The container image sets `0.0.0.0`. |
+| `PORT` | `3000` | `listenConfig.ts` | Listen port. Portless sets this in development; the container and Vercel use `3000`. |
 | `NODE_ENV` | unset | `server.ts`, `logger.ts` | `production` serves `frontend/dist` and disables the lightning fixture. `test` skips frontend serving and request logging. |
 | `LOG_LEVEL` | `info` (`silent` in tests) | `logger.ts` | pino log level. |
-| `LOG_FILE_PATH` | `backend/logs/app.log` | `logger.ts` | Second log destination alongside stdout. |
+| `LOG_FILE_PATH` | `backend/logs/app.log` | `logger.ts` | Second log destination alongside stdout. The container image sets `/tmp/lepak-weather.log`. |
 | `LIGHTNING_FIXTURE` | unset | `server.ts` | `demo` serves three fake strikes instead of calling data.gov.sg. Ignored when `NODE_ENV=production`. |
 
 ## Dev server
