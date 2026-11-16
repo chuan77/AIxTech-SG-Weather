@@ -64,14 +64,18 @@ describe('lightning API', () => {
   });
 
   it('returns an empty strikes array as a normal result', async () => {
-    const app = await buildApp({ getRecentLightning: async () => ({ ...observation, strikes: [] }) });
+    const app = await buildApp({
+      getRecentLightning: async () => ({ ...observation, strikes: [] }),
+    });
     const response = await request(app).post('/api/lightning/refresh');
     expect(response.status).toBe(200);
     expect(response.body.strikes).toEqual([]);
   });
 
   it('passes a stale flag through', async () => {
-    const app = await buildApp({ getRecentLightning: async () => ({ ...observation, stale: true }) });
+    const app = await buildApp({
+      getRecentLightning: async () => ({ ...observation, stale: true }),
+    });
     const response = await request(app).post('/api/lightning/refresh');
     expect(response.body.stale).toBe(true);
   });
@@ -111,7 +115,15 @@ describe('lightning API', () => {
   it('passes through what the client measured', async () => {
     const app = await buildApp({
       getRecentLightning: async (_now, timing) => {
-        Object.assign(timing ?? {}, { served: 'fetch', providerMs: 1200, pacingWaitMs: 900, retries: 0, retryWaitMs: 0, requests: 2, pages: 2 });
+        Object.assign(timing ?? {}, {
+          served: 'fetch',
+          providerMs: 1200,
+          pacingWaitMs: 900,
+          retries: 0,
+          retryWaitMs: 0,
+          requests: 2,
+          pages: 2,
+        });
         return observation;
       },
     });
@@ -139,5 +151,75 @@ describe('lightning API', () => {
     await createApp({ serveFrontend: false, enableRequestLogging: false });
 
     expect(requesterCount.value).toBe(1);
+  });
+
+  describe('LIGHTNING_FIXTURE=storm (spec 009, development only)', () => {
+    async function stormWarnings(nodeEnv: string) {
+      const { logger } = await import('../logger.js');
+      const warn = vi.spyOn(logger, 'warn').mockImplementation(() => undefined);
+      vi.stubEnv('LIGHTNING_FIXTURE', 'storm');
+      vi.stubEnv('NODE_ENV', nodeEnv);
+      try {
+        const { createApp } = await import('../server.js');
+        await createApp({ serveFrontend: false, enableRequestLogging: false });
+        return warn.mock.calls.filter(([message]) =>
+          String(message).includes('LIGHTNING_FIXTURE=storm'),
+        );
+      } finally {
+        vi.unstubAllEnvs();
+        warn.mockRestore();
+      }
+    }
+
+    it('serves the storm replay outside production', async () => {
+      expect(await stormWarnings('development')).toHaveLength(1);
+    });
+
+    it('is ignored in production', async () => {
+      expect(await stormWarnings('production')).toHaveLength(0);
+    });
+  });
+
+  describe('compression (spec 009: a storm window is about 6.4 MB as plain JSON)', () => {
+    const storm: LightningObservation = {
+      ...observation,
+      strikes: Array.from({ length: 2_000 }, (_, index) => {
+        const occurred_at = new Date(
+          Date.parse('2026-11-16T09:00:00Z') - index * 1_000,
+        ).toISOString();
+        const latitude = 1.3 + index / 100_000;
+        return {
+          id: `${occurred_at}|${latitude}|103.8`,
+          latitude,
+          longitude: 103.8,
+          occurred_at,
+          type: 'C',
+          label: 'Cloud to Cloud',
+        };
+      }),
+    };
+
+    it('compresses the refresh for clients that accept gzip, with the body unchanged', async () => {
+      const app = await buildApp({ getRecentLightning: async () => storm });
+      const response = await request(app)
+        .post('/api/lightning/refresh')
+        .set('Accept-Encoding', 'gzip');
+      expect(response.status).toBe(200);
+      expect(response.headers['content-encoding']).toBe('gzip');
+      expect(response.headers.vary).toMatch(/Accept-Encoding/i);
+      expect(response.headers['server-timing']).toBeDefined();
+      expect(response.body).toEqual(storm);
+    });
+
+    it('sends plain JSON to clients that accept no compression', async () => {
+      const app = await buildApp({ getRecentLightning: async () => storm });
+      const response = await request(app)
+        .post('/api/lightning/refresh')
+        .set('Accept-Encoding', 'identity');
+      expect(response.status).toBe(200);
+      expect(response.headers['content-encoding']).toBeUndefined();
+      expect(response.headers['server-timing']).toBeDefined();
+      expect(response.body).toEqual(storm);
+    });
   });
 });

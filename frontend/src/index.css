@@ -28,6 +28,7 @@ body,
   /* Strike-mark outline: never faded, so it carries the 3:1 contrast on the light voyager map
      (measured 2026-11-15 around the oldest strike: median 14.3:1, worst pixel 6.5:1). */
   --lightning-outline: #141928;
+  --lightning-ink: #141928; /* group count and age text on --lightning: 12.1:1 */
   --scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --card-radius: 1rem;
   --card-border: rgba(255, 255, 255, 0.15);
@@ -113,6 +114,7 @@ body,
   --pin-dot-selected: #ffd479;
   --lightning: #ffd21f;
   --lightning-outline: #141928; /* voyager: median 15.1:1, worst 10.8:1 */
+  --lightning-ink: #141928; /* group count and age text on --lightning: 12.1:1 */
   --scrollbar-thumb: rgba(255, 255, 255, 0.3);
 }
 
@@ -146,6 +148,7 @@ body,
   /* Dark basemap: a bright outline keeps every strike findable while only the fill fades
      (dark_all: median 16.8:1, worst 6.4:1). */
   --lightning-outline: #fff35c;
+  --lightning-ink: #141928; /* group count and age text on --lightning: 15.2:1 */
   --scrollbar-thumb: rgba(0, 229, 255, 0.25);
 }
 
@@ -260,6 +263,7 @@ body,
   --pin-dot-selected: #7a55c9;
   --lightning: #ff4d8d;
   --lightning-outline: #3b0f2a; /* light_all: median 16.2:1, worst 12.6:1 */
+  --lightning-ink: #3b0f2a; /* group count and age text on --lightning: 5.2:1 */
   --scrollbar-thumb: rgba(74, 59, 92, 0.3);
 }
 
@@ -304,6 +308,7 @@ body,
   --pin-dot-selected: #007f79;
   --lightning: #ff3d6e;
   --lightning-outline: #111111; /* light_all: median 17.3:1, worst 13.4:1 */
+  --lightning-ink: #111111; /* group count and age text on --lightning: 5.5:1 */
   --scrollbar-thumb: rgba(17, 17, 17, 0.3);
 }
 
@@ -458,6 +463,7 @@ body,
   /* Dark basemap: a bright outline keeps every strike findable while only the fill fades
      (dark_all: median 14.8:1, worst 5.6:1). */
   --lightning-outline: #ffe14a;
+  --lightning-ink: #141928; /* group count and age text on --lightning: 13.4:1 */
   --scrollbar-thumb: rgba(214, 208, 255, 0.22);
 
   /* NEA flag colours, banded at the official cut-offs so the marker sits on its band's colour.
@@ -817,6 +823,108 @@ textarea {
   stroke-width: 1.6;
   stroke-linejoin: round;
   paint-order: stroke;
+}
+
+/* Lightning strike groups (groupMarker.ts, spec 009): where strikes crowd, one round mark with the
+   count and the newest strike's age. Only the halo fill fades with that age, like a bolt's fill; the
+   outline, the core and the text never fade, so the outline keeps 3:1 against the basemap and the
+   text keeps 4.5:1 (--lightning-ink on --lightning) at every age. */
+.strike-group-wrapper {
+  background: none;
+  border: none;
+}
+
+.strike-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.strike-group--small {
+  font-size: 9px;
+}
+
+.strike-group--large {
+  font-size: 11px;
+}
+
+.strike-group__halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  border: 1.5px solid var(--lightning-outline);
+}
+
+.strike-group__halo::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: var(--lightning);
+  opacity: calc(
+    var(--lightning-fill-floor, 0.25) + (1 - var(--lightning-fill-floor, 0.25)) *
+      var(--strike-fresh, 1)
+  );
+}
+
+.strike-group__core {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  min-width: 64%;
+  height: 64%;
+  padding: 0 0.25em;
+  border-radius: 9999px;
+  border: 1.5px solid var(--lightning-outline);
+  background: var(--lightning);
+  color: var(--lightning-ink, var(--lightning-outline));
+}
+
+.strike-group__core svg {
+  width: 0.8em;
+  height: 0.8em;
+  flex: none;
+  fill: currentColor;
+}
+
+.strike-group__age {
+  position: absolute;
+  left: 50%;
+  bottom: -0.7em;
+  transform: translateX(-50%);
+  padding: 0.1em 0.3em;
+  border-radius: 9999px;
+  border: 1px solid var(--lightning-outline);
+  background: var(--lightning);
+  color: var(--lightning-ink, var(--lightning-outline));
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* The list in the popup of a group that can't split further (several strikes at one spot). */
+.strike-group-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 14rem;
+  overflow-y: auto;
+}
+
+.strike-group-list li + li {
+  margin-top: 0.35rem;
 }
 
 .weather-pin {

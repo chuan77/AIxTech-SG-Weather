@@ -27,8 +27,16 @@ export interface LightningTimingRecord {
   /** null when no map drew the strikes (for example the map is not on screen). */
   drawMs: number | null;
   strikes: number;
+  /** Marks the map drew for this observation (spec 009): group marks and single bolts. */
+  groups: number;
+  bolts: number;
   outcome: LightningTimingOutcome;
   server: ServerTimingSummary;
+}
+
+export interface DrawnMarks {
+  groups: number;
+  bolts: number;
 }
 
 const DURATIONS: Record<string, keyof ServerTimingSummary> = {
@@ -78,6 +86,8 @@ export function buildTimingRecord(input: {
   respondedAt: number;
   drawnAt: number | null;
   strikes: number;
+  groups?: number;
+  bolts?: number;
   outcome: LightningTimingOutcome;
   serverTiming: string | null;
 }): LightningTimingRecord {
@@ -89,6 +99,8 @@ export function buildTimingRecord(input: {
     networkMs: Math.round(input.respondedAt - input.startedAt),
     drawMs: input.drawnAt === null ? null : Math.round(input.drawnAt - input.respondedAt),
     strikes: input.strikes,
+    groups: input.groups ?? 0,
+    bolts: input.bolts ?? 0,
     outcome: input.outcome,
     server: parseServerTiming(input.serverTiming),
   };
@@ -98,6 +110,7 @@ export function buildReusedRecord(
   trigger: LightningTrigger,
   strikes: number,
   outcome: LightningTimingOutcome,
+  marks: DrawnMarks = { groups: 0, bolts: 0 },
 ): LightningTimingRecord {
   return {
     trigger,
@@ -106,6 +119,8 @@ export function buildReusedRecord(
     networkMs: 0,
     drawMs: 0,
     strikes,
+    groups: marks.groups,
+    bolts: marks.bolts,
     outcome,
     server: {},
   };

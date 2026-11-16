@@ -6,6 +6,8 @@ export const LIGHTNING_WINDOW_MS = 3_600_000;
 export const LIGHTNING_STORAGE_KEY = 'weather-starter.lightning.enabled';
 
 const MINUTE_MS = 60_000;
+/** "37,242": storms bring tens of thousands of strikes (spec 009). */
+const COUNT_FORMAT = new Intl.NumberFormat('en-SG');
 const SGT_OFFSET_MS = 8 * 3_600_000;
 
 /** True when the data was fetched under 2 minutes ago, so a repeat action can reuse it. */
@@ -75,7 +77,10 @@ export function statusMessage(
     case 'ok':
       return count === 0
         ? { text: 'No lightning in the last hour', updatedText }
-        : { text: `${count} ${count === 1 ? 'strike' : 'strikes'} in the last hour`, updatedText };
+        : {
+            text: `${COUNT_FORMAT.format(count)} ${count === 1 ? 'strike' : 'strikes'} in the last hour`,
+            updatedText,
+          };
   }
 }
 

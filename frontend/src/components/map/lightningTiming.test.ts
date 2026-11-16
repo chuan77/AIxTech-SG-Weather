@@ -42,6 +42,8 @@ describe('buildTimingRecord', () => {
       respondedAt: 4610.4,
       drawnAt: 4890.6,
       strikes: 370,
+      groups: 12,
+      bolts: 340,
       outcome: 'ok',
       serverTiming: 'total;dur=3521, provider;dur=3480;desc="fetch"',
     });
@@ -52,6 +54,8 @@ describe('buildTimingRecord', () => {
       networkMs: 3610,
       drawMs: 280,
       strikes: 370,
+      groups: 12,
+      bolts: 340,
       outcome: 'ok',
       server: { totalMs: 3521, served: 'fetch', providerMs: 3480 },
     });
@@ -67,7 +71,15 @@ describe('buildTimingRecord', () => {
       outcome: 'unavailable',
       serverTiming: null,
     });
-    expect(record).toMatchObject({ totalMs: 120, networkMs: 120, drawMs: null, outcome: 'unavailable', server: {} });
+    expect(record).toMatchObject({
+      totalMs: 120,
+      networkMs: 120,
+      drawMs: null,
+      groups: 0,
+      bolts: 0,
+      outcome: 'unavailable',
+      server: {},
+    });
   });
 });
 
@@ -80,8 +92,14 @@ describe('buildReusedRecord', () => {
       networkMs: 0,
       drawMs: 0,
       strikes: 3,
+      groups: 0,
+      bolts: 0,
       outcome: 'ok',
       server: {},
     });
+  });
+
+  it('carries the marks already on the map when given', () => {
+    expect(buildReusedRecord('refresh', 3, 'ok', { groups: 1, bolts: 2 })).toMatchObject({ groups: 1, bolts: 2 });
   });
 });

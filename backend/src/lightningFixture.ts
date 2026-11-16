@@ -1,9 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import {
   LIGHTNING_WINDOW_MINUTES,
   normaliseStrikes,
   type LightningClient,
   type LightningObservation,
   type LightningRecord,
+  type LightningStrike,
 } from './lightning.js';
 
 const DEMO_STRIKES = [
@@ -111,6 +114,62 @@ export function createBusyLightningClient(): LightningClient {
       });
       return {
         strikes: normaliseStrikes(records, now),
+        window_minutes: LIGHTNING_WINDOW_MINUTES,
+        fetched_at: now.toISOString(),
+        provider_updated_at: now.toISOString(),
+        stale: false,
+      };
+    },
+  };
+}
+
+/** The real window captured on 2026-11-16 (spec 009): 37,242 strikes, mostly over Singapore. */
+const STORM_FIXTURE_URL = new URL(
+  '../fixtures/lightning-storm-2026-11-16.json.gz',
+  import.meta.url,
+);
+
+interface StormCapture {
+  captured_at: string;
+  provider_updated_at: string | null;
+  /** [latitude, longitude, occurred_at, type, label], newest first. */
+  strikes: [number, number, string, string, string][];
+}
+
+let stormCapture: StormCapture | null = null;
+
+function readStormCapture(): StormCapture {
+  stormCapture ??= JSON.parse(
+    gunzipSync(readFileSync(STORM_FIXTURE_URL)).toString('utf8'),
+  ) as StormCapture;
+  return stormCapture;
+}
+
+/**
+ * Dev-only client (LIGHTNING_FIXTURE=storm): replays the 2026-11-16 storm with every strike moved
+ * forward by (now − capture time), so the hour looks as it did when it was captured.
+ */
+export function createStormLightningClient(): LightningClient {
+  return {
+    async getRecentLightning(now = new Date()): Promise<LightningObservation> {
+      const capture = readStormCapture();
+      const shiftMs = now.getTime() - Date.parse(capture.captured_at);
+      const strikes: LightningStrike[] = capture.strikes.map(
+        ([latitude, longitude, occurredAt, type, label]) => {
+          const occurred_at = new Date(Date.parse(occurredAt) + shiftMs).toISOString();
+          return {
+            id: `${occurred_at}|${latitude}|${longitude}`,
+            latitude,
+            longitude,
+            occurred_at,
+            type,
+            label,
+          };
+        },
+      );
+      strikes.sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at));
+      return {
+        strikes,
         window_minutes: LIGHTNING_WINDOW_MINUTES,
         fetched_at: now.toISOString(),
         provider_updated_at: now.toISOString(),

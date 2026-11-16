@@ -25,6 +25,12 @@ export function MapCard() {
     setExpanded(true);
   }, [locations.length]);
   const collapse = useCallback(() => setExpanded(false), []);
+  // A lightning group tapped in the card opens fullscreen on that group (the card never zooms).
+  const openLightningGroup = useCallback((view: MapView) => {
+    logInteraction('lightning_group_opened', { zoom: view.zoom });
+    setFullscreenView(view);
+    setExpanded(true);
+  }, []);
 
   if (locations.length === 0) return null;
 
@@ -42,6 +48,9 @@ export function MapCard() {
           focusKey={focusKey}
           onViewChange={handleViewChange}
           onBackgroundTap={isCoarsePointer() ? expand : undefined}
+          // Under fullscreen the card's lightning would be drawn twice for nothing (spec 009, FR-009).
+          showLightning={!expanded}
+          onLightningGroupSelect={openLightningGroup}
         />
         <LightningControl className="right-14 top-2" />
         <button

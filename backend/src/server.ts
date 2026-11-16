@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import compression from 'compression';
 import express from 'express';
 import pinoHttpModule from 'pino-http';
 import { dirname, resolve } from 'node:path';
@@ -6,7 +7,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
 import { createLightningRouter } from './routes/lightning.js';
 import type { LightningClient } from './lightning.js';
-import { createBusyLightningClient, createFixtureLightningClient } from './lightningFixture.js';
+import {
+  createBusyLightningClient,
+  createFixtureLightningClient,
+  createStormLightningClient,
+} from './lightningFixture.js';
 import { logger } from './logger.js';
 import { ProviderRequester } from './providerHttp.js';
 
@@ -30,6 +35,9 @@ export async function createApp(options: AppOptions = {}) {
     app.use(pinoHttp({ logger }));
   }
 
+  // gzip or brotli when the browser accepts it: a storm's lightning window is about 6.4 MB as plain
+  // JSON and about 0.5 MB compressed (spec 009). The body itself is unchanged.
+  app.use(compression());
   app.use(express.json());
 
   app.get('/health', (_request, response) => {
@@ -56,13 +64,31 @@ export async function createApp(options: AppOptions = {}) {
   });
 
   let lightningClient = options.lightningClient;
-  if (!lightningClient && process.env.LIGHTNING_FIXTURE === 'demo' && process.env.NODE_ENV !== 'production') {
+  if (
+    !lightningClient &&
+    process.env.LIGHTNING_FIXTURE === 'demo' &&
+    process.env.NODE_ENV !== 'production'
+  ) {
     logger.warn('LIGHTNING_FIXTURE=demo: serving fake lightning strikes (development only)');
     lightningClient = createFixtureLightningClient();
   }
-  if (!lightningClient && process.env.LIGHTNING_FIXTURE === 'busy' && process.env.NODE_ENV !== 'production') {
+  if (
+    !lightningClient &&
+    process.env.LIGHTNING_FIXTURE === 'busy' &&
+    process.env.NODE_ENV !== 'production'
+  ) {
     logger.warn('LIGHTNING_FIXTURE=busy: serving ~370 fake lightning strikes (development only)');
     lightningClient = createBusyLightningClient();
+  }
+  if (
+    !lightningClient &&
+    process.env.LIGHTNING_FIXTURE === 'storm' &&
+    process.env.NODE_ENV !== 'production'
+  ) {
+    logger.warn(
+      'LIGHTNING_FIXTURE=storm: serving the 2026-11-16 storm (37,242 strikes, development only)',
+    );
+    lightningClient = createStormLightningClient();
   }
 
   // The provider's rate limit is per key, so every default client shares one paced requester.

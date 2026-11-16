@@ -110,7 +110,8 @@ export interface LightningState {
    */
   refresh: (trigger?: 'toggle' | 'refresh' | 'prompt') => Promise<void>;
   /** Called by a map once it has drawn `observation`; completes that refresh's timing record. */
-  reportDrawn: (observation: LightningObservation) => void;
+  /** Called by the map that drew an observation, with what it drew (spec 009 timing record). */
+  reportDrawn: (observation: LightningObservation, marks: { groups: number; bolts: number }) => void;
 }
 
 export interface LocationError {

@@ -27,6 +27,7 @@ import {
   buildReusedRecord,
   buildTimingRecord,
   logRefreshTiming,
+  type DrawnMarks,
   type LightningTimingOutcome,
   type LightningTrigger,
 } from '../components/map/lightningTiming';
@@ -375,20 +376,20 @@ export function StoreProvider({ children }: ProviderProps) {
   }, [clearDeleteTimer]);
 
   // Lightning is island-wide and fetched only on a user action (never on mount); see constitution I.
-  const finishLightningTiming = useCallback((drawnAt: number | null) => {
+  const finishLightningTiming = useCallback((drawnAt: number | null, marks?: DrawnMarks) => {
     const pending = lightningTimingRef.current;
     if (!pending) return;
     lightningTimingRef.current = null;
     clearTimeout(pending.fallback);
     logRefreshTiming(
-      buildTimingRecord({ ...pending, drawnAt, strikes: pending.observation.strikes.length }),
+      buildTimingRecord({ ...pending, ...marks, drawnAt, strikes: pending.observation.strikes.length }),
     );
   }, []);
 
   const reportLightningDrawn = useCallback(
-    (observation: LightningObservation) => {
+    (observation: LightningObservation, marks: DrawnMarks) => {
       if (lightningTimingRef.current?.observation === observation) {
-        finishLightningTiming(performance.now());
+        finishLightningTiming(performance.now(), marks);
       }
     },
     [finishLightningTiming],

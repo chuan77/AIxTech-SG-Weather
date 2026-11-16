@@ -92,7 +92,10 @@ describe('formatting', () => {
 
 describe('statusMessage', () => {
   it('prompts when idle', () => {
-    expect(statusMessage('idle', null, NOW)).toEqual({ text: 'Show latest lightning', updatedText: null });
+    expect(statusMessage('idle', null, NOW)).toEqual({
+      text: 'Show latest lightning',
+      updatedText: null,
+    });
   });
 
   it('shows loading', () => {
@@ -106,14 +109,24 @@ describe('statusMessage', () => {
   });
 
   it('counts strikes with singular and plural wording', () => {
-    expect(statusMessage('ok', observation([strike(5)]), NOW).text).toBe('1 strike in the last hour');
+    expect(statusMessage('ok', observation([strike(5)]), NOW).text).toBe(
+      '1 strike in the last hour',
+    );
     expect(statusMessage('ok', observation([strike(5), strike(9)]), NOW).text).toBe(
       '2 strikes in the last hour',
     );
   });
 
   it('falls back to the empty message once every strike has aged out', () => {
-    expect(statusMessage('ok', observation([strike(61)]), NOW).text).toBe('No lightning in the last hour');
+    expect(statusMessage('ok', observation([strike(61)]), NOW).text).toBe(
+      'No lightning in the last hour',
+    );
+  });
+
+  it('separates thousands in a storm-sized count', () => {
+    const many = (count: number) => observation(Array.from({ length: count }, () => strike(5)));
+    expect(statusMessage('ok', many(37_242), NOW).text).toBe('37,242 strikes in the last hour');
+    expect(statusMessage('ok', many(999), NOW).text).toBe('999 strikes in the last hour');
   });
 
   it('reports unavailable and keeps the last-updated time of earlier data', () => {

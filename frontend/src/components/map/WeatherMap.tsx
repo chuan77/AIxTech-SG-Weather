@@ -177,6 +177,10 @@ interface WeatherMapProps {
   focusKey?: string;
   onViewChange?: (view: MapView) => void;
   onBackgroundTap?: () => void;
+  /** False hides this map's lightning and stops its work (the card while fullscreen is open). */
+  showLightning?: boolean;
+  /** When set, selecting a lightning group calls this instead of zooming this map. */
+  onLightningGroupSelect?: (view: MapView) => void;
   className?: string;
 }
 
@@ -189,6 +193,8 @@ export function WeatherMap({
   focusKey = '',
   onViewChange,
   onBackgroundTap,
+  showLightning = true,
+  onLightningGroupSelect,
   className = 'h-full w-full',
 }: WeatherMapProps) {
   const touchLocked = !interactive && isCoarsePointer();
@@ -224,7 +230,7 @@ export function WeatherMap({
           focusable={interactive}
         />
       ))}
-      <LightningLayer />
+      <LightningLayer showLightning={showLightning} onGroupSelect={onLightningGroupSelect} />
       <FitBounds locations={locations} skipFirstFit={initialView !== undefined} />
       <FocusSelected locations={locations} selectedId={selectedId} focusKey={focusKey} />
       <ResizeWatcher />
