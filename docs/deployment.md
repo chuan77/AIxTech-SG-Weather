@@ -32,7 +32,7 @@ Names only. Values never go in the repo, in logs or in chat.
 | `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub Actions secrets (`orgId` and `id` in `.vercel/repo.json` after `vercel link`) | `deploy` job |
 | `PRODUCTION_URL` | GitHub Actions **variable**, for example `https://lepak-weather.vercel.app` | smoke check |
 
-The image sets `HOST=0.0.0.0`, `PORT=3000`, `NODE_ENV=production` and `DATABASE_REQUIRE_REMOTE=true` itself.
+The image sets `HOST=0.0.0.0`, `PORT=3000`, `NODE_ENV=production`, `DATABASE_REQUIRE_REMOTE=true`, `LOG_FILE_PATH=/tmp/lepak-weather.log`, `TRUST_PROXY=1` and `RATE_LIMITS=on` itself.
 
 ## How the app chooses its database
 
@@ -57,6 +57,15 @@ All of this is done by the owner.
 3. In Vercel, create a token: Account → Settings → Tokens.
 4. In GitHub, add the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` and the variable `PRODUCTION_URL` on `chuan77/AIxTech-SG-Weather`. With `gh`, always pass `--repo chuan77/AIxTech-SG-Weather`, because this folder's default `gh` repo is a different one.
 5. In GitHub, add a branch ruleset on `main` that requires a pull request, requires the status check `verify`, and blocks force pushes.
+
+6. Optional, recommended while the URL is public: a Vercel Firewall rate-limit rule, which applies before any instance. Vercel → lepak-weather → Firewall → Configure → New Rule: if **Request Path** starts with `/api/locations` **and** **Method** is `POST`, then **Rate Limit**, Fixed Window, **600 s**, **30** requests, key **IP**. Or with the CLI:
+
+   ```bash
+   npx vercel@65.9.0 firewall rules add "Limit weather fetches" \
+     --condition '{"type":"path","op":"pre","value":"/api/locations"}' \
+     --condition '{"type":"method","op":"eq","value":"POST"}' \
+     --action rate_limit --rate-limit-window 600 --rate-limit-requests 30 --rate-limit-keys ip --yes
+   ```
 
 ## Manual deploy
 
@@ -85,6 +94,7 @@ npx vercel@65.9.0 deploy --prod   # production
 - Size: container 94.7 MB; whole deployment 238 MB of the 5 GiB limit (2026-11-16).
 - One saved-locations list is shared by every visitor until per-visitor storage ships.
 - Rate pacing for data.gov.sg and the lightning cache are per instance. That's fine for fewer than 5 visitors.
+- The URL is public, so the image turns on per-device limits (`RATE_LIMITS=on`, keyed on the visitor address from `TRUST_PROXY=1`): 30 weather fetches per 10 minutes and 60 `/api/logs` events per minute, plus a 2 KB cap on log metadata. Lightning needs no limit: its 2-minute cache already caps data.gov.sg calls. The limits are in memory per instance: they reset on a cold start, and a parallel burst makes Vercel start more instances (9 in a 64-request test), each with its own allowance. So they stop a simple loop, not a determined burst. For a limit across all instances, add the Vercel Firewall rate-limit rule below (Hobby allows one).
 - Region: `vercel.json` asks for `sin1`. Confirm it in the deployment's runtime logs, and set it in Project Settings if Vercel ignores the file for containers.
 
 ## Troubleshooting

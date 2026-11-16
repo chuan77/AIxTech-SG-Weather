@@ -20,9 +20,13 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000 \
     DATABASE_REQUIRE_REMOTE=true \
-    LOG_FILE_PATH=/tmp/lepak-weather.log
+    LOG_FILE_PATH=/tmp/lepak-weather.log \
+    TRUST_PROXY=1 \
+    RATE_LIMITS=on
 # The app runs as the non-root node user, which cannot create backend/logs under the root-owned
 # /app, so the second log copy goes to /tmp. Vercel collects the stdout copy.
+# RATE_LIMITS=on: per-device limits on weather fetches and /api/logs, since the URL is public.
+# TRUST_PROXY=1: Vercel's proxy puts the visitor's address in X-Forwarded-For, which those limits key on.
 COPY package.json package-lock.json ./
 COPY frontend/package.json frontend/
 COPY backend/package.json backend/
