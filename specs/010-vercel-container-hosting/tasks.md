@@ -127,11 +127,12 @@ description: "Task list for 010-vercel-container-hosting"
     - `# TURSO_DATABASE_URL=libsql://XXXXXX`
     - `# TURSO_AUTH_TOKEN=XXXX`
   - Add `# DATABASE_REQUIRE_REMOTE=true  (set in the container image; makes local mode an error)`.
-- [ ] T018 [US1] Local image check (quickstart §4). **(owner)** starts Docker Desktop. Then:
+- [x] T018 [US1] Local image check (quickstart §4). **(owner)** starts Docker Desktop. Then:
   - `docker build -t lepak-weather .`, and record the image size.
   - `docker run --rm -p 3000:3000 lepak-weather` must exit with the "hosted database is required" error.
   - With `turso dev` serving a throwaway copy, run with `-e TURSO_DATABASE_URL=http://host.docker.internal:8080 -e TURSO_AUTH_TOKEN=dev`. `/health` must return 200, the dashboard must show 10 locations, and `docker stop` must log `shutting down` within 25 s.
   - Tear down every container and `turso dev`, whether it passes or fails.
+  - Result (2026-11-17, OrbStack): built in 42 s, image 429 MB uncompressed; without Turso it exits 1 with "a hosted database is required here"; against a throwaway libSQL server (the `ghcr.io/tursodatabase/libsql-server` image in place of `turso dev`, seeded with a copy of the uploaded database) `/health` 200, 10 locations, `migrationsApplied: 0`; `docker stop` logs `shutting down` and exits 0 in under 1 s. `vite` (12 MB) is in the image only because the docs workspace's Astro hoists it; nothing at runtime uses it.
 - [x] T019 [US1] **(owner)** One-time Vercel setup (quickstart §3, steps 1–3):
   - `npx vercel@<latest from npm view vercel version> link` to project `lepak-weather` on team SNAIC-Nexus.
   - Set the Production env vars `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (from `turso db tokens create lepak-weather-prod`), `WEATHER_API_KEY` and `PORT=3000` in the Vercel dashboard.

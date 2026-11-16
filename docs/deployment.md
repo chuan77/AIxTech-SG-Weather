@@ -92,7 +92,7 @@ npx vercel@65.9.0 deploy --prod   # production
 
 - The Container runtime is in beta on Vercel.
 - Instances stop after 5 idle minutes, so the next visit waits for a cold start. Measured cold start: about 5 s for the first request after a deploy (preview, 2026-11-16), then 5–25 ms per request.
-- Size: container 94.7 MB; whole deployment 238 MB of the 5 GiB limit (2026-11-16).
+- Size: container 94.7 MB compressed on Vercel (429 MB uncompressed in a local build); whole deployment 238 MB of the 5 GiB limit (2026-11-16).
 - One saved-locations list is shared by every visitor until per-visitor storage ships.
 - Rate pacing for data.gov.sg and the lightning cache are per instance. That's fine for fewer than 5 visitors.
 - The URL is public, so the image turns on per-device limits (`RATE_LIMITS=on`, keyed on the visitor address from `TRUST_PROXY=1`): 30 weather fetches per 10 minutes and 60 `/api/logs` events per minute, plus a 2 KB cap on log metadata. Lightning needs no limit: its 2-minute cache already caps data.gov.sg calls. The limits are in memory per instance: they reset on a cold start, and a parallel burst makes Vercel start more instances (9 in a 64-request test), each with its own allowance. So they stop a simple loop, not a determined burst. For a limit across all instances, add the Vercel Firewall rate-limit rule below (Hobby allows one).
