@@ -27,6 +27,7 @@ Names only. Values never go in the repo, in logs or in chat.
 | `TURSO_DATABASE_URL` | Vercel → Project → Settings → Environment Variables (Production) | Container at runtime |
 | `TURSO_AUTH_TOKEN` | Vercel → Production env. Create it with `turso db tokens create lepak-weather-prod` | Container at runtime |
 | `WEATHER_API_KEY` | Vercel → Production env | Container at runtime |
+| `VITE_CARTO_API_KEY` | Vercel → Production env. Read at **build** time: the Dockerfile's `ARG` lets Vercel pass it into the Vite build, so a change needs a redeploy. It ends up in the public JS bundle, so restrict it to `lepak-weather.vercel.app` at CARTO | Frontend map tiles |
 | `PORT` = `3000` | Vercel → Production env (also set in the image) | Vercel routing |
 | `VERCEL_TOKEN` | GitHub → repo → Settings → Secrets and variables → Actions → Secrets | `deploy` job |
 | `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub Actions secrets (`orgId` and `id` in `.vercel/repo.json` after `vercel link`) | `deploy` job |
