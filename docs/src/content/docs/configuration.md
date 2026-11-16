@@ -38,4 +38,4 @@ Set in `frontend/.env.local`. Vite only exposes variables prefixed with `VITE_`.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `VITE_CARTO_API_KEY` | unset | Appended to CARTO basemap tile URLs. Without it the map uses CARTO's keyless subdomain tiles. |
+| `VITE_CARTO_API_KEY` | unset | Appended to CARTO basemap tile URLs. Without it the map uses CARTO's keyless subdomain tiles. In development Vite inlines it from `frontend/.env.local`. In production the server reads it from its own environment at runtime and puts it in `index.html` as `<meta name="carto-api-key">`, which `components/map/cartoKey.ts` prefers. |
