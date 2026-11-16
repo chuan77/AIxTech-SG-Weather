@@ -75,6 +75,27 @@ body,
   background: var(--scale-uv);
 }
 
+/* UV tile hourly bars (spec 008): each bar shows a 1/22-wide slice of the theme's UV gauge,
+   centred on its value by an inline background-position-x (uvBarPosition in uvTrend.ts). The slice
+   is narrower than any band, so banded themes (Singapore Sky) give each bar one band colour. */
+.uv-bar {
+  background-image: var(--scale-uv);
+  background-size: 2200% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Below 340 px the 13 slots get too narrow for a number each, so only the text lines show
+   (spec FR-015). Hand-written because Tailwind disables min-[…] variants when a screen is `raw`
+   (see `md` in tailwind.config.js). */
+.uv-hourly {
+  display: none;
+}
+@media (min-width: 340px) {
+  .uv-hourly {
+    display: block;
+  }
+}
+
 /* Apple Glass: a deep saturated blue, more frosted panels, larger radius. */
 [data-theme='glass'] {
   --app-background:

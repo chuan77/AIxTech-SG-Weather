@@ -12,6 +12,24 @@ export interface DailyForecast {
   temperature_high_c: number | null;
 }
 
+/** One hourly UV index reading (nationwide, measured at Changi). Mirrors backend `UvReading`. */
+export interface UvReading {
+  /** ISO start of the hour with Singapore offset. */
+  hour: string;
+  /** UV index; null when not numeric (never 0 for missing). */
+  value: number | null;
+}
+
+/** The day's hourly UV readings. Mirrors backend `UvDay`. */
+export interface UvDay {
+  /** 'YYYY-MM-DD' Singapore day from the provider; the previous day overnight. */
+  date: string;
+  /** Provider's last update of the readings, not the refresh time. */
+  as_of: string | null;
+  /** Oldest first; may be empty. */
+  readings: UvReading[];
+}
+
 export interface WeatherSnapshot {
   condition: string | null;
   observed_at: string | null;
@@ -26,6 +44,7 @@ export interface WeatherSnapshot {
   forecast_low_c: number | null;
   forecast_high_c: number | null;
   uv_index: number | null;
+  uv_hourly: UvDay | null;
   psi_twenty_four_hourly: number | null;
   pm25_one_hourly: number | null;
   air_quality_region: string | null;

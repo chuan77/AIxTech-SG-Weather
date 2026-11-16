@@ -12,6 +12,23 @@ const readingTimestamps = {
   windDirection: '2026-11-01T10:04:00Z',
 };
 
+const DEFAULT_UV_PAYLOAD = {
+  code: 0,
+  data: {
+    records: [
+      {
+        updatedTimestamp: '2026-11-01T10:05:00Z',
+        index: [{ hour: '2026-11-01T10:00:00Z', value: 6 }],
+      },
+    ],
+  },
+};
+let uvPayload: unknown = DEFAULT_UV_PAYLOAD;
+
+function uvRecord(record: Record<string, unknown>) {
+  return { code: 0, data: { records: [record] } };
+}
+
 function installFetchMock(failedPath?: string, rateLimitedPath?: string) {
   const rateLimitAttempts = new Map<string, number>();
   const fetchMock = vi.fn(async (input: string | URL | Request) => {
@@ -66,17 +83,7 @@ function payloadFor(path: string) {
     return stationReading(180, readingTimestamps.windDirection);
   }
   if (path.endsWith('/uv')) {
-    return {
-      code: 0,
-      data: {
-        records: [
-          {
-            updatedTimestamp: '2026-11-01T10:05:00Z',
-            index: [{ hour: '2026-11-01T10:00:00Z', value: 6 }],
-          },
-        ],
-      },
-    };
+    return uvPayload;
   }
   if (path.endsWith('/psi')) {
     return airQualityReadings({
@@ -224,6 +231,7 @@ function airQualityReadings(values: Record<string, number | string>) {
 afterEach(() => {
   vi.unstubAllGlobals();
   wbgtReadings = DEFAULT_WBGT_READINGS;
+  uvPayload = DEFAULT_UV_PAYLOAD;
 });
 
 describe('SingaporeWeatherClient', () => {
@@ -482,5 +490,126 @@ describe('SingaporeWeatherClient', () => {
 
     expect(snapshot.area).toBe('Bishan');
     expect(snapshot.condition).toBe('Bishan Cloudy');
+  });
+});
+
+describe('SingaporeWeatherClient hourly UV (spec 008)', () => {
+  // Newest first, as the provider sends it: 15:00 back to 07:00 SGT.
+  const newestFirst = [2, 2, 1, 4, 4, 2, 1, 0, 0].map((value, i) => ({
+    hour: `2026-11-15T${String(15 - i).padStart(2, '0')}:00:00+08:00`,
+    value,
+  }));
+
+  async function snapshotWith(record: Record<string, unknown>) {
+    uvPayload = uvRecord(record);
+    installFetchMock();
+    return new SingaporeWeatherClient(NO_PACING).getCurrentWeather(1.35, 103.85);
+  }
+
+  it('stores the day oldest first with the record date and update time', async () => {
+    const snapshot = await snapshotWith({
+      date: '2026-11-15',
+      timestamp: '2026-11-15T15:00:00+08:00',
+      updatedTimestamp: '2026-11-15T15:11:20+08:00',
+      index: newestFirst,
+    });
+
+    expect(snapshot.uv_index).toBe(2);
+    expect(snapshot.uv_hourly?.date).toBe('2026-11-15');
+    expect(snapshot.uv_hourly?.as_of).toBe('2026-11-15T15:11:20+08:00');
+    expect(snapshot.uv_hourly?.readings.map((r) => r.hour.slice(11, 13))).toEqual([
+      '07',
+      '08',
+      '09',
+      '10',
+      '11',
+      '12',
+      '13',
+      '14',
+      '15',
+    ]);
+    expect(snapshot.uv_hourly?.readings.map((r) => r.value)).toEqual([0, 0, 1, 2, 4, 4, 1, 2, 2]);
+  });
+
+  it('turns a non-numeric value into null, never 0', async () => {
+    const snapshot = await snapshotWith({
+      date: '2026-11-15',
+      index: [
+        { hour: '2026-11-15T09:00:00+08:00', value: 'x' },
+        { hour: '2026-11-15T08:00:00+08:00', value: null },
+        { hour: '2026-11-15T07:00:00+08:00', value: '' },
+      ],
+    });
+
+    expect(snapshot.uv_hourly?.readings.map((r) => r.value)).toEqual([null, null, null]);
+  });
+
+  it('drops entries without a parseable hour and keeps the newest of duplicate hours', async () => {
+    const snapshot = await snapshotWith({
+      date: '2026-11-15',
+      index: [
+        { hour: '2026-11-15T09:00:00+08:00', value: 5 },
+        { hour: 'not a time', value: 9 },
+        { value: 9 },
+        { hour: '2026-11-15T09:00:00+08:00', value: 3 },
+        { hour: '2026-11-15T08:00:00+08:00', value: 1 },
+      ],
+    });
+
+    expect(snapshot.uv_hourly?.readings).toEqual([
+      { hour: '2026-11-15T08:00:00+08:00', value: 1 },
+      { hour: '2026-11-15T09:00:00+08:00', value: 5 },
+    ]);
+  });
+
+  it('gives an empty list when the provider returns no readings', async () => {
+    const snapshot = await snapshotWith({ date: '2026-11-15', index: [] });
+
+    expect(snapshot.uv_hourly).toEqual({ date: '2026-11-15', as_of: null, readings: [] });
+  });
+
+  it('takes a missing date from the oldest reading hour, even without a timestamp', async () => {
+    const snapshot = await snapshotWith({ index: newestFirst });
+
+    expect(snapshot.uv_hourly?.date).toBe('2026-11-15');
+  });
+
+  it('uses the Singapore day of the reading hour, not the UTC day', async () => {
+    // 23:00 UTC on the 14th is 07:00 SGT on the 15th.
+    const snapshot = await snapshotWith({ index: [{ hour: '2026-11-14T23:00:00Z', value: 0 }] });
+
+    expect(snapshot.uv_hourly?.date).toBe('2026-11-15');
+  });
+
+  it('takes a missing date from the record timestamp when there are no readings', async () => {
+    const snapshot = await snapshotWith({ timestamp: '2026-11-15T07:05:00+08:00', index: [] });
+
+    expect(snapshot.uv_hourly).toEqual({ date: '2026-11-15', as_of: null, readings: [] });
+  });
+
+  it('leaves uv_hourly null only when no day can be read at all', async () => {
+    const snapshot = await snapshotWith({ updatedTimestamp: 'garbage', index: [] });
+
+    expect(snapshot.uv_hourly).toBeNull();
+  });
+
+  it('nulls both UV fields when the uv call fails and keeps the rest', async () => {
+    installFetchMock('/v2/real-time/api/uv');
+    const snapshot = await new SingaporeWeatherClient(NO_PACING).getCurrentWeather(1.35, 103.85);
+
+    expect(snapshot.uv_index).toBeNull();
+    expect(snapshot.uv_hourly).toBeNull();
+    expect(snapshot.temperature_c).toBe(29.5);
+    expect(snapshot.condition).toBe('Light Rain');
+  });
+
+  it('makes the same 12 provider requests per refresh as before the feature', async () => {
+    uvPayload = uvRecord({ date: '2026-11-15', index: newestFirst });
+    const fetchMock = installFetchMock();
+    await new SingaporeWeatherClient(NO_PACING).getCurrentWeather(1.35, 103.85);
+
+    expect(fetchMock).toHaveBeenCalledTimes(12);
+    const uvCalls = fetchMock.mock.calls.filter(([url]) => url.toString().endsWith('/uv'));
+    expect(uvCalls).toHaveLength(1);
   });
 });

@@ -7,6 +7,19 @@ import { heatReconcileLine } from './heatComfort';
 import { useNow } from './map/useNow';
 import { psiBand } from './outdoorSummary';
 import { formatSgtTime, singaporeDate, sunTimes } from './sunTimes';
+import {
+  UV_GUIDANCE,
+  UV_MODERATE_FROM,
+  UV_PEAK_CAPTION,
+  uvBandName,
+  uvBarFraction,
+  uvBarPosition,
+  uvDayLabel,
+  uvSourceText,
+  uvStatusText,
+  uvTrendView,
+  type UvSlot,
+} from './uvTrend';
 
 interface WeatherProps {
   weather: WeatherSnapshot;
@@ -102,8 +115,8 @@ export function AirQualityTile({ weather, asOf }: WeatherProps) {
     <TileShell
       icon={<CloudIcon className="h-3.5 w-3.5" />}
       title="Air Quality"
-      // Open detail takes the full row on large screens so it does not stretch neighbouring tiles.
-      className={open ? 'col-span-2 lg:col-span-4' : 'col-span-2'}
+      // Takes the full row on large screens, open or closed, below Rainfall | UV (spec 008).
+      className="col-span-2 lg:col-span-4"
     >
       <div className="text-4xl font-light leading-none tabular-nums text-white/95">{psi}</div>
       <div className="mt-1 text-base text-white/85">
@@ -221,32 +234,148 @@ function Compass({ speed, direction }: CompassProps) {
 }
 
 function uvLabel(value: number | null | undefined): string {
-  if (!isFiniteNumber(value)) return 'Unavailable';
-  if (value <= 2) return 'Low';
-  if (value <= 5) return 'Moderate';
-  if (value <= 7) return 'High';
-  if (value <= 10) return 'Very High';
-  return 'Extreme';
+  return uvBandName(value) ?? 'Unavailable';
 }
 
-export function UVTile({ weather, asOf }: WeatherProps) {
+/** Plot height in px for a full (UV 11) bar; the UV 3 line sits at 3/11 of it. */
+const UV_PLOT_PX = 48;
+/** Hours labelled on the axis (all 13 would crowd a phone). */
+const UV_AXIS_HOURS = new Set([7, 10, 13, 16, 19]);
+
+function hourText(hour: number): string {
+  return `${String(hour).padStart(2, '0')}:00`;
+}
+
+/** Today's (or the snapshot day's) hourly UV slots, 07:00 → 19:00 (spec 008, contracts/ui.md). */
+function UvHourlyView({ slots, label }: { slots: UvSlot[]; label: string }) {
+  const peakStart = slots.findIndex((slot) => slot.inPeakWindow);
+  const peakCount = slots.filter((slot) => slot.inPeakWindow).length;
   return (
-    <TileShell icon={<SunIcon className="h-3.5 w-3.5" />} title="UV Index">
+    // Below 340 px the slots get too narrow for a number each; the text lines still show (FR-015).
+    <div className="uv-hourly mt-4">
+      <div className="relative">
+        {/* NEA's usual peak, 11 am – 3 pm: behind the 11, 12, 13 and 14 columns. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-y-0 rounded-sm bg-white/[0.06]"
+          style={{
+            left: `${(peakStart / slots.length) * 100}%`,
+            width: `${(peakCount / slots.length) * 100}%`,
+          }}
+        />
+        {/* UV 3, the start of Moderate. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 border-t border-dashed border-white/40"
+          style={{ bottom: Math.round((UV_MODERATE_FROM / 11) * UV_PLOT_PX) }}
+        />
+        <ol
+          aria-label={label}
+          className="relative grid grid-cols-[repeat(13,minmax(0,1fr))]"
+          style={{ height: UV_PLOT_PX + 16 }}
+        >
+          {slots.map((slot) => (
+            <li key={slot.hour} className="flex flex-col items-center justify-end gap-0.5">
+              <span className="sr-only">
+                {slot.value === null
+                  ? `${hourText(slot.hour)}, no reading`
+                  : `${hourText(slot.hour)}, UV ${slot.value}, ${slot.band}`}
+              </span>
+              {slot.value === null ? (
+                <span aria-hidden="true" className="w-3/5 border-b border-dotted border-white/20" />
+              ) : (
+                <>
+                  <span
+                    aria-hidden="true"
+                    className="text-[11px] leading-none tabular-nums text-white/85"
+                  >
+                    {slot.value}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className="uv-bar w-3/5 rounded-t-sm"
+                    style={{
+                      height: Math.max(2, Math.round(uvBarFraction(slot.value) * UV_PLOT_PX)),
+                      backgroundPositionX: uvBarPosition(slot.value),
+                    }}
+                  />
+                </>
+              )}
+            </li>
+          ))}
+        </ol>
+      </div>
+      <div
+        aria-hidden="true"
+        className="mt-1 grid grid-cols-[repeat(13,minmax(0,1fr))] text-center text-[10px] tabular-nums text-ink-muted"
+      >
+        {slots.map((slot) => (
+          <span key={slot.hour}>{UV_AXIS_HOURS.has(slot.hour) ? slot.hour : ''}</span>
+        ))}
+      </div>
+      <div
+        aria-hidden="true"
+        className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[10px] leading-tight text-ink-muted"
+      >
+        <span className="flex items-center gap-1">
+          <span className="w-3 border-t border-dashed border-white/40" />
+          UV {UV_MODERATE_FROM} (Moderate)
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-2 w-3 rounded-sm bg-white/[0.12]" />
+          {UV_PEAK_CAPTION}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+export function UVTile({ weather, asOf, className }: WeatherProps & { className?: string }) {
+  const now = useNow(60_000, weather?.observed_at);
+  const view = uvTrendView(weather?.uv_index, weather?.uv_hourly, new Date(now));
+
+  return (
+    <TileShell icon={<SunIcon className="h-3.5 w-3.5" />} title="UV Index" className={className}>
       <div className="text-4xl font-light leading-none tabular-nums text-white/95">
         {formatNumber(weather?.uv_index)}
       </div>
       <div className="mt-1 text-base text-white/85">{uvLabel(weather?.uv_index)}</div>
       <ScaleBar value={weather?.uv_index} max={11} scale="uv" />
-      <p className="mt-3 text-xs leading-snug text-ink-muted">
-        {asOf ? `Nationwide UVI reading from ${asOf}.` : 'Latest nationwide UVI reading.'}
+      {view.kind === 'readings' && (
+        <>
+          <p className="mt-3 text-sm text-white/85">{uvStatusText(view)}</p>
+          <UvHourlyView
+            slots={view.slots}
+            label={`Hourly UV, ${view.dayLabel ?? uvDayLabel(weather.uv_hourly?.date ?? '')}`}
+          />
+        </>
+      )}
+      {view.kind === 'pre-feature' && (
+        <p className="mt-3 text-sm text-white/85">Hourly view appears after the next refresh.</p>
+      )}
+      {view.kind === 'empty' && <p className="mt-3 text-sm text-white/85">No UV readings yet.</p>}
+      {view.kind !== 'unavailable' && (
+        <p className="mt-3 text-xs leading-snug text-ink-muted">{UV_GUIDANCE}</p>
+      )}
+      <p
+        className={`${view.kind === 'unavailable' ? 'mt-3' : 'mt-1'} text-xs leading-snug text-ink-muted`}
+      >
+        {view.kind === 'readings'
+          ? uvSourceText(view.asOf, view.dayLabel)
+          : // Pre-feature and empty: the tile's own stale time when set (contracts/ui.md item 6).
+            uvSourceText(view.kind === 'unavailable' ? null : (asOf ?? null))}
       </p>
     </TileShell>
   );
 }
 
-export function PrecipitationTile({ weather, asOf }: WeatherProps) {
+export function PrecipitationTile({
+  weather,
+  asOf,
+  className,
+}: WeatherProps & { className?: string }) {
   return (
-    <TileShell icon={<DropletIcon />} title="Rainfall">
+    <TileShell icon={<DropletIcon />} title="Rainfall" className={className}>
       <div className="text-4xl font-light leading-none tabular-nums text-white/95">
         {formatNumber(weather?.rainfall_mm, 1)} mm
       </div>
@@ -458,8 +587,8 @@ export function OutdoorGrid({ weather, asOf }: WeatherProps) {
       </h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <HeatComfortPanel weather={weather} asOf={asOf} className="col-span-2 lg:col-span-4" />
-        <PrecipitationTile weather={weather} asOf={asOf} />
-        <UVTile weather={weather} asOf={asOf} />
+        <PrecipitationTile weather={weather} asOf={asOf} className="col-span-2" />
+        <UVTile weather={weather} asOf={asOf} className="col-span-2" />
         <AirQualityTile weather={weather} asOf={asOf} />
       </div>
     </section>

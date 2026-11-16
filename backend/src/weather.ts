@@ -1,6 +1,7 @@
 import { logger } from './logger.js';
 
 import { ProviderRequester, WeatherProviderError } from './providerHttp.js';
+import type { UvDay, UvReading } from './schema.js';
 
 export { WeatherProviderError };
 
@@ -73,16 +74,19 @@ interface RegionMetadata {
   };
 }
 
+type UvRecord = NonNullable<NonNullable<UvPayload['data']>['records']>[number];
+
 interface UvPayload {
   code?: number;
   errorMsg?: string;
   data?: {
     records?: Array<{
+      date?: string;
       timestamp?: string;
       updatedTimestamp?: string;
       index?: Array<{
         hour?: string;
-        value?: number | string;
+        value?: number | string | null;
       }>;
     }>;
   };
@@ -204,6 +208,7 @@ export interface WeatherSnapshot {
   forecast_low_c: number | null;
   forecast_high_c: number | null;
   uv_index: number | null;
+  uv_hourly: UvDay | null;
   psi_twenty_four_hourly: number | null;
   pm25_one_hourly: number | null;
   air_quality_region: string | null;
@@ -305,7 +310,11 @@ export class SingaporeWeatherClient {
         () => this.fetchNearestReading('wind-direction', latitude, longitude),
         { value: null, timestamp: null },
       ),
-      this.fetchOptional('uv', () => this.fetchUvIndex(), { value: null, timestamp: null }),
+      this.fetchOptional('uv', () => this.fetchUvIndex(), {
+        value: null,
+        timestamp: null,
+        hourly: null,
+      }),
       this.fetchOptional(
         'air-quality',
         () => this.fetchAirQuality(latitude, longitude),
@@ -352,6 +361,7 @@ export class SingaporeWeatherClient {
     snapshot.wind_speed_knots = windSpeed.value;
     snapshot.wind_direction_degrees = windDirection.value;
     snapshot.uv_index = uv.value;
+    snapshot.uv_hourly = uv.hourly;
     snapshot.psi_twenty_four_hourly = airQuality.psi;
     snapshot.pm25_one_hourly = airQuality.pm25;
     snapshot.air_quality_region = airQuality.region;
@@ -418,7 +428,11 @@ export class SingaporeWeatherClient {
     return this.fetchJson(`${this.apiBaseUrl()}/v2/real-time/api/${endpoint}`);
   }
 
-  async fetchUvIndex(): Promise<{ value: number | null; timestamp: string | null }> {
+  async fetchUvIndex(): Promise<{
+    value: number | null;
+    timestamp: string | null;
+    hourly: UvDay | null;
+  }> {
     const payload = await this.fetchJson<UvPayload>(`${this.apiBaseUrl()}/v2/real-time/api/uv`);
     if (payload.code !== undefined && payload.code !== 0) {
       throw new WeatherProviderError(
@@ -429,8 +443,9 @@ export class SingaporeWeatherClient {
     const record = payload.data?.records?.[0];
     const latest = record?.index?.[0];
     return {
-      value: numberOrNull(latest?.value),
+      value: numberOrNull(latest?.value ?? undefined),
       timestamp: record?.updatedTimestamp ?? latest?.hour ?? record?.timestamp ?? null,
+      hourly: uvDayFromRecord(record),
     };
   }
 
@@ -467,10 +482,7 @@ export class SingaporeWeatherClient {
     return nearest ?? EMPTY_WBGT;
   }
 
-  async fetchAirQuality(
-    latitude: number,
-    longitude: number,
-  ): Promise<AirQuality> {
+  async fetchAirQuality(latitude: number, longitude: number): Promise<AirQuality> {
     const [psiPayload, pm25Payload] = await Promise.all([
       this.fetchOptional('psi', () => this.fetchAirQualityPayload('psi'), null),
       this.fetchOptional('pm25', () => this.fetchAirQualityPayload('pm25'), null),
@@ -638,6 +650,7 @@ export class SingaporeWeatherClient {
         forecast_low_c: null,
         forecast_high_c: null,
         uv_index: null,
+        uv_hourly: null,
         psi_twenty_four_hourly: null,
         pm25_one_hourly: null,
         air_quality_region: null,
@@ -672,6 +685,7 @@ export class SingaporeWeatherClient {
       forecast_low_c: null,
       forecast_high_c: null,
       uv_index: null,
+      uv_hourly: null,
       psi_twenty_four_hourly: null,
       pm25_one_hourly: null,
       air_quality_region: null,
@@ -706,6 +720,7 @@ export class SingaporeWeatherClient {
       forecast_low_c: null,
       forecast_high_c: null,
       uv_index: null,
+      uv_hourly: null,
       psi_twenty_four_hourly: null,
       pm25_one_hourly: null,
       air_quality_region: null,
@@ -806,6 +821,58 @@ function latestTimestamp(timestamps: Array<string | null>): string | null {
       .filter((timestamp): timestamp is string => Boolean(timestamp))
       .sort((a, b) => new Date(b).getTime() - new Date(a).getTime())[0] ?? null
   );
+}
+
+/**
+ * The day's hourly UV list from the same `uv` record as `uv_index` (spec 008, data-model.md):
+ * oldest first, unparseable hours dropped, the newest of duplicate hours kept, non-numeric values
+ * null. The day comes from the data: `date`, else the oldest reading's Singapore day, else the
+ * record timestamp's. Null only when no day can be read at all.
+ */
+function uvDayFromRecord(record: UvRecord | undefined): UvDay | null {
+  if (!record) return null;
+
+  const byHour = new Map<number, UvReading>();
+  for (const entry of record.index ?? []) {
+    const time = entry.hour ? Date.parse(entry.hour) : Number.NaN;
+    if (Number.isNaN(time) || byHour.has(time)) continue;
+    byHour.set(time, { hour: entry.hour as string, value: uvValueOrNull(entry.value) });
+  }
+  const readings = [...byHour.entries()].sort(([a], [b]) => a - b).map(([, reading]) => reading);
+
+  const date =
+    (isIsoDate(record.date) ? record.date : null) ??
+    singaporeDateOf(readings[0]?.hour) ??
+    singaporeDateOf(record.timestamp);
+  if (!date) return null;
+
+  return { date, as_of: record.updatedTimestamp ?? null, readings };
+}
+
+/** Numeric UV value, or null. Unlike `numberOrNull`, '' and null never become 0. */
+function uvValueOrNull(value: number | string | null | undefined): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (typeof value === 'string' && value.trim() !== '') {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+  return null;
+}
+
+function isIsoDate(value: string | undefined): value is string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value);
+}
+
+/** 'YYYY-MM-DD' in Singapore for an ISO time, or null when it doesn't parse. */
+function singaporeDateOf(iso: string | undefined): string | null {
+  const time = iso ? Date.parse(iso) : Number.NaN;
+  if (Number.isNaN(time)) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Singapore',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(new Date(time));
 }
 
 function numberOrNull(value: number | string | undefined): number | null {

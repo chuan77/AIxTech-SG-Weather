@@ -20,6 +20,14 @@ const weather: WeatherSnapshot = {
   forecast_low_c: 25,
   forecast_high_c: 32,
   uv_index: 7,
+  uv_hourly: {
+    date: '2026-11-15',
+    as_of: '2026-11-15T15:11:20+08:00',
+    readings: [
+      { hour: '2026-11-15T07:00:00+08:00', value: 0 },
+      { hour: '2026-11-15T08:00:00+08:00', value: 1 },
+    ],
+  },
   psi_twenty_four_hourly: 42,
   pm25_one_hourly: 9,
   air_quality_region: 'central',
@@ -114,6 +122,7 @@ describe('locations API', () => {
         condition: 'Cloudy',
         area: 'Bishan',
         temperature_c: 29,
+        uv_hourly: weather.uv_hourly,
       },
     });
 
@@ -127,6 +136,7 @@ describe('locations API', () => {
       wind_speed_knots: 4,
       wind_direction_degrees: 180,
       uv_index: 7,
+      uv_hourly: weather.uv_hourly,
       psi_twenty_four_hourly: 42,
       pm25_one_hourly: 9,
       air_quality_region: 'central',
@@ -167,7 +177,32 @@ describe('locations API', () => {
       wbgt_station_name: 'Bishan Street',
       wbgt_station_distance_km: 0.4,
       wbgt_observed_at: '2026-11-01T10:05:00+08:00',
+      uv_hourly: weather.uv_hourly,
     });
+  });
+
+  it('stores the hourly UV list and reads it back unchanged after a restart', async () => {
+    await addAll(1);
+    await restartApp({
+      async getCurrentWeather() {
+        throw new Error('weather must not be fetched on startup');
+      },
+    });
+
+    const { body } = await request(app).get('/api/locations').expect(200);
+    expect(body.locations[0].weather.uv_hourly).toEqual(weather.uv_hourly);
+  });
+
+  it('reads uv_hourly as null for a snapshot saved without it (pre-feature)', async () => {
+    app = await buildApp({
+      async getCurrentWeather() {
+        return { ...weather, uv_hourly: null };
+      },
+    });
+    await addAll(1);
+
+    const { body } = await request(app).get('/api/locations').expect(200);
+    expect(body.locations[0].weather).toMatchObject({ uv_index: 7, uv_hourly: null });
   });
 
   it('deletes a location and returns 404 when it does not exist', async () => {

@@ -17,6 +17,7 @@ function weather(overrides: Partial<WeatherSnapshot> = {}): WeatherSnapshot {
     forecast_low_c: null,
     forecast_high_c: null,
     uv_index: null,
+    uv_hourly: null,
     psi_twenty_four_hourly: null,
     pm25_one_hourly: null,
     air_quality_region: null,

@@ -1,5 +1,23 @@
 import { integer, real, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
+/** One hourly UV index reading from data.gov.sg (nationwide, measured at Changi). */
+export interface UvReading {
+  /** ISO start of the hour with Singapore offset, e.g. '2026-11-15T11:00:00+08:00'. */
+  hour: string;
+  /** UV index; null when the provider value isn't numeric (never 0 for missing). */
+  value: number | null;
+}
+
+/** The day's hourly UV readings from the same `uv` response as `uv_index`. */
+export interface UvDay {
+  /** 'YYYY-MM-DD' Singapore calendar day, from the provider record (previous day overnight). */
+  date: string;
+  /** When the provider last updated the readings (`updatedTimestamp`), not the refresh time. */
+  as_of: string | null;
+  /** Oldest first; may be empty. */
+  readings: UvReading[];
+}
+
 export interface WeatherSnapshot {
   condition: string | null;
   observed_at: string | null;
@@ -14,6 +32,7 @@ export interface WeatherSnapshot {
   forecast_low_c: number | null;
   forecast_high_c: number | null;
   uv_index: number | null;
+  uv_hourly: UvDay | null;
   psi_twenty_four_hourly: number | null;
   pm25_one_hourly: number | null;
   air_quality_region: string | null;
@@ -60,6 +79,8 @@ export const locations = sqliteTable(
     forecastLowC: real('forecast_low_c'),
     forecastHighC: real('forecast_high_c'),
     uvIndex: real('uv_index'),
+    // Nullable: rows refreshed before this column existed read null (pre-feature state).
+    uvHourly: text('uv_hourly', { mode: 'json' }).$type<UvDay>(),
     psiTwentyFourHourly: real('psi_twenty_four_hourly'),
     pm25OneHourly: real('pm25_one_hourly'),
     airQualityRegion: text('air_quality_region'),

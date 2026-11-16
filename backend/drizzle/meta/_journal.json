@@ -22,6 +22,13 @@
       "when": 1794631201027,
       "tag": "0002_old_richard_fisk",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1794791848560,
+      "tag": "0003_cynical_bulldozer",
+      "breakpoints": true
     }
   ]
 }
