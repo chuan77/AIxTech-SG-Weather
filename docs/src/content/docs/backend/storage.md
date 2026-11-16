@@ -5,19 +5,39 @@ sidebar:
   order: 3
 ---
 
-`backend/src/db.ts` uses Node's built-in `node:sqlite` (`DatabaseSync`) behind Drizzle's `sqlite-proxy` driver. There is no native SQLite package to compile.
+`backend/src/db.ts` uses Drizzle's `sqlite-proxy` driver over an adapter (`backend/src/dbAdapter.ts`) that picks one of two stores:
+- **Local:** Node's built-in `node:sqlite` (`DatabaseSync`), the default for development, tests and browser checks.
+- **Turso:** the hosted libSQL database used in production, through `@libsql/client/web` (pure JS over HTTP).
+
+Neither needs a native SQLite package to compile.
 
 ```mermaid
 flowchart LR
   Routes["routes/locations.ts"] --> Helpers["db.ts helpers<br/>listLocations, createLocation,<br/>getLocation, updateWeather,<br/>deleteLocation"]
   Helpers --> Drizzle["Drizzle ORM<br/>sqlite-proxy driver"]
-  Drizzle --> Callback["sqliteCallback(sql, params, method)"]
-  Callback --> Node["node:sqlite DatabaseSync"]
+  Drizzle --> Adapter["DatabaseAdapter<br/>query / batch / execute"]
+  Config["resolveDatabaseConfig(env)"] --> Adapter
+  Adapter -- "no TURSO_*" --> Node["node:sqlite DatabaseSync"]
   Node --> File[("backend/weather.db<br/>WAL mode")]
-  Migrations["backend/drizzle/*.sql"] -. "migrate() at import" .-> Node
+  Adapter -- "TURSO_DATABASE_URL +<br/>TURSO_AUTH_TOKEN" --> Turso[("Turso lepak-weather-prod<br/>aws-ap-southeast-1")]
+  Migrations["backend/drizzle/*.sql"] -. "migrate() at import" .-> Adapter
 ```
 
-## Database file
+## Choosing the store
+
+`resolveDatabaseConfig` (`backend/src/dbConfig.ts`):
+
+| Situation | Result |
+| --- | --- |
+| Both `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` set | Turso |
+| Neither set | Local file |
+| Only one set | Startup error |
+| `DATABASE_REQUIRE_REMOTE=true` (set in the container image) without Turso | Startup error |
+| `NODE_ENV=test` with Turso | Startup error |
+
+vitest (`vitest.config.ts`) and the e2e server (`scripts/e2e/lib.sh`) blank `TURSO_*`, so tests never reach the hosted database even if `.env` points at it. Error messages name variables, never values. Hosting and secrets: see `docs/deployment.md`.
+
+## Database file (local mode)
 
 - Path: `DATABASE_PATH`, or `backend/weather.db` relative to the working directory. The parent folder is created if missing.
 - `PRAGMA journal_mode = WAL`, so you will also see `weather.db-wal` and `weather.db-shm`.
@@ -25,7 +45,7 @@ flowchart LR
 
 ## Startup and migrations
 
-`db.ts` opens the database and runs migrations from `backend/drizzle/` with top-level `await` when it is first imported. Any failure is logged as `could not open or migrate the database` and rethrown, so the server exits non-zero. The file is never deleted or recreated, so saved locations survive a bad migration.
+`db.ts` opens the database and runs migrations from `backend/drizzle/` with top-level `await` when it is first imported. Success is logged as `database ready` with `kind` (`local` or `turso`) and `migrationsApplied`. Any failure is logged as `could not open or migrate the database` and rethrown, so the server exits non-zero. Nothing is ever deleted or recreated, so saved locations survive a bad migration. Both stores use the same `sqlite-proxy` migrator and `__drizzle_migrations` table.
 
 To change the schema:
 
@@ -90,6 +110,6 @@ A unique index `locations_latitude_longitude_unique` on `(latitude, longitude)` 
 | `updateWeather(id, snapshot)` | Overwrites every snapshot column, returns the updated record |
 | `deleteLocation(id)` | `true` if a row was removed |
 | `resetStore()` | Test helper: deletes all rows and resets the autoincrement |
-| `closeDatabase()` | Test helper: closes the handle |
+| `closeDatabase()` | Closes the handle (tests, and the server's `SIGTERM` shutdown) |
 
 Rows are converted to API records by `rowToRecord`, which nests the snapshot columns under `weather` with snake_case keys.

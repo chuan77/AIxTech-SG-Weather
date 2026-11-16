@@ -29,6 +29,7 @@ Do not commit `RealtimeWeatherReadingsacrossSingapore/` (untracked sample API du
 - [Architecture](docs/architecture.md): one-process server, snapshot pattern, storage, frontend store, map. Read before changing backend, API or data flow.
 - [Theming](docs/theming.md): the `--ink` and `rounded-card` mechanics. Read before touching colours, Tailwind classes or `index.css`.
 - [Testing](docs/testing.md): vitest setup and its limits. Read before adding tests.
+- [Deployment](docs/deployment.md): Vercel container, Turso, CI/CD, secrets and rollback. Read before changing the Dockerfile, `vercel.json`, the workflow or database settings.
 
 ## Library docs (Context7)
 

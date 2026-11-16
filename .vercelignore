@@ -1,0 +1,22 @@
+# Files `vercel deploy` must never upload: secrets, local databases, sample dumps and folders the
+# container build does not use. The Dockerfile only needs the package files and the
+# frontend/ and backend/ sources.
+.env
+.env.*
+!.env.example
+*.db
+*.db-shm
+*.db-wal
+RealtimeWeatherReadingsacrossSingapore
+e2e-artifacts
+specs
+.specify
+.claude
+# docs/package.json stays: npm ci needs every workspace's manifest to match the lockfile.
+docs/*
+!docs/package.json
+node_modules
+frontend/dist
+backend/dist
+backend/logs
+backend/fixtures

@@ -1,0 +1,5 @@
+{
+  "framework": "container",
+  "regions": ["sin1"],
+  "git": { "deploymentEnabled": false }
+}

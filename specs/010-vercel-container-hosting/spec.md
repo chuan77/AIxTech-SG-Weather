@@ -132,6 +132,8 @@ The owner can read a short guide in the repo that explains the path from commit 
   - The hosting platform is Vercel's Container preset on the free Hobby plan, project `lepak-weather`.
   - The data store is Turso Cloud (hosted SQLite, free plan), database `lepak-weather-prod` in `aws-ap-southeast-1`. It is already created and seeded with 10 locations.
   - CI is GitHub Actions on the public repo `chuan77/AIxTech-SG-Weather`.
+- **What goes live**: production deploys whatever is on GitHub `main`. Features 008 and 009 were merged and pushed on 2026-11-16, before this feature's first deploy.
+- **Safety**: automated tests and browser checks never use the hosted database, even if a developer's local settings point at it.
 - **Deploy gating**: CI runs the gate and then deploys production with the platform's CLI. The platform's own automatic production deploys from Git are turned off, so the gate can't be bypassed.
 - **Region**: the Hobby plan allows choosing a single region, and `sin1` (Singapore) can be chosen. This will be confirmed after the first deploy.
 - **Usage**: fewer than 5 visitors, personal and non-commercial. Free-plan limits (Turso: 500M reads, 10M writes and 5 GB storage a month; Vercel Hobby: 4 Active CPU hours a month) are far above expected use.

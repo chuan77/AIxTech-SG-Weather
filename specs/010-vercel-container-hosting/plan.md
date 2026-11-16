@@ -93,6 +93,9 @@ backend/src/
 
 Dockerfile                    # NEW: 2-stage node:24-alpine, frontend+backend workspaces only
 .dockerignore                 # NEW
+.vercelignore                 # NEW: keep .env*, *.db*, dumps out of `vercel deploy` uploads
+vitest.config.ts              # CHANGED: blank TURSO_* so tests can never reach the hosted DB
+scripts/e2e/lib.sh            # CHANGED: e2e server starts with blank TURSO_* / DATABASE_REQUIRE_REMOTE
 vercel.json                   # NEW: framework container, regions sin1, git deploys off
 .github/workflows/ci.yml      # NEW: verify (push+PR) → deploy (push to main, serialized)
 .env.example                  # CHANGED: HOST, PORT, TURSO_* (owner's XXXX placeholders, commented out), DATABASE_REQUIRE_REMOTE (comment)

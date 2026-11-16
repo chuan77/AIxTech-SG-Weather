@@ -42,6 +42,7 @@ The result of `resolveDatabaseConfig(env)` (research R2):
 | Exactly one present | `ConfigError("TURSO_DATABASE_URL and TURSO_AUTH_TOKEN must be set together")` |
 | `DATABASE_REQUIRE_REMOTE=true` and the result would be `local` | `ConfigError("a hosted database is required here")` |
 | URL with any other scheme | `ConfigError` |
+| `NODE_ENV=test` and the result would be `turso` | `ConfigError("tests must not use a hosted database")` |
 
 Error messages name variables, never values.
 

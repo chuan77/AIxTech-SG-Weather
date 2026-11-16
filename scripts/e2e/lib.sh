@@ -72,7 +72,10 @@ e2e_start_server() {
     rm -f "$E2E_DB" "$E2E_DB-shm" "$E2E_DB-wal"
   fi
   set -m # own process group, so e2e_stop_server can signal the whole tree
+  # Blank TURSO_* so the throwaway database is always used, even if .env points at Turso
+  # (dotenv does not override variables that are already set, even to empty).
   NODE_ENV=production PORT="$port" DATABASE_PATH="$E2E_DB" \
+    TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_REQUIRE_REMOTE= \
     node --import tsx backend/src/server.ts >"$OUT/server.log" 2>&1 &
   E2E_SERVER_PID=$!
   set +m

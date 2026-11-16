@@ -1,0 +1,59 @@
+# Lepak Weather CI/CD (spec 010).
+# - verify: the full quality gate on every push and pull request to main. Its job name is the
+#   required status check in the main branch ruleset, so do not rename it.
+# - deploy: production deploy to Vercel, only after verify passes on a push to main. Deploys run
+#   one at a time in merge order. Vercel's own Git deploys are off (vercel.json).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run verify
+
+  deploy:
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    environment:
+      name: production
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_CLI: vercel@65.9.0
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Deploy to production (Vercel builds the container image)
+        id: deploy
+        run: |
+          url="$(npx --yes "$VERCEL_CLI" deploy --prod --yes --token "$VERCEL_TOKEN")"
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed: $url"
+      # Checks the public production domain (repository variable PRODUCTION_URL, for example
+      # https://lepak-weather.vercel.app): unique deployment URLs can sit behind Vercel's
+      # deployment protection and answer 401.
+      - name: Smoke check
+        if: vars.PRODUCTION_URL != ''
+        run: curl -fsS --retry 5 --retry-delay 10 --retry-all-errors "${{ vars.PRODUCTION_URL }}/health"
