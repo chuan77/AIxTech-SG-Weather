@@ -132,7 +132,7 @@ description: "Task list for 010-vercel-container-hosting"
   - `docker run --rm -p 3000:3000 lepak-weather` must exit with the "hosted database is required" error.
   - With `turso dev` serving a throwaway copy, run with `-e TURSO_DATABASE_URL=http://host.docker.internal:8080 -e TURSO_AUTH_TOKEN=dev`. `/health` must return 200, the dashboard must show 10 locations, and `docker stop` must log `shutting down` within 25 s.
   - Tear down every container and `turso dev`, whether it passes or fails.
-- [ ] T019 [US1] **(owner)** One-time Vercel setup (quickstart §3, steps 1–3):
+- [x] T019 [US1] **(owner)** One-time Vercel setup (quickstart §3, steps 1–3):
   - `npx vercel@<latest from npm view vercel version> link` to project `lepak-weather` on team SNAIC-Nexus.
   - Set the Production env vars `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (from `turso db tokens create lepak-weather-prod`), `WEATHER_API_KEY` and `PORT=3000` in the Vercel dashboard.
   - Create a Vercel token.
@@ -182,9 +182,9 @@ description: "Task list for 010-vercel-container-hosting"
     - Steps: checkout, setup-node 24, then `npx --yes vercel@<pinned> deploy --prod --yes --token "$VERCEL_TOKEN"`, and print the deployment URL.
     - Then a smoke step: `curl -fsS <url>/health`.
   - Pin action versions to full major tags. Never echo secrets.
-- [ ] T025 [US3] **(owner)** Add the GitHub repository secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` (values from `.vercel/project.json` and T019) on `chuan77/AIxTech-SG-Weather`, plus the Actions **variable** `PRODUCTION_URL` (the production domain, e.g. `https://lepak-weather.vercel.app`) used by the smoke check. Always pass `--repo chuan77/AIxTech-SG-Weather` to `gh`, because its default repo here is `AISG-AIAP/weather_starter`.
-- [ ] T026 [US3] **(owner)** Add a branch ruleset on `main` in `chuan77/AIxTech-SG-Weather`: require status check `verify`, require a pull request, and block force-pushes (quickstart §3, step 5).
-- [ ] T027 [US3] Pipeline proof (quickstart §5, step 1 and §7):
+- [x] T025 [US3] **(owner)** Add the GitHub repository secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` (values from `.vercel/project.json` and T019) on `chuan77/AIxTech-SG-Weather`, plus the Actions **variable** `PRODUCTION_URL` (the production domain, e.g. `https://lepak-weather.vercel.app`) used by the smoke check. Always pass `--repo chuan77/AIxTech-SG-Weather` to `gh`, because its default repo here is `AISG-AIAP/weather_starter`.
+- [x] T026 [US3] **(owner)** Add a branch ruleset on `main` in `chuan77/AIxTech-SG-Weather`: require status check `verify`, require a pull request, and block force-pushes (quickstart §3, step 5).
+- [x] T027 [US3] Pipeline proof (quickstart §5, step 1 and §7):
   - Open a PR from this branch to `main`. `verify` runs and passes, and `deploy` doesn't run on a PR.
   - Merge. `deploy` runs, the live URL serves the new version, and `/health` returns 200.
   - Open a throwaway PR with a deliberately failing test. `verify` fails, merging is blocked, and production is unchanged.
@@ -226,7 +226,9 @@ description: "Task list for 010-vercel-container-hosting"
   - a one-line pointer to `docs/deployment.md`
 - [x] T033 [P] Mirror T032 in `docs/src/content/docs/backend/storage.md`. Add `HOST`, `PORT`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` and `DATABASE_REQUIRE_REMOTE` to `docs/src/content/docs/configuration.md`.
 - [x] T034 [P] Add one line to `CLAUDE.md` → "Read before working on" pointing to `docs/deployment.md` (hosting, CI/CD and secrets).
-- [ ] T035 Run `npm run verify`. It must be green. Then run the `weather-code-review` skill on the branch diff (focus: secrets in logs and files, the env handling and the Dockerfile). Fix confirmed findings and re-run `npm run verify`.
+- [x] T035 Run `npm run verify`. It must be green. Then run the `weather-code-review` skill on the branch diff (focus: secrets in logs and files, the env handling and the Dockerfile). Fix confirmed findings and re-run `npm run verify`.
+  - Result (2026-11-16). Fixed: container crash creating `backend/logs` as the `node` user (log file moved to `/tmp`); body-parser DoS advisory (`npm audit fix`); request logs carrying visitor IP/location and Vercel tokens (`backend/src/requestLogging.ts`, with a test).
+  - Deferred: rate limiting `POST /api/locations/:id/refresh` and `/api/lightning/refresh` on the public URL (open question); size cap on `POST /api/logs` metadata; moving `vite` to dev dependencies. Accepted: `katex` advisory, which reaches only the docs site and is not in the image.
 
 ---
 
