@@ -15,13 +15,19 @@ import { resolveListenConfig } from './listenConfig.js';
 import { logger } from './logger.js';
 import { createRequestLogger } from './requestLogging.js';
 import { ProviderRequester } from './providerHttp.js';
+import { createRateLimiter } from './rateLimit.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const FRONTEND_EVENT_PATTERN = /^[a-z][a-z0-9_.:-]{1,63}$/;
+const MAX_LOG_METADATA_BYTES = 2048;
 
 interface AppOptions {
   serveFrontend?: boolean;
   enableRequestLogging?: boolean;
+  /** Per-device limits on routes that spend the data.gov.sg key and on /api/logs. From RATE_LIMITS=on by default. */
+  enableRateLimits?: boolean;
+  /** Proxy hops to trust for the client address (Express `trust proxy`). From TRUST_PROXY by default. */
+  trustProxyHops?: number;
   weatherClient?: WeatherClient;
   lightningClient?: LightningClient;
 }
@@ -30,6 +36,13 @@ export async function createApp(options: AppOptions = {}) {
   const app = express();
   const serveFrontend = options.serveFrontend ?? process.env.NODE_ENV !== 'test';
   const enableRequestLogging = options.enableRequestLogging ?? process.env.NODE_ENV !== 'test';
+  // On in the container image (RATE_LIMITS=on), where the URL is public; off for local dev and e2e.
+  const enableRateLimits = options.enableRateLimits ?? process.env.RATE_LIMITS === 'on';
+  const trustProxyHops = options.trustProxyHops ?? Number(process.env.TRUST_PROXY);
+  if (Number.isInteger(trustProxyHops) && trustProxyHops > 0) {
+    // Behind Vercel the client address arrives in X-Forwarded-For (the container image sets 1).
+    app.set('trust proxy', trustProxyHops);
+  }
 
   if (enableRequestLogging) {
     app.use(createRequestLogger(logger));
@@ -44,11 +57,33 @@ export async function createApp(options: AppOptions = {}) {
     response.json({ status: 'healthy' });
   });
 
+  if (enableRateLimits || app.get('trust proxy')) {
+    logger.info({ rateLimits: enableRateLimits, trustProxy: app.get('trust proxy') }, 'public limits');
+  }
+  if (enableRateLimits) {
+    // The public URL lets anyone trigger weather fetches, and each one makes about 12 data.gov.sg
+    // calls on the shared key. 30 per device per 10 minutes covers refreshing ten places three times.
+    const weatherLimit = createRateLimiter({
+      windowMs: 10 * 60_000,
+      max: 30,
+      detail: 'Too many weather updates from this device. Try again in a few minutes.',
+    });
+    app.post(['/api/locations', '/api/locations/:locationId/refresh'], weatherLimit);
+    app.post(
+      '/api/logs',
+      createRateLimiter({ windowMs: 60_000, max: 60, detail: 'Too many log events' }),
+    );
+  }
+
   app.post('/api/logs', (request, response) => {
     const event = request.body?.event;
     const metadata = request.body?.metadata;
     if (typeof event !== 'string' || !FRONTEND_EVENT_PATTERN.test(event)) {
       response.status(422).json({ detail: 'event is required' });
+      return;
+    }
+    if (metadata !== undefined && JSON.stringify(metadata).length > MAX_LOG_METADATA_BYTES) {
+      response.status(413).json({ detail: 'metadata is too large' });
       return;
     }
     logger.info(

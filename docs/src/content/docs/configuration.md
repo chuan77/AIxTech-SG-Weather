@@ -17,6 +17,8 @@ The backend loads `.env` from the repo root through `dotenv/config`. `.env.examp
 | `DATABASE_REQUIRE_REMOTE` | unset | `dbConfig.ts` | `true` makes starting without Turso an error. The container image sets it. |
 | `HOST` | `127.0.0.1` | `listenConfig.ts` | Listen address. The container image sets `0.0.0.0`. |
 | `PORT` | `3000` | `listenConfig.ts` | Listen port. Portless sets this in development; the container and Vercel use `3000`. |
+| `RATE_LIMITS` | unset | `server.ts` | `on` turns on per-device limits: 30 weather fetches (adding or refreshing a place) per 10 minutes and 60 `/api/logs` events per minute, answering `429` with `Retry-After`. The container image sets it; local dev and e2e leave it off. |
+| `TRUST_PROXY` | unset | `server.ts` | Number of proxy hops to trust for the client address (Express `trust proxy`). The container image sets `1` for Vercel. |
 | `NODE_ENV` | unset | `server.ts`, `logger.ts` | `production` serves `frontend/dist` and disables the lightning fixture. `test` skips frontend serving and request logging. |
 | `LOG_LEVEL` | `info` (`silent` in tests) | `logger.ts` | pino log level. |
 | `LOG_FILE_PATH` | `backend/logs/app.log` | `logger.ts` | Second log destination alongside stdout. The container image sets `/tmp/lepak-weather.log`. |
