@@ -15,8 +15,9 @@ import {
   SINGAPORE_CENTER,
   type MapView,
 } from './mapHelpers';
+import { readCartoApiKey } from './cartoKey';
 
-const CARTO_API_KEY = import.meta.env.VITE_CARTO_API_KEY as string | undefined;
+const CARTO_API_KEY = readCartoApiKey();
 
 function tileUrl(basemap: Basemap): string {
   return CARTO_API_KEY

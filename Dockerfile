@@ -11,10 +11,6 @@ COPY docs/package.json docs/
 RUN npm ci --workspace frontend --workspace backend --include-workspace-root --ignore-scripts
 COPY frontend frontend
 COPY backend backend
-# Vite bakes VITE_* values into the frontend bundle at build time. Vercel passes the project's
-# environment variables to the image build as build arguments, so declare the one the map needs.
-# It is public by design (CARTO keys are client-side); restrict it to the site's domain at CARTO.
-ARG VITE_CARTO_API_KEY
 RUN npm run build
 
 # --- runtime: production dependencies, compiled server, migrations and built frontend only ---

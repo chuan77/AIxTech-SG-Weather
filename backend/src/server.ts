@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import compression from 'compression';
 import express from 'express';
+import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
@@ -14,6 +15,7 @@ import {
 import { resolveListenConfig } from './listenConfig.js';
 import { logger } from './logger.js';
 import { createRequestLogger } from './requestLogging.js';
+import { renderIndexHtml } from './indexHtml.js';
 import { ProviderRequester } from './providerHttp.js';
 import { createRateLimiter } from './rateLimit.js';
 
@@ -137,9 +139,14 @@ export async function createApp(options: AppOptions = {}) {
   if (serveFrontend) {
     if (process.env.NODE_ENV === 'production') {
       const staticPath = resolve(__dirname, '..', '..', 'frontend', 'dist');
-      app.use(express.static(staticPath));
+      // index.html is never served as a static file: it gets runtime settings (the map key) first.
+      const indexHtml = renderIndexHtml(readFileSync(resolve(staticPath, 'index.html'), 'utf8'));
+      app.get('/index.html', (_request, response) => {
+        response.type('html').send(indexHtml);
+      });
+      app.use(express.static(staticPath, { index: false }));
       app.get('*', (_request, response) => {
-        response.sendFile(resolve(staticPath, 'index.html'));
+        response.type('html').send(indexHtml);
       });
     } else {
       const { createServer } = await import('vite');
