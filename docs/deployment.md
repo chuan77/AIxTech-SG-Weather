@@ -59,7 +59,7 @@ All of this is done by the owner.
 4. In GitHub, add the secrets `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` and the variable `PRODUCTION_URL` on `chuan77/AIxTech-SG-Weather`. With `gh`, always pass `--repo chuan77/AIxTech-SG-Weather`, because this folder's default `gh` repo is a different one.
 5. In GitHub, add a branch ruleset on `main` that requires a pull request, requires the status check `verify`, and blocks force pushes.
 
-6. Optional, recommended while the URL is public: a Vercel Firewall rate-limit rule, which applies before any instance. Vercel → lepak-weather → Firewall → Configure → New Rule: if **Request Path** starts with `/api/locations` **and** **Method** is `POST`, then **Rate Limit**, Fixed Window, **600 s**, **30** requests, key **IP**. Or with the CLI:
+6. Optional, recommended while the URL is public: a Vercel Firewall rate-limit rule, which applies before any instance. Vercel → lepak-weather → Firewall → Configure → New Rule: if **Request Path** starts with `/api/locations` **and** **Method** is `POST`, then **Rate Limit**, Fixed Window, **600 s**, **30** requests, key **IP Address**, and **Then: Too Many Requests (429)** (the default, Deny, returns 403). Use **Starts with**, not Equals, so refresh (`/api/locations/<id>/refresh`) is covered as well as adding. Press **Add Rule**, then publish it (`npx vercel@65.9.0 firewall diff` should show no pending changes). Or with the CLI:
 
    ```bash
    npx vercel@65.9.0 firewall rules add "Limit weather fetches" \
@@ -67,6 +67,8 @@ All of this is done by the owner.
      --condition '{"type":"method","op":"eq","value":"POST"}' \
      --action rate_limit --rate-limit-window 600 --rate-limit-requests 30 --rate-limit-keys ip --yes
    ```
+
+   Live since 2026-11-17. Checked by sending 32 refreshes for a missing location (each returns 404, so data.gov.sg is never called). Requests 1–30 reached the app. Requests 31 and 32 got Vercel's own `429 Too Many Requests` (plain text, `x-vercel-mitigated: deny`) without reaching an instance. That response has no `detail`, so the app shows "Request failed" rather than its own limit message. The test blocks your own IP from adding or refreshing for 10 minutes. `npx vercel@65.9.0 firewall rules list` shows the rule.
 
 ## Manual deploy
 
