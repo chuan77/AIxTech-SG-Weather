@@ -21,6 +21,7 @@ Findings:
 2. **The newest period fills in gradually.** At 08:25 the 08:20 reading held **3 of 87** stations. It still held 3 after a recheck 45 s later. The plain "latest" call skips that period and returns 08:15 (86 stations). So the newest *usable* reading lags real time by about 10 minutes.
 3. Station objects carry `location` (as the skill recorded), not the `labelLocation` in the OpenAPI spec.
 4. Values were all `0`, typed as integers, because the morning was dry. Wet values were not observed, so the parser must coerce with `Number()`.
+   - **Confirmed live 2026-11-17 12:13 SGT (T058):** wet values arrive as decimals (`0.2`) among integer zeros. One `rainfall?date=` response: the newest period (12:10) held 7 of 87 stations and was skipped; the window anchored on 12:05 (85 rows) and covered 11:55, 12:00 and 12:05. `buildRainObservation` matched a manual three-period sum for all 87 stations (0 mismatches); one station was wet (S903 Lorong Kismis, 0.2 mm, light, 3 of 3 periods). Only light rain was falling, so moderate and heavy totals were not seen live.
 5. One station listed in `stations` was absent from the 08:15 reading, which confirms that "no reading" is a normal case.
 6. The `paginationToken` decodes to `date=rainfall_2026-11-16,timestamp=2026-11-16T22:20:00.000Z`, a UTC cursor. It isn't used, but it shows that the data is partitioned by UTC date.
 

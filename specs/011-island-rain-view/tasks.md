@@ -353,7 +353,7 @@ Also read `docs/architecture.md`, `docs/theming.md` and `docs/testing.md` first 
   - the number of 429s (must be 0);
   - each `refresh timing` (must be within 10–15 s);
   - the `rain refresh timing` `served` values (at most one `fetch` per 2 minutes) (SC-006, SC-008).
-- [ ] T058 On the first showery day after release, run quickstart.md §6 once by hand. Confirm that wet values parse and that the totals match a manual three-period sum. Record the result in `specs/011-island-rain-view/research.md` under Gate 1, finding 4.
+- [X] T058 On the first showery day after release, run quickstart.md §6 once by hand. Confirm that wet values parse and that the totals match a manual three-period sum. Record the result in `specs/011-island-rain-view/research.md` under Gate 1, finding 4.
 
 ---
 
