@@ -5,6 +5,9 @@
 # Otherwise e2e_start_server starts a temporary server: production mode (the built frontend in
 # frontend/dist), a free port on 127.0.0.1 and a throwaway database (E2E_DATABASE_PATH to keep
 # one between runs). It runs in its own process group, so teardown reaches every child.
+# Web analytics (spec 012) is off on that server: WEB_ANALYTICS and VERCEL are blanked, so no
+# visit is ever measured. E2E_WEB_ANALYTICS=notice-only shows the privacy notice without loading
+# the script (scripts/e2e/privacy-notice.sh).
 #
 # Teardown. e2e_cleanup runs from the EXIT trap (INT and TERM exit through it too), on success
 # and failure alike: it closes every tracked browser session, kills the server's process group
@@ -76,6 +79,7 @@ e2e_start_server() {
   # (dotenv does not override variables that are already set, even to empty).
   NODE_ENV=production PORT="$port" DATABASE_PATH="$E2E_DB" \
     TURSO_DATABASE_URL= TURSO_AUTH_TOKEN= DATABASE_REQUIRE_REMOTE= \
+    WEB_ANALYTICS="${E2E_WEB_ANALYTICS:-}" VERCEL= \
     node --import tsx backend/src/server.ts >"$OUT/server.log" 2>&1 &
   E2E_SERVER_PID=$!
   set +m

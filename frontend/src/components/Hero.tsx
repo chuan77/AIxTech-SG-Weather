@@ -12,6 +12,11 @@ import { readingFreshness } from './freshness';
 import { formatSgtTime, singaporeDate } from './sunTimes';
 import { nearestStrike } from './map/lightningHelpers';
 import { useNow } from './map/useNow';
+import { PrivacyNotice } from './PrivacyNotice';
+import { readAnalyticsMode } from '../analytics/analyticsMode';
+
+// The notice follows measurement (spec 012): shown only where visits are counted.
+const showPrivacyNotice = readAnalyticsMode() !== 'off';
 
 export function Hero() {
   const { locations, refresh, refreshingId, refreshError, remove, bulkRefresh, lightning } =
@@ -30,6 +35,11 @@ export function Hero() {
             <p className="mt-2 text-sm text-ink-muted">
               Add a Singapore town or coordinates from the sidebar to see its weather.
             </p>
+            {showPrivacyNotice && (
+              <div className="mt-4">
+                <PrivacyNotice />
+              </div>
+            )}
           </div>
         </div>
       </main>
@@ -201,6 +211,7 @@ export function Hero() {
             Weather for {area}
             {source ? ` · ${source}` : ''}
           </p>
+          {showPrivacyNotice && <PrivacyNotice />}
         </footer>
       </div>
       {/* Last in the DOM so the tab order reaches the weather and Refresh first; it still

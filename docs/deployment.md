@@ -29,6 +29,7 @@ Names only. Values never go in the repo, in logs or in chat.
 | `WEATHER_API_KEY` | Vercel → Production env | Container at runtime |
 | `VITE_CARTO_API_KEY` | Vercel → Production env. Read at **runtime**: the server adds it to `index.html` as `<meta name="carto-api-key">` (`backend/src/indexHtml.ts`), because Vercel does not pass project variables into a container image build. A change needs only a redeploy or restart. It is public by design, so restrict it to `lepak-weather.vercel.app` at CARTO | Frontend map tiles |
 | `PORT` = `3000` | Vercel → Production env (also set in the image) | Vercel routing |
+| `WEB_ANALYTICS` = `on` | Vercel → **Production and Preview** env. Read at **runtime** by `backend/src/analyticsMode.ts`; the server adds `<meta name="web-analytics">` to `index.html`. `off` switches measurement and the privacy notice off; `notice-only` is for browser checks only. Unset falls back to on only when Vercel's `VERCEL=1` reaches the container. A change needs a redeploy or restart. Not a secret | Web Analytics (spec 012) |
 | `VERCEL_TOKEN` | GitHub → repo → Settings → Secrets and variables → Actions → Secrets | `deploy` job |
 | `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub Actions secrets (`orgId` and `id` in `.vercel/repo.json` after `vercel link`) | `deploy` job |
 | `PRODUCTION_URL` | GitHub Actions **variable**, for example `https://lepak-weather.vercel.app` | smoke check |
@@ -99,6 +100,17 @@ npx vercel@65.9.0 deploy --prod   # production
    ```
 
    Drill (2026-11-17): the rollback and the promote each took about 3 s, and the domain served the chosen deployment straight away. Health was 200 and the saved locations were unchanged at each step, because they live in Turso, not in the deployment.
+
+## Web Analytics
+
+Visitor counts come from Vercel Web Analytics on the Hobby plan (spec 012). Hosted deployments load Vercel's `/_vercel/insights/script.js`, which Vercel serves in front of the container (checked on a preview, 2026-11-17). Local runs, tests and the e2e checks never load it.
+
+- **Where to look:** Vercel → lepak-weather → Analytics. Use the environment filter to separate Production from Preview. Figures: visitors, page views, referrers, countries and cities, device type, OS and browser. The app is one page, so every view is `/`.
+- **Limits (Hobby):** 50,000 events a month, shared by every project on the account. When they run out, after a 3-day grace period, collection pauses until the next billing cycle, at no charge. The dashboard shows the last month only, and Hobby has no custom events or UTM breakdowns.
+- **Not counted:** visitors whose ad or content blocker stops the script. The app keeps working for them, with no error.
+- **Privacy:** no cookies. Vercel tells visitors apart with a request hash that resets daily. The reported URL has its query string and fragment removed (`frontend/src/analytics/stripUrl.ts`). Wherever measurement runs, the page shows "Anonymous visit counts · no cookies", which opens a short explanation (`frontend/src/components/PrivacyNotice.tsx`).
+- **Switching it off:** set `WEB_ANALYTICS=off` in Vercel and redeploy. The script and the notice both go. Disabling Web Analytics only in the dashboard leaves the app requesting the script, which then fails on every page load, so change the variable first.
+- **Startup log:** each production start logs `web analytics mode` with `webAnalytics` (`measure` or `off`) and `vercel` (whether `VERCEL=1` was present). An invalid `WEB_ANALYTICS` value logs a warning and turns measurement off.
 
 ## Known limits
 
