@@ -7,6 +7,7 @@ import {
   RAIN_LICENCE_NOTICE,
   RAIN_LICENCE_URL,
   rainStatusMessage,
+  shouldAutoOpenLegend,
   type RainMarkKind,
 } from './rainHelpers';
 import { rainMarkup } from './rainMarker';
@@ -27,7 +28,7 @@ function RainSymbol({ kind, partial = false }: { kind: RainMarkKind; partial?: b
   );
 }
 
-/** The heaviness key (spec US2): every level with its range, plus dry, no reading and partial. */
+/** The heaviness legend (spec US2): every level with its range, plus dry, no reading and partial. */
 export function RainLegend({ id }: { id?: string }) {
   return (
     <div id={id} className="rain-legend w-64 text-xs">
@@ -112,7 +113,7 @@ export function RainControl({ className }: { className: string }) {
   );
 }
 
-/** Rain's status line (unpositioned) with the key: prompt, count, reading time and age. */
+/** Rain's status line (unpositioned) with the legend: prompt, count, reading time and age. */
 export function RainStatusStrip() {
   const { rain } = useStore();
   const now = useNow(30_000, rain.observation);
@@ -120,12 +121,21 @@ export function RainStatusStrip() {
   const [keyOpen, setKeyOpen] = useState(false);
   const keyId = useId();
   const keyButtonRef = useRef<HTMLButtonElement>(null);
+  const { legendSeen, markLegendSeen, status } = rain;
+
+  // The first time readings show, open the legend so the symbols are explained (state is
+  // adjusted while rendering, as React recommends), then remember that it has been seen.
+  const autoOpen = shouldAutoOpenLegend(legendSeen, status);
+  if (autoOpen && !keyOpen) setKeyOpen(true);
+  useEffect(() => {
+    if (autoOpen) markLegendSeen();
+  }, [autoOpen, markLegendSeen]);
 
   useEffect(() => {
     if (!keyOpen) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 'Escape') return;
-      // Only the key closes; the full-screen map's own Escape handler must not also fire.
+      // Only the legend closes; the full-screen map's own Escape handler must not also fire.
       event.stopPropagation();
       setKeyOpen(false);
       keyButtonRef.current?.focus();
@@ -162,7 +172,7 @@ export function RainStatusStrip() {
           onClick={() => setKeyOpen((open) => !open)}
           className="-my-3 ml-2 inline-flex min-h-11 items-center underline md:pointer-fine:-my-1 md:pointer-fine:min-h-6"
         >
-          Key
+          Legend
         </button>
       </div>
     </div>

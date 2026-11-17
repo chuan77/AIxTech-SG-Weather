@@ -3,7 +3,7 @@ import { useStore } from '../../state/store';
 import { LayersIcon } from '../icons';
 import { LightningButtons } from './LightningControl';
 import { statusMessage } from './lightningHelpers';
-import { combinedStatusSegments, layersLabel } from './rainHelpers';
+import { combinedStatusSegments, layersLabel, shouldAutoOpenLegend } from './rainHelpers';
 import { RainLegend, RainRefreshButton, RainSwitch } from './RainControl';
 import { useNow } from './useNow';
 
@@ -50,6 +50,14 @@ export function MapLayersControl({ className }: MapLayersControlProps) {
     };
   }, [open]);
 
+  // The first time readings show while the menu is open, open the legend inside it.
+  const { legendSeen, markLegendSeen, status: rainStatus } = rain;
+  const autoOpen = open && shouldAutoOpenLegend(legendSeen, rainStatus);
+  if (autoOpen && !keyOpen) setKeyOpen(true);
+  useEffect(() => {
+    if (autoOpen) markLegendSeen();
+  }, [autoOpen, markLegendSeen]);
+
   const lightningText = lightning.enabled
     ? statusMessage(lightning.status, lightning.observation, now).text
     : null;
@@ -87,7 +95,7 @@ export function MapLayersControl({ className }: MapLayersControlProps) {
           <div
             id={menuId}
             // The card clips anything taller than itself, so the menu scrolls within the card's
-            // height (224 / 288 / 320 px) and the key opens only on request.
+            // height (224 / 288 / 320 px) and the legend opens only on request (or by itself the first time).
             className="rounded-card absolute right-0 top-full mt-2 flex max-h-[9.5rem] w-max max-w-[min(18rem,calc(100vw-3rem))] flex-col gap-2 overflow-y-auto rounded-xl map-control p-2 backdrop-blur-xl sm:max-h-[13.5rem] lg:max-h-[15.5rem]"
           >
             <div className="flex items-center gap-2">
@@ -106,7 +114,7 @@ export function MapLayersControl({ className }: MapLayersControlProps) {
                   onClick={() => setKeyOpen((value) => !value)}
                   className="inline-flex min-h-11 items-center px-1 text-xs underline md:pointer-fine:min-h-6"
                 >
-                  {keyOpen ? 'Hide rain key' : 'Rain key'}
+                  {keyOpen ? 'Hide rain legend' : 'Rain legend'}
                 </button>
                 {keyOpen && <RainLegend id={keyId} />}
               </div>

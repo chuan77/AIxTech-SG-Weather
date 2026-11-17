@@ -7,7 +7,9 @@ import {
   isRainOutOfDate,
   isWet,
   layersLabel,
+  parseLegendSeen,
   parseRainEnabled,
+  RAIN_LEGEND_SEEN_KEY,
   RAIN_LEVELS,
   RAIN_OUT_OF_DATE_MS,
   RAIN_STORAGE_KEY,
@@ -17,6 +19,7 @@ import {
   rainPopup,
   rainStatusMessage,
   serialiseRainEnabled,
+  shouldAutoOpenLegend,
 } from './rainHelpers';
 
 const WINDOW_END = '2026-11-17T08:15:00+08:00';
@@ -256,5 +259,33 @@ describe('card map strip and Layers button (Gate 2)', () => {
     expect(layersLabel(true, false)).toBe('Map layers: rain on');
     expect(layersLabel(false, true)).toBe('Map layers: lightning on');
     expect(layersLabel(false, false)).toBe('Map layers: all off');
+  });
+});
+
+describe('legend opens by itself once', () => {
+  it('uses its own storage key', () => {
+    expect(RAIN_LEGEND_SEEN_KEY).toBe('weather-starter.rain.legendSeen');
+  });
+
+  it('counts as seen only when "true" was stored', () => {
+    expect(parseLegendSeen(null)).toBe(false);
+    expect(parseLegendSeen('false')).toBe(false);
+    expect(parseLegendSeen('true')).toBe(true);
+  });
+
+  it('opens when readings first show, dry or wet', () => {
+    expect(shouldAutoOpenLegend(false, 'ok')).toBe(true);
+    expect(shouldAutoOpenLegend(false, 'empty')).toBe(true);
+  });
+
+  it('waits while nothing is drawn', () => {
+    expect(shouldAutoOpenLegend(false, 'idle')).toBe(false);
+    expect(shouldAutoOpenLegend(false, 'loading')).toBe(false);
+    expect(shouldAutoOpenLegend(false, 'unavailable')).toBe(false);
+  });
+
+  it('never opens by itself again once seen', () => {
+    expect(shouldAutoOpenLegend(true, 'ok')).toBe(false);
+    expect(shouldAutoOpenLegend(true, 'empty')).toBe(false);
   });
 });

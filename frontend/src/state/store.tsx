@@ -33,7 +33,9 @@ import {
   type LightningTrigger,
 } from '../components/map/lightningTiming';
 import {
+  parseLegendSeen,
   parseRainEnabled,
+  RAIN_LEGEND_SEEN_KEY,
   RAIN_STORAGE_KEY,
   serialiseRainEnabled,
 } from '../components/map/rainHelpers';
@@ -101,6 +103,22 @@ function writeRainEnabled(enabled: boolean): void {
   }
 }
 
+function readLegendSeen(): boolean {
+  try {
+    return parseLegendSeen(window.localStorage.getItem(RAIN_LEGEND_SEEN_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function writeLegendSeen(): void {
+  try {
+    window.localStorage.setItem(RAIN_LEGEND_SEEN_KEY, 'true');
+  } catch {
+    // Storage can be blocked; the legend then opens by itself once per page session.
+  }
+}
+
 export function StoreProvider({ children }: ProviderProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -125,6 +143,7 @@ export function StoreProvider({ children }: ProviderProps) {
   const [rainObservation, setRainObservation] = useState<IslandRainObservation | null>(null);
   const rainObservationRef = useRef<IslandRainObservation | null>(null);
   const rainInFlightRef = useRef(false);
+  const [rainLegendSeen, setRainLegendSeen] = useState(readLegendSeen);
   const lightningInFlightRef = useRef(false);
   // The refresh whose timing record waits for a map to report it drew the new strikes.
   const lightningTimingRef = useRef<{
@@ -524,6 +543,11 @@ export function StoreProvider({ children }: ProviderProps) {
     [],
   );
 
+  const markLegendSeen = useCallback(() => {
+    setRainLegendSeen(true);
+    writeLegendSeen();
+  }, []);
+
   const setRainEnabledAndLoad = useCallback(
     (enabled: boolean) => {
       setRainEnabled(enabled);
@@ -584,6 +608,8 @@ export function StoreProvider({ children }: ProviderProps) {
         observation: rainObservation,
         setEnabled: setRainEnabledAndLoad,
         refresh: refreshRainData,
+        legendSeen: rainLegendSeen,
+        markLegendSeen,
       },
     }),
     [
@@ -619,6 +645,8 @@ export function StoreProvider({ children }: ProviderProps) {
       rainObservation,
       setRainEnabledAndLoad,
       refreshRainData,
+      rainLegendSeen,
+      markLegendSeen,
     ],
   );
 

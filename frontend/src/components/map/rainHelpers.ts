@@ -4,6 +4,8 @@ import { formatStrikeTime } from './lightningHelpers';
 /** Island-wide rain (spec 011). Pure helpers so the map components stay thin (constitution IV). */
 
 export const RAIN_STORAGE_KEY = 'weather-starter.rain.enabled';
+/** Set once the legend has opened by itself, so it does so only the first time. */
+export const RAIN_LEGEND_SEEN_KEY = 'weather-starter.rain.legendSeen';
 /**
  * The newest complete reading is normally about 10 minutes old (research R3), so readings count
  * as out of date only once the newest is more than 20 minutes old.
@@ -230,4 +232,16 @@ export function parseRainEnabled(raw: string | null): boolean {
 
 export function serialiseRainEnabled(enabled: boolean): string {
   return enabled ? 'true' : 'false';
+}
+
+export function parseLegendSeen(raw: string | null): boolean {
+  return raw === 'true';
+}
+
+/**
+ * The legend opens by itself the first time rain readings are on screen (ok or empty), so a new
+ * viewer learns what the symbols mean; after that it opens only on request.
+ */
+export function shouldAutoOpenLegend(legendSeen: boolean, status: RainStatus): boolean {
+  return !legendSeen && (status === 'ok' || status === 'empty');
 }
