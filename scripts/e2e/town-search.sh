@@ -65,10 +65,14 @@ open_form() {
 town_type() { ab find role combobox fill --name "Town" "$1" >/dev/null; }
 pick_option() { ab find role option click --name "$1" >/dev/null; }
 press_add() { ab find role button click --name "Add" --exact >/dev/null; }
-# Escape first: an open town list overlays the buttons below it.
+# Escape first: an open town list overlays the buttons below it. Since 0afde7f Escape also closes
+# the whole form when no list is open, so Cancel is clicked only if the form is still there.
 cancel_form() {
   ab press Escape >/dev/null
-  ab find role button click --name "Cancel" >/dev/null
+  if [ "$(js "!!document.querySelector('[role=combobox]')")" = "true" ]; then
+    ab find role button click --name "Cancel" >/dev/null
+  fi
+  check "the add-location form closes" eq "$(js "!!document.querySelector('[role=combobox]')")" "false"
   assert_clean "close the add-location form"
 }
 shot() { ab screenshot "$OUT/$1.png" >/dev/null; }
@@ -123,7 +127,7 @@ if runs us1; then
   pick_option "Sengkang"
   check "picking fills latitude 1.384" eq "$(lat_value)" "1.384"
   check "picking fills longitude 103.891443" eq "$(lon_value)" "103.891443"
-  check "the chosen town is shown" body_has "Town: Sengkang"
+  check "the chosen town is shown in the town field" eq "$(town_value)" "Sengkang"
   check "picking does not save" eq "$(saved_count Sengkang)" "$before_sengkang"
   shot us1-picked
   press_add
@@ -199,9 +203,12 @@ if runs us3; then
   open_form
   town_type "tamp"
   pick_option "Tampines"
-  check "picking Tampines shows the chosen town" body_has "Town: Tampines"
-  ab find label "Latitude" fill "1.346" >/dev/null
-  if body_has "Town: Tampines"; then fail "editing latitude clears the chosen town"; else pass "editing latitude clears the chosen town"; fi
+  check "picking Tampines shows it in the town field" eq "$(town_value)" "Tampines"
+  # Since 0afde7f the pick shows only in the town field (no "Town: …" line). Editing the picked
+  # name must drop its coordinates, so Add can never save a place the field no longer names.
+  town_type "Tampine"
+  check "editing the picked town clears latitude" eq "$(lat_value)" ""
+  check "editing the picked town clears longitude" eq "$(lon_value)" ""
   cancel_form
 
   open_form
