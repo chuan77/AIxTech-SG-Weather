@@ -111,7 +111,43 @@ export interface LightningState {
   refresh: (trigger?: 'toggle' | 'refresh' | 'prompt') => Promise<void>;
   /** Called by a map once it has drawn `observation`; completes that refresh's timing record. */
   /** Called by the map that drew an observation, with what it drew (spec 009 timing record). */
-  reportDrawn: (observation: LightningObservation, marks: { groups: number; bolts: number }) => void;
+  reportDrawn: (
+    observation: LightningObservation,
+    marks: { groups: number; bolts: number },
+  ) => void;
+}
+
+/** One station's rainfall over the latest 15 minutes (spec 011, `POST /api/rain/refresh`). */
+export interface RainStationReading {
+  id: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+  /** Sum over the covered periods, to 0.1 mm; null when no period has a reading. */
+  total_mm: number | null;
+  periods_covered: 0 | 1 | 2 | 3;
+}
+
+export interface IslandRainObservation {
+  stations: RainStationReading[];
+  window_minutes: number;
+  /** Provider time of the newest usable five-minute period (end of the window). */
+  window_end: string | null;
+  window_start: string | null;
+  periods_found: number;
+  fetched_at: string;
+  stale: boolean;
+}
+
+export type RainStatus = 'idle' | 'loading' | 'ok' | 'empty' | 'unavailable';
+
+export interface RainState {
+  enabled: boolean;
+  status: RainStatus;
+  observation: IslandRainObservation | null;
+  setEnabled: (enabled: boolean) => void;
+  /** Loads island rain; a no-op while the data is under 2 minutes old. Never called on page load. */
+  refresh: (trigger?: 'toggle' | 'refresh' | 'prompt') => Promise<void>;
 }
 
 export interface LocationError {
@@ -172,6 +208,7 @@ export interface StoreValue {
   clearBulkRefresh: () => void;
   reload: () => Promise<void>;
   lightning: LightningState;
+  rain: RainState;
 }
 
 export interface ProviderProps {

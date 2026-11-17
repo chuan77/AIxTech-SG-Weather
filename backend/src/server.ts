@@ -6,7 +6,10 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
 import { createLightningRouter } from './routes/lightning.js';
+import { createRainRouter } from './routes/rain.js';
 import type { LightningClient } from './lightning.js';
+import type { RainClient } from './rain.js';
+import { createFixtureRainClient } from './rainFixture.js';
 import {
   createBusyLightningClient,
   createFixtureLightningClient,
@@ -32,6 +35,7 @@ interface AppOptions {
   trustProxyHops?: number;
   weatherClient?: WeatherClient;
   lightningClient?: LightningClient;
+  rainClient?: RainClient;
 }
 
 export async function createApp(options: AppOptions = {}) {
@@ -60,7 +64,10 @@ export async function createApp(options: AppOptions = {}) {
   });
 
   if (enableRateLimits || app.get('trust proxy')) {
-    logger.info({ rateLimits: enableRateLimits, trustProxy: app.get('trust proxy') }, 'public limits');
+    logger.info(
+      { rateLimits: enableRateLimits, trustProxy: app.get('trust proxy') },
+      'public limits',
+    );
   }
   if (enableRateLimits) {
     // The public URL lets anyone trigger weather fetches, and each one makes about 12 data.gov.sg
@@ -128,13 +135,22 @@ export async function createApp(options: AppOptions = {}) {
     lightningClient = createStormLightningClient();
   }
 
+  let rainClient = options.rainClient;
+  if (!rainClient && process.env.RAIN_FIXTURE === 'demo' && process.env.NODE_ENV !== 'production') {
+    logger.warn('RAIN_FIXTURE=demo: serving fake rain readings (development only)');
+    rainClient = createFixtureRainClient();
+  }
+
   // The provider's rate limit is per key, so every default client shares one paced requester.
   const requester =
-    !options.weatherClient || !lightningClient
+    !options.weatherClient || !lightningClient || !rainClient
       ? new ProviderRequester({ apiKey: process.env.WEATHER_API_KEY })
       : undefined;
   app.use('/api', createLocationsRouter({ weatherClient: options.weatherClient, requester }));
   app.use('/api', createLightningRouter({ lightningClient, requester }));
+  // No per-device limiter here, as for lightning: the rain client's 2-minute shared cache already
+  // caps data.gov.sg at one rain fetch per 2 minutes, and a failure is remembered for 2 minutes too.
+  app.use('/api', createRainRouter({ rainClient, requester }));
 
   if (serveFrontend) {
     if (process.env.NODE_ENV === 'production') {

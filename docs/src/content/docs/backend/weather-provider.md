@@ -85,12 +85,13 @@ If the 2-hour forecast fails, the snapshot starts from an empty one with `condit
 
 ## Shared HTTP behaviour
 
-`backend/src/providerHttp.ts` holds `ProviderRequester`. data.gov.sg limits requests per API key, not per client, so `createApp` builds **one** requester and passes it to both default clients (`requester` option). Weather refreshes and lightning loads then share one queue and cannot together go over the limit.
+`backend/src/providerHttp.ts` holds `ProviderRequester`. data.gov.sg limits requests per API key, not per client, so `createApp` builds **one** requester and passes it to every default client (`requester` option): weather, lightning and rain. They share one queue and cannot together go over the limit.
 
 ```mermaid
 flowchart LR
   W["SingaporeWeatherClient<br/>12 calls per refresh"] --> Q["one ProviderRequester<br/>(created in createApp)"]
-  L["SingaporeLightningClient<br/>up to 4 calls per load"] --> Q
+  L["SingaporeLightningClient<br/>up to 4 calls per load, high priority"] --> Q
+  R["SingaporeRainClient<br/>1–2 calls per load, high priority"] --> Q
   Q -->|"starts spaced<br/>ceil(10000 / limit) + 50 ms"| DG[("data.gov.sg")]
 ```
 
@@ -99,7 +100,7 @@ flowchart LR
 - **Rate limit:** on HTTP 429, wait 10 seconds (as the provider's error body asks), then retry once. A second 429 throws.
 - **Overrides:** `requestIntervalMs` and `rateLimitRetryDelayMs` options replace the defaults. Tests set both to `0`.
 
-A lightning load that starts during a refresh waits its turn in the queue, so it can take as long as the refresh (about 10 s).
+- **Priority:** `getJson(url, stats, priority)` takes `'high'` or `'normal'` (default). When a slot frees, a waiting high-priority call goes first; within a priority it is first come, first served, and a 429 retry keeps its priority. Lightning and rain use `'high'` (spec 011): before, a rain or lightning load started during a location refresh waited behind its dozen calls (10.5–12 s, measured), missing rain's 5 s target. Now it takes the next slot, and the refresh finishes about one slot per island call later. The spacing between any two calls is unchanged.
 - **Headers:** `Accept: application/json`, a `User-Agent` of `weather-starter/0.1 (educational project)`, and `x-api-key` when `WEATHER_API_KEY` is set.
 - **Errors:** everything becomes a `WeatherProviderError` with a safe message: rate limit, rejected key (401/403), other HTTP status, or "Unable to reach weather provider".
 

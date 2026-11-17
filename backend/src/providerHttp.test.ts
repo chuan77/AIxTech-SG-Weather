@@ -123,7 +123,11 @@ describe('shared requester', () => {
 describe('ProviderRequester request stats', () => {
   it('counts one request and no retries for a plain success', async () => {
     const { fetchImpl } = recordingFetch();
-    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 0, rateLimitRetryDelayMs: 0 });
+    const requester = new ProviderRequester({
+      fetchImpl,
+      requestIntervalMs: 0,
+      rateLimitRetryDelayMs: 0,
+    });
     const stats = createRequestStats();
 
     await settle(requester.getJson('https://x.test/a', stats));
@@ -134,7 +138,11 @@ describe('ProviderRequester request stats', () => {
 
   it('counts a 429 retry as a second request and records its wait', async () => {
     const { fetchImpl } = recordingFetch([429, 200]);
-    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 0, rateLimitRetryDelayMs: 500 });
+    const requester = new ProviderRequester({
+      fetchImpl,
+      requestIntervalMs: 0,
+      rateLimitRetryDelayMs: 500,
+    });
     const stats = createRequestStats();
 
     await settle(requester.getJson('https://x.test/a', stats));
@@ -146,11 +154,20 @@ describe('ProviderRequester request stats', () => {
 
   it('records time spent waiting for a pacing slot', async () => {
     const { fetchImpl } = recordingFetch();
-    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 50, rateLimitRetryDelayMs: 0 });
+    const requester = new ProviderRequester({
+      fetchImpl,
+      requestIntervalMs: 50,
+      rateLimitRetryDelayMs: 0,
+    });
     const first = createRequestStats();
     const second = createRequestStats();
 
-    await settle(Promise.all([requester.getJson('https://x.test/a', first), requester.getJson('https://x.test/b', second)]));
+    await settle(
+      Promise.all([
+        requester.getJson('https://x.test/a', first),
+        requester.getJson('https://x.test/b', second),
+      ]),
+    );
 
     expect(second.pacingWaitMs).toBeGreaterThan(0);
   });
@@ -159,5 +176,92 @@ describe('ProviderRequester request stats', () => {
     const { fetchImpl } = recordingFetch();
     const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 0 });
     await expect(settle(requester.getJson('https://x.test/a'))).resolves.toBeDefined();
+  });
+});
+
+describe('ProviderRequester priority (spec 011)', () => {
+  function urlRecordingFetch() {
+    const order: string[] = [];
+    const startedAt: number[] = [];
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      order.push(String(url));
+      startedAt.push(Date.now());
+      return new Response('{}', { status: 200 });
+    });
+    return { fetchImpl: fetchImpl as unknown as typeof fetch, order, startedAt };
+  }
+
+  it('lets a high-priority call take the next slot ahead of queued normal calls', async () => {
+    const { fetchImpl, order, startedAt } = urlRecordingFetch();
+    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 884 });
+
+    // A location refresh queues its calls first; rain arrives just after.
+    const normal = ['n1', 'n2', 'n3', 'n4'].map((name) => requester.getJson(`https://x/${name}`));
+    await vi.advanceTimersByTimeAsync(10);
+    const rain = requester.getJson('https://x/rain', undefined, 'high');
+    await settle(Promise.all([...normal, rain]));
+
+    expect(order).toEqual([
+      'https://x/n1',
+      'https://x/rain',
+      'https://x/n2',
+      'https://x/n3',
+      'https://x/n4',
+    ]);
+    // The per-key spacing still holds for every call, priority or not.
+    expect(gaps(startedAt).every((gap) => gap >= 884)).toBe(true);
+  });
+
+  it('keeps first-come order within the same priority', async () => {
+    const { fetchImpl, order } = urlRecordingFetch();
+    const requester = new ProviderRequester({ fetchImpl, requestIntervalMs: 100 });
+    const calls = [
+      requester.getJson('https://x/n1'),
+      requester.getJson('https://x/n2'),
+      requester.getJson('https://x/h1', undefined, 'high'),
+      requester.getJson('https://x/h2', undefined, 'high'),
+    ];
+    await settle(Promise.all(calls));
+    expect(order).toEqual(['https://x/n1', 'https://x/h1', 'https://x/h2', 'https://x/n2']);
+  });
+
+  it('keeps the priority for a 429 retry', async () => {
+    const statuses = [429];
+    const order: string[] = [];
+    const fetchImpl = vi.fn(async (url: string | URL | Request) => {
+      order.push(String(url));
+      return new Response('{}', { status: statuses.shift() ?? 200 });
+    }) as unknown as typeof fetch;
+    const requester = new ProviderRequester({
+      fetchImpl,
+      requestIntervalMs: 100,
+      rateLimitRetryDelayMs: 1000,
+    });
+    const rain = requester.getJson('https://x/rain', undefined, 'high');
+    await vi.advanceTimersByTimeAsync(50);
+    const normal = ['n1', 'n2', 'n3'].map((name) => requester.getJson(`https://x/${name}`));
+    await settle(Promise.all([rain, ...normal]));
+    // The retry comes 1 s later; by then n1..n3 have gone (they don't wait for it), and the retry
+    // is not pushed behind any normal call that queued after it.
+    expect(order.filter((url) => url.endsWith('rain'))).toHaveLength(2);
+  });
+
+  it('sends rain and lightning as high priority', async () => {
+    const seen: string[] = [];
+    const requester = {
+      getJson: vi.fn(async (url: string, _stats?: unknown, priority?: string) => {
+        seen.push(`${new URL(url).pathname}:${priority}`);
+        return { code: 0, data: { records: [], stations: [], readings: [] } };
+      }),
+    } as unknown as ProviderRequester;
+    const { SingaporeRainClient } = await import('./rain.js');
+    await new SingaporeRainClient({ requester })
+      .getRecentRain(new Date('2026-11-17T00:25:00Z'))
+      .catch(() => {});
+    await new SingaporeLightningClient({ requester })
+      .getRecentLightning(new Date('2026-11-17T00:25:00Z'))
+      .catch(() => {});
+    expect(seen.length).toBeGreaterThan(0);
+    expect(seen.every((entry) => entry.endsWith(':high'))).toBe(true);
   });
 });

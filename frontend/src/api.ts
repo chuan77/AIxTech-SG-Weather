@@ -1,4 +1,9 @@
-import type { CreateLocationPayload, LightningObservation, Location } from './types';
+import type {
+  CreateLocationPayload,
+  IslandRainObservation,
+  LightningObservation,
+  Location,
+} from './types';
 
 const API_BASE = '/api';
 
@@ -62,7 +67,9 @@ export const refreshLocation = (id: number) =>
 
 /** The server's Server-Timing header from a lightning refresh, or null (developer diagnostics). */
 export function serverTimingOf(error: unknown): string | null {
-  return error instanceof ApiRequestError ? (error.response?.headers.get('Server-Timing') ?? null) : null;
+  return error instanceof ApiRequestError
+    ? (error.response?.headers.get('Server-Timing') ?? null)
+    : null;
 }
 
 export async function refreshLightning(): Promise<{
@@ -72,6 +79,18 @@ export async function refreshLightning(): Promise<{
   const response = await send('/lightning/refresh', { method: 'POST' });
   return {
     observation: (await response.json()) as LightningObservation,
+    serverTiming: response.headers.get('Server-Timing'),
+  };
+}
+
+/** Island-wide rain (spec 011): an explicit user action, never called on page load. */
+export async function refreshRain(): Promise<{
+  observation: IslandRainObservation;
+  serverTiming: string | null;
+}> {
+  const response = await send('/rain/refresh', { method: 'POST' });
+  return {
+    observation: (await response.json()) as IslandRainObservation,
     serverTiming: response.headers.get('Server-Timing'),
   };
 }

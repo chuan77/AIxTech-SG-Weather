@@ -4,7 +4,7 @@ import { useStore } from '../../state/store';
 import { ExpandIcon, MapIcon } from '../icons';
 import { TileShell } from '../Tiles';
 import { isCoarsePointer, type MapView } from './mapHelpers';
-import { LightningControl } from './LightningControl';
+import { MapLayersControl } from './MapLayersControl';
 import { MapFullscreen } from './MapFullscreen';
 import { WeatherMap } from './WeatherMap';
 
@@ -48,11 +48,14 @@ export function MapCard() {
           focusKey={focusKey}
           onViewChange={handleViewChange}
           onBackgroundTap={isCoarsePointer() ? expand : undefined}
-          // Under fullscreen the card's lightning would be drawn twice for nothing (spec 009, FR-009).
+          // Under fullscreen the card's lightning and rain would be drawn twice for nothing (spec 009,
+          // FR-009; spec 011).
           showLightning={!expanded}
+          showRain={!expanded}
           onLightningGroupSelect={openLightningGroup}
         />
-        <LightningControl className="right-14 top-2" />
+        {/* One Layers button and one strip on the 224 px card (spec 011, Gate 2). */}
+        <MapLayersControl className="right-14 top-2" />
         <button
           type="button"
           onClick={expand}

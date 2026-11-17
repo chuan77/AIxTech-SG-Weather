@@ -29,6 +29,13 @@ export function createRequestStats(): RequestStats {
   return { requests: 0, pacingWaitMs: 0, retries: 0, retryWaitMs: 0 };
 }
 
+/**
+ * `high` takes the next free slot ahead of queued `normal` calls. Island layers (rain, lightning)
+ * use it: they make one or two calls, so they shouldn't wait ~10 s behind a location refresh's
+ * dozen (spec 011, T057). The spacing between any two calls is unchanged.
+ */
+export type RequestPriority = 'high' | 'normal';
+
 export interface ProviderRequesterOptions {
   apiKey?: string;
   timeoutMs?: number;
@@ -48,7 +55,8 @@ export interface ProviderRequesterOptions {
  * the provider's limit is per key, not per client.
  */
 export class ProviderRequester {
-  private requestQueue: Promise<void> = Promise.resolve();
+  private readonly waiting: Record<RequestPriority, (() => void)[]> = { high: [], normal: [] };
+  private slotTimer: ReturnType<typeof setTimeout> | null = null;
   private nextRequestAt = 0;
   private readonly intervalMs: number;
 
@@ -56,10 +64,14 @@ export class ProviderRequester {
     this.intervalMs = options.requestIntervalMs ?? defaultRequestIntervalMs(options.apiKey);
   }
 
-  async getJson<T>(url: string, stats?: RequestStats): Promise<T> {
+  async getJson<T>(
+    url: string,
+    stats?: RequestStats,
+    priority: RequestPriority = 'normal',
+  ): Promise<T> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       const queuedAt = Date.now();
-      await this.waitForRequestSlot();
+      await this.waitForRequestSlot(priority);
       if (stats) {
         stats.pacingWaitMs += Date.now() - queuedAt;
         stats.requests += 1;
@@ -111,19 +123,30 @@ export class ProviderRequester {
     throw new WeatherProviderError('Weather provider request failed after retry');
   }
 
-  private async waitForRequestSlot(): Promise<void> {
-    const requestSlot = this.requestQueue.then(async () => {
-      const delay = Math.max(0, this.nextRequestAt - Date.now());
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      }
-      this.nextRequestAt = Date.now() + this.intervalMs;
+  /** Resolves when this call may start: high-priority waiters first, then first come first served. */
+  private waitForRequestSlot(priority: RequestPriority): Promise<void> {
+    return new Promise((resolve) => {
+      this.waiting[priority].push(resolve);
+      this.grantSlots();
     });
+  }
 
-    this.requestQueue = requestSlot.then(
-      () => undefined,
-      () => undefined,
-    );
-    await requestSlot;
+  /** Grants every slot that is free now and sets one timer for the next; picks at grant time. */
+  private grantSlots(): void {
+    if (this.slotTimer) return;
+    for (;;) {
+      if (this.waiting.high.length === 0 && this.waiting.normal.length === 0) return;
+      const delay = this.nextRequestAt - Date.now();
+      if (delay > 0) {
+        this.slotTimer = setTimeout(() => {
+          this.slotTimer = null;
+          this.grantSlots();
+        }, delay);
+        return;
+      }
+      const next = this.waiting.high.shift() ?? this.waiting.normal.shift();
+      this.nextRequestAt = Date.now() + this.intervalMs;
+      next?.();
+    }
   }
 }

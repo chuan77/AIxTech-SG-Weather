@@ -1,6 +1,6 @@
 ---
 title: Data flow
-description: The snapshot pattern for locations and the on-demand path for lightning.
+description: The snapshot pattern for locations and the on-demand paths for lightning and rain.
 sidebar:
   order: 2
 ---
@@ -113,6 +113,10 @@ sequenceDiagram
 ```
 
 Nothing from lightning is written to SQLite or to any `WeatherSnapshot`. Concurrent requests share one in-flight upstream fetch. On the client, strikes keep fading and drop off after 60 minutes on a 30-second timer with no further network calls.
+
+## Rain (the second exception)
+
+Island-wide rain (spec 011) follows the lightning path: the store's rain slice calls `refreshRain()` only on a user action (turning Rain on, its refresh button, or the "Show latest rain" prompt), skipping it while a request is in flight or the data is under 2 minutes old. `POST /api/rain/refresh` asks `SingaporeRainClient`, which serves its 2-minute cache or makes one `rainfall?date=today` request (two just after midnight), sums each station's last three five-minute periods and returns an `IslandRainObservation`; on failure it serves the previous one with `stale: true`, or the route answers 502. Nothing is written to SQLite or to any `WeatherSnapshot`. Rain is off by default; a remembered "on" shows the prompt rather than fetching on load. Events: `rain_toggled`, `rain_refreshed`. See [Rain](../../backend/rain/).
 
 ## Frontend interaction logging
 

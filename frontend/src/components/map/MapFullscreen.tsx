@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { useStore } from '../../state/store';
 import type { Location } from '../../types';
 import { CloseIcon } from '../icons';
-import { LightningControl } from './LightningControl';
+import { LightningButtons, LightningStatusStrip } from './LightningControl';
+import { RainRefreshButton, RainStatusStrip, RainSwitch } from './RainControl';
 import type { MapView } from './mapHelpers';
 import { WeatherMap } from './WeatherMap';
 
@@ -24,6 +26,7 @@ export function MapFullscreen({
   onClose,
 }: MapFullscreenProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
+  const { rain, lightning } = useStore();
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -62,7 +65,18 @@ export function MapFullscreen({
         initialView={initialView}
         focusKey={focusKey}
       />
-      <LightningControl className="right-[calc(max(0.75rem,env(safe-area-inset-right))+3.5rem)] top-[max(0.75rem,env(safe-area-inset-top))]" />
+      <div className="absolute right-[calc(max(0.75rem,env(safe-area-inset-right))+3.5rem)] top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] flex items-center gap-2">
+        <RainRefreshButton />
+        <RainSwitch />
+        <LightningButtons />
+      </div>
+      {(rain.enabled || lightning.enabled) && (
+        // Rain stacks above lightning, both above the attribution row (spec 011).
+        <div className="absolute bottom-8 left-2 z-[1000] flex max-w-[70%] flex-col items-start gap-1.5">
+          {rain.enabled && <RainStatusStrip />}
+          {lightning.enabled && <LightningStatusStrip />}
+        </div>
+      )}
       <button
         ref={closeRef}
         type="button"
