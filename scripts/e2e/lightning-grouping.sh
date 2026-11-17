@@ -85,6 +85,13 @@ locations_json() {
       created_at: new Date().toISOString(), weather }] }));'
 }
 
+# The card's lightning switch sits in its Layers menu (spec 011): open the menu, then press it.
+toggle_card_lightning() {
+  js '(() => { if (!document.querySelector("section [role=switch][aria-label=Lightning]")) document.querySelector("section [aria-label^=\"Map layers\"]")?.click(); return 1; })()' >/dev/null
+  ab wait 200 >/dev/null
+  js 'document.querySelector("section [role=switch][aria-label=Lightning]").click(); 1' >/dev/null
+}
+
 # --- page helpers -----------------------------------------------------------------------------
 
 CARD='section .leaflet-container'
@@ -182,10 +189,10 @@ if want us1; then
   check "the card map draws again after fullscreen closes" test "$(marks_in "$CARD")" -ge 1
 
   mark_t
-  js "document.querySelector('section [role=switch]').click(); 1" >/dev/null
+  toggle_card_lightning
   ab wait 800 >/dev/null
   check "turning the layer off removes every mark" test "$(marks_in "$CARD")" -eq 0
-  js "document.querySelector('section [role=switch]').click(); 1" >/dev/null
+  toggle_card_lightning
   wait_for "document.querySelectorAll('$CARD .strike-group, $CARD .strike-mark').length > 0" 20 || true
   ab wait 800 >/dev/null
   task_ok "toggling the layer off and on"

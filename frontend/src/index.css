@@ -29,6 +29,14 @@ body,
      (measured 2026-11-15 around the oldest strike: median 14.3:1, worst pixel 6.5:1). */
   --lightning-outline: #141928;
   --lightning-ink: #141928; /* group count and age text on --lightning: 12.1:1 */
+  /* Rain stations (spec 011). The outline carries the 3:1 on the basemap (voyager nominal: worst 10.3:1); fills only
+     tell levels apart, and heavy is the darkest, strongest drop. */
+  --rain-outline: #0b2350;
+  --rain-dry: #ffffff;
+  --rain-light: #8ec5ff;
+  --rain-moderate: #2f7ce0;
+  --rain-heavy: #0a3a8c;
+  --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
   --scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --card-radius: 1rem;
   --card-border: rgba(255, 255, 255, 0.15);
@@ -115,6 +123,14 @@ body,
   --lightning: #ffd21f;
   --lightning-outline: #141928; /* voyager: median 15.1:1, worst 10.8:1 */
   --lightning-ink: #141928; /* group count and age text on --lightning: 12.1:1 */
+  /* Rain stations (spec 011). The outline carries the 3:1 on the basemap (voyager nominal: worst 10.3:1); fills only
+     tell levels apart, and heavy is the darkest, strongest drop. */
+  --rain-outline: #0b2350;
+  --rain-dry: #ffffff;
+  --rain-light: #8ec5ff;
+  --rain-moderate: #2f7ce0;
+  --rain-heavy: #0a3a8c;
+  --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
   --scrollbar-thumb: rgba(255, 255, 255, 0.3);
 }
 
@@ -149,6 +165,14 @@ body,
      (dark_all: median 16.8:1, worst 6.4:1). */
   --lightning-outline: #fff35c;
   --lightning-ink: #141928; /* group count and age text on --lightning: 15.2:1 */
+  /* Rain stations (spec 011). Dark basemap: a pale outline carries the 3:1 (dark_all nominal:
+     worst 7.4:1); heavy is a saturated violet, never pale, so brighter never reads as less. */
+  --rain-outline: #cfefff;
+  --rain-dry: #0d1626;
+  --rain-light: #5aa9e6;
+  --rain-moderate: #1fa2ff;
+  --rain-heavy: #b44bff;
+  --rain-missing: #9aa7b4; /* dashed "no reading" ring: nominal worst 3.6:1 */
   --scrollbar-thumb: rgba(0, 229, 255, 0.25);
 }
 
@@ -264,6 +288,14 @@ body,
   --lightning: #ff4d8d;
   --lightning-outline: #3b0f2a; /* light_all: median 16.2:1, worst 12.6:1 */
   --lightning-ink: #3b0f2a; /* group count and age text on --lightning: 5.2:1 */
+  /* Rain stations (spec 011). The outline carries the 3:1 on the basemap (light_all nominal: worst 11.0:1); fills only
+     tell levels apart, and heavy is the darkest, strongest drop. */
+  --rain-outline: #3b0f2a;
+  --rain-dry: #ffffff;
+  --rain-light: #8ec5ff;
+  --rain-moderate: #2f7ce0;
+  --rain-heavy: #0a3a8c;
+  --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
   --scrollbar-thumb: rgba(74, 59, 92, 0.3);
 }
 
@@ -309,6 +341,14 @@ body,
   --lightning: #ff3d6e;
   --lightning-outline: #111111; /* light_all: median 17.3:1, worst 13.4:1 */
   --lightning-ink: #111111; /* group count and age text on --lightning: 5.5:1 */
+  /* Rain stations (spec 011). The outline carries the 3:1 on the basemap (light_all nominal: worst 12.7:1); fills only
+     tell levels apart, and heavy is the darkest, strongest drop. */
+  --rain-outline: #111111;
+  --rain-dry: #ffffff;
+  --rain-light: #8ec5ff;
+  --rain-moderate: #2f7ce0;
+  --rain-heavy: #0a3a8c;
+  --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
   --scrollbar-thumb: rgba(17, 17, 17, 0.3);
 }
 
@@ -464,6 +504,14 @@ body,
      (dark_all: median 14.8:1, worst 5.6:1). */
   --lightning-outline: #ffe14a;
   --lightning-ink: #141928; /* group count and age text on --lightning: 13.4:1 */
+  /* Rain stations (spec 011). Dark basemap: a pale outline carries the 3:1 (dark_all nominal:
+     worst 7.4:1); heavy is a saturated violet, never pale, so brighter never reads as less. */
+  --rain-outline: #cfefff;
+  --rain-dry: #0d1626;
+  --rain-light: #5aa9e6;
+  --rain-moderate: #1fa2ff;
+  --rain-heavy: #b44bff;
+  --rain-missing: #9aa7b4; /* dashed "no reading" ring: nominal worst 3.6:1 */
   --scrollbar-thumb: rgba(214, 208, 255, 0.22);
 
   /* NEA flag colours, banded at the official cut-offs so the marker sits on its band's colour.
@@ -803,6 +851,82 @@ textarea {
 /* Lightning strike marks: a filled bolt in the theme's colours (strikeMarker.ts). Only the fill
    fades with age, down to the theme's --lightning-fill-floor; the outline never fades, so the mark
    keeps its contrast against the basemap at every age. */
+/* Island-wide rain stations (spec 011). Levels differ by size and shape (rainMarker.ts) as well
+   as colour; colours come only from the theme's --rain-* variables. */
+.rain-mark-wrapper {
+  background: none;
+  border: none;
+}
+
+.rain-mark {
+  position: relative;
+}
+
+.rain-mark svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  stroke: var(--rain-outline);
+  stroke-linejoin: round;
+  paint-order: stroke;
+}
+
+.rain-dry svg {
+  fill: var(--rain-dry);
+  fill-opacity: 0.6;
+  stroke-width: 1.5;
+}
+
+.rain-light svg {
+  fill: var(--rain-light);
+  stroke-width: 1.5;
+}
+
+.rain-moderate svg {
+  fill: var(--rain-moderate);
+  stroke-width: 1.75;
+}
+
+.rain-heavy svg {
+  fill: var(--rain-heavy);
+  stroke-width: 3;
+}
+
+/* No reading: a dashed ring with a dash, never filled, so it can't be read as dry. */
+.rain-missing svg {
+  fill: none;
+  stroke: var(--rain-missing);
+  stroke-width: 2;
+  stroke-dasharray: 3 2.5;
+}
+
+.rain-missing svg .rain-missing__dash {
+  stroke-dasharray: none;
+  stroke-linecap: round;
+}
+
+/* Partial total: a solid badge at the top right, large enough to see on the smallest drop. */
+.rain-partial::after {
+  content: '';
+  position: absolute;
+  top: -4px;
+  right: -5px;
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--rain-outline);
+  box-shadow: 0 0 0 2px var(--map-control-bg);
+}
+
+.rain-legend .rain-mark {
+  display: inline-block;
+}
+
+.rain-popup__source {
+  opacity: 0.8;
+}
+
 .strike-mark-wrapper {
   background: none;
   border: none;

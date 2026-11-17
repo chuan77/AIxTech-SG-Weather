@@ -14,6 +14,7 @@ import {
   deleteLocationOnUnload,
   refreshLocation,
   refreshLightning,
+  refreshRain,
   serverTimingOf,
   logInteraction,
 } from '../api';
@@ -31,13 +32,20 @@ import {
   type LightningTimingOutcome,
   type LightningTrigger,
 } from '../components/map/lightningTiming';
+import {
+  parseRainEnabled,
+  RAIN_STORAGE_KEY,
+  serialiseRainEnabled,
+} from '../components/map/rainHelpers';
 import type {
   BulkRefresh,
   BulkRefreshFailure,
   CreateLocationOptions,
   CreateLocationPayload,
+  IslandRainObservation,
   LightningObservation,
   LightningStatus,
+  RainStatus,
   Location,
   LocationError,
   PendingDelete,
@@ -76,6 +84,23 @@ function writeLightningEnabled(enabled: boolean): void {
   }
 }
 
+/** Rain is off unless the viewer turned it on before (FR-007); never fetched on load. */
+function readRainEnabled(): boolean {
+  try {
+    return parseRainEnabled(window.localStorage.getItem(RAIN_STORAGE_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function writeRainEnabled(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(RAIN_STORAGE_KEY, serialiseRainEnabled(enabled));
+  } catch {
+    // Storage can be blocked; the choice then only lasts for this page session.
+  }
+}
+
 export function StoreProvider({ children }: ProviderProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -94,6 +119,12 @@ export function StoreProvider({ children }: ProviderProps) {
     null,
   );
   const lightningObservationRef = useRef<LightningObservation | null>(null);
+  // Island-wide rain (spec 011): off by default and fetched only on a user action.
+  const [rainEnabled, setRainEnabled] = useState(readRainEnabled);
+  const [rainStatus, setRainStatus] = useState<RainStatus>('idle');
+  const [rainObservation, setRainObservation] = useState<IslandRainObservation | null>(null);
+  const rainObservationRef = useRef<IslandRainObservation | null>(null);
+  const rainInFlightRef = useRef(false);
   const lightningInFlightRef = useRef(false);
   // The refresh whose timing record waits for a map to report it drew the new strikes.
   const lightningTimingRef = useRef<{
@@ -382,7 +413,12 @@ export function StoreProvider({ children }: ProviderProps) {
     lightningTimingRef.current = null;
     clearTimeout(pending.fallback);
     logRefreshTiming(
-      buildTimingRecord({ ...pending, ...marks, drawnAt, strikes: pending.observation.strikes.length }),
+      buildTimingRecord({
+        ...pending,
+        ...marks,
+        drawnAt,
+        strikes: pending.observation.strikes.length,
+      }),
     );
   }, []);
 
@@ -458,6 +494,46 @@ export function StoreProvider({ children }: ProviderProps) {
     [refreshLightningData],
   );
 
+  // Rain is island-wide and fetched only on a user action (never on mount); see constitution I.
+  const refreshRainData = useCallback(
+    async (_trigger: 'toggle' | 'refresh' | 'prompt' = 'refresh') => {
+      if (rainInFlightRef.current) return;
+      if (isFresh(rainObservationRef.current, Date.now())) return;
+
+      rainInFlightRef.current = true;
+      setRainStatus('loading');
+      logInteraction('rain_refreshed');
+      try {
+        const { observation: next } = await refreshRain();
+        rainObservationRef.current = next;
+        setRainObservation(next);
+        setRainStatus(
+          next.stale
+            ? 'unavailable'
+            : next.stations.some((station) => (station.total_mm ?? 0) > 0)
+              ? 'ok'
+              : 'empty',
+        );
+      } catch {
+        // Keep any readings loaded earlier on screen; only the status changes.
+        setRainStatus('unavailable');
+      } finally {
+        rainInFlightRef.current = false;
+      }
+    },
+    [],
+  );
+
+  const setRainEnabledAndLoad = useCallback(
+    (enabled: boolean) => {
+      setRainEnabled(enabled);
+      writeRainEnabled(enabled);
+      logInteraction('rain_toggled', { enabled });
+      if (enabled) void refreshRainData('toggle');
+    },
+    [refreshRainData],
+  );
+
   const setAdding = useCallback((nextIsAdding: boolean) => {
     setIsAdding(nextIsAdding);
     if (nextIsAdding) logInteraction('location_form_opened');
@@ -502,6 +578,13 @@ export function StoreProvider({ children }: ProviderProps) {
         refresh: refreshLightningData,
         reportDrawn: reportLightningDrawn,
       },
+      rain: {
+        enabled: rainEnabled,
+        status: rainStatus,
+        observation: rainObservation,
+        setEnabled: setRainEnabledAndLoad,
+        refresh: refreshRainData,
+      },
     }),
     [
       visibleLocations,
@@ -531,6 +614,11 @@ export function StoreProvider({ children }: ProviderProps) {
       setLightningEnabledAndLoad,
       refreshLightningData,
       reportLightningDrawn,
+      rainEnabled,
+      rainStatus,
+      rainObservation,
+      setRainEnabledAndLoad,
+      refreshRainData,
     ],
   );
 

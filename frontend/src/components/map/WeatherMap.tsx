@@ -8,6 +8,7 @@ import type { Basemap } from '../../theme/themes';
 import { pinMarkup } from './pinMarkup';
 import { prefersReducedMotion } from '../motion';
 import { LightningLayer } from './LightningLayer';
+import { RainLayer } from './RainLayer';
 import {
   DEFAULT_ZOOM,
   getBounds,
@@ -182,6 +183,8 @@ interface WeatherMapProps {
   showLightning?: boolean;
   /** When set, selecting a lightning group calls this instead of zooming this map. */
   onLightningGroupSelect?: (view: MapView) => void;
+  /** False hides this map's rain (spec 011); follows `showLightning` unless set. */
+  showRain?: boolean;
   className?: string;
 }
 
@@ -196,6 +199,7 @@ export function WeatherMap({
   onBackgroundTap,
   showLightning = true,
   onLightningGroupSelect,
+  showRain = showLightning,
   className = 'h-full w-full',
 }: WeatherMapProps) {
   const touchLocked = !interactive && isCoarsePointer();
@@ -231,6 +235,7 @@ export function WeatherMap({
           focusable={interactive}
         />
       ))}
+      <RainLayer showRain={showRain} />
       <LightningLayer showLightning={showLightning} onGroupSelect={onLightningGroupSelect} />
       <FitBounds locations={locations} skipFirstFit={initialView !== undefined} />
       <FocusSelected locations={locations} selectedId={selectedId} focusKey={focusKey} />

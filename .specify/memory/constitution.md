@@ -1,34 +1,19 @@
-<!--
-Sync Impact Report (temporary; remove before commit)
-- Version change: 1.3.0 → 1.4.0
-- Modified principles: none.
-- Modified sections: Technical Constraints. Storage may now be a hosted libSQL (Turso) database
-  through the same Drizzle `sqlite-proxy` path when `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`
-  are set. `node:sqlite` stays the store for local development, tests and browser checks, which
-  never use the hosted database. `DATABASE_PATH` applies only in local mode.
-- Added sections: none
-- Removed sections: none
-- Reason: spec 010 hosts the app on Vercel's Container runtime, whose disk is temporary, so saved
-  locations need a hosted store to survive idle shutdowns and redeploys.
-- Synced: docs/architecture.md, docs/src/content/docs/backend/storage.md,
-  docs/src/content/docs/configuration.md, docs/deployment.md (spec 010 tasks T028, T032, T033).
-- Follow-up TODOs: none.
--->
 # Weather Starter Constitution
 
 ## Core Principles
 
 ### I. Snapshot-Only Weather Data
-The app MUST NOT call data.gov.sg while serving a page load. Weather data is fetched only when a
+The app MUST NOT call data.gov.sg while serving a page load. Weather data is fetched when a
 location is created or explicitly refreshed (`POST /api/locations/:id/refresh`), merged into one
 `WeatherSnapshot`, and stored in SQLite. `GET /api/locations` MUST only read stored data. Map pins
 and other views MUST derive from that stored data and make no weather calls of their own.
-Exception: island-wide data that is not tied to any saved location (currently the lightning map
-layer) MAY be fetched through a dedicated endpoint (`POST /api/lightning/refresh`) only on an
-explicit user action, never during a page load. It MUST NOT be stored in SQLite or in any
-location's `WeatherSnapshot`, MUST be cached server-side for at least 2 minutes so repeated actions
-do not call data.gov.sg again, and MUST degrade to an "unavailable" state without affecting the
-rest of the app. Any further exception requires its own amendment.
+Exception: island-wide data that is not tied to any saved location MAY be fetched through a
+dedicated endpoint only on an explicit user action, never during a page load. Two such layers are
+permitted: lightning strikes (`POST /api/lightning/refresh`) and rainfall station totals
+(`POST /api/rain/refresh`). Each MUST NOT be stored in SQLite or in any location's
+`WeatherSnapshot`, MUST be cached server-side for at least 2 minutes so repeated actions do not
+call data.gov.sg again, and MUST degrade to an "unavailable" state without affecting the rest of
+the app. Any further exception requires its own amendment.
 Rationale: keeps the dashboard fast and independent of upstream availability and rate limits.
 
 ### II. One Process, Relative API
@@ -116,4 +101,4 @@ Every plan and review MUST check compliance with the principles; any deviation M
 in writing in the plan or pull request. `CLAUDE.md` and `docs/` provide runtime development
 guidance and MUST NOT contradict this document.
 
-**Version**: 1.4.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-16
+**Version**: 1.5.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-17

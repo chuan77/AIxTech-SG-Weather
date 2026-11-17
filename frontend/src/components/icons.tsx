@@ -226,6 +226,14 @@ export function MapIcon({ className = 'h-3.5 w-3.5' }: IconProps) {
   );
 }
 
+export function LayersIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
+      <path d="m12 3 9 5-9 5-9-5Zm-9 9 9 5 9-5M3 16l9 5 9-5" />
+    </svg>
+  );
+}
+
 export function ExpandIcon({ className = 'h-4 w-4' }: IconProps) {
   return (
     <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>

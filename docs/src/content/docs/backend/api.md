@@ -16,6 +16,7 @@ All API routes are under `/api` except `/health`. Errors return JSON `{ "detail"
 | `DELETE` | `/api/locations/:id` | no | `204` |
 | `POST` | `/api/locations/:id/refresh` | yes | `200 Location` |
 | `POST` | `/api/lightning/refresh` | yes, at most every 2 minutes | `200 LightningObservation` |
+| `POST` | `/api/rain/refresh` | yes, at most every 2 minutes | `200 IslandRainObservation` (see [Rain](../rain/)) |
 | `POST` | `/api/logs` | no | `204` |
 
 ## Locations

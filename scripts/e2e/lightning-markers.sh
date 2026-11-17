@@ -70,6 +70,13 @@ locations_json() {
       created_at: new Date().toISOString(), weather }] }));'
 }
 
+# The card's lightning switch sits in its Layers menu (spec 011): open the menu, then press it.
+toggle_card_lightning() {
+  js '(() => { if (!document.querySelector("section [role=switch][aria-label=Lightning]")) document.querySelector("section [aria-label^=\"Map layers\"]")?.click(); return 1; })()' >/dev/null
+  ab wait 200 >/dev/null
+  js 'document.querySelector("section [role=switch][aria-label=Lightning]").click(); 1' >/dev/null
+}
+
 # --- page helpers -------------------------------------------------------------------------
 
 mark_count() { js 'document.querySelectorAll(".strike-mark").length'; }
@@ -117,10 +124,10 @@ if want us1; then
   check "selecting a bolt shows its type and time" \
     grep -q "Cloud to Cloud" <<<"$(js 'document.querySelector(".leaflet-popup-content")?.textContent ?? ""')"
   shot "us1-apple"
-  js 'document.querySelector("[role=switch]").click(); 1' >/dev/null
+  toggle_card_lightning
   ab wait 300 >/dev/null
   check "turning the layer off removes every bolt" test "$(mark_count)" -eq 0
-  js 'document.querySelector("[role=switch]").click(); 1' >/dev/null
+  toggle_card_lightning
   ab wait 500 >/dev/null
   check "turning it back on restores them" test "$(mark_count)" -eq 3
   assert_clean "us1 toggle"
