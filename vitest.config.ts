@@ -13,6 +13,9 @@ export default defineConfig({
       // dotenv does not override variables that already exist, so these blanks win.
       TURSO_DATABASE_URL: '',
       TURSO_AUTH_TOKEN: '',
+      // Never measure visits from tests (spec 012), even if .env sets WEB_ANALYTICS.
+      WEB_ANALYTICS: '',
+      VERCEL: '',
     },
   },
 });

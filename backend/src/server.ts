@@ -19,6 +19,7 @@ import { resolveListenConfig } from './listenConfig.js';
 import { logger } from './logger.js';
 import { createRequestLogger } from './requestLogging.js';
 import { renderIndexHtml } from './indexHtml.js';
+import { resolveAnalyticsMode } from './analyticsMode.js';
 import { ProviderRequester } from './providerHttp.js';
 import { createRateLimiter } from './rateLimit.js';
 
@@ -157,6 +158,17 @@ export async function createApp(options: AppOptions = {}) {
       const staticPath = resolve(__dirname, '..', '..', 'frontend', 'dist');
       // index.html is never served as a static file: it gets runtime settings (the map key) first.
       const indexHtml = renderIndexHtml(readFileSync(resolve(staticPath, 'index.html'), 'utf8'));
+      // Logs the mode only (and the rejected WEB_ANALYTICS value), never other settings.
+      const analytics = resolveAnalyticsMode();
+      if (analytics.invalid !== undefined) {
+        logger.warn(
+          `WEB_ANALYTICS=${analytics.invalid} is not on, off or notice-only; measurement is off`,
+        );
+      }
+      logger.info(
+        { webAnalytics: analytics.mode, vercel: process.env.VERCEL === '1' },
+        'web analytics mode',
+      );
       app.get('/index.html', (_request, response) => {
         response.type('html').send(indexHtml);
       });
