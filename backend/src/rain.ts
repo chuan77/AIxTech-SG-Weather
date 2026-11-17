@@ -385,6 +385,8 @@ export class SingaporeRainClient implements RainClient {
       payload = await this.requester.getJson<RainPayload>(
         `${base}/v2/real-time/api/rainfall?date=${date}`,
         stats,
+        // One or two calls: don't wait behind a location refresh's dozen (spec 011, T057).
+        'high',
       );
     } catch (error) {
       if (

@@ -162,7 +162,9 @@ function trimObservation(observation: LightningObservation, now: Date): Lightnin
   const nowMs = now.getTime();
   return {
     ...observation,
-    strikes: observation.strikes.filter((strike) => isInWindow(Date.parse(strike.occurred_at), nowMs)),
+    strikes: observation.strikes.filter((strike) =>
+      isInWindow(Date.parse(strike.occurred_at), nowMs),
+    ),
   };
 }
 
@@ -331,6 +333,8 @@ export class SingaporeLightningClient implements LightningClient {
     const payload = await this.requester.getJson<LightningPayload>(
       `${base}/v2/real-time/api/weather?api=lightning&date=${date}${tokenQuery}`,
       stats,
+      // A few pages at most: don't wait behind a location refresh's dozen (spec 011, T057).
+      'high',
     );
     if (payload.code !== undefined && payload.code !== 0) {
       throw new WeatherProviderError(payload.errorMsg ?? 'Lightning provider returned an error');

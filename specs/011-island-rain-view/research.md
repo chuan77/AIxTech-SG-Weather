@@ -90,6 +90,8 @@ Findings:
 
 ## R6. Sharing the request budget with saved-location refreshes and lightning (OQ9)
 
+> **Superseded 2026-11-17 by the T057 measurement and an owner decision.** First-come order made a rain request started during a location refresh wait 10.5–12 s behind the refresh's queued calls (quickstart.md, Results), missing SC-005. The owner chose to let rain and lightning go first: `ProviderRequester.getJson(url, stats, 'high')` takes the next free slot ahead of queued normal calls, with first-come order within each priority and the same spacing between calls. A location refresh then finishes about one slot per island call later. The original reasoning below is kept for the record.
+
 - **Decision**: no new queueing rule. Rain uses the one `ProviderRequester` built in `createApp`, as lightning does, and requests run first-come, first-served at the existing pacing.
 - **Rationale**:
   - A rain fetch adds 1 slot (2 near midnight), about 0.9–1.8 s, to anything queued behind it.

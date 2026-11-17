@@ -87,3 +87,17 @@ Own temporary server, throwaway database, Development key. One saved place; five
 | Rain fresh data while a location refresh is running (SC-005) | **10.5–12.1 s: misses the 5 s target.** `pacingWaitMs` 10.4–12.0 s: the one rain request waits behind the location refresh's ~12 queued calls in the shared, first-come paced queue |
 
 Research R6 expected rain to delay location refreshes, not the reverse. Rain alone (no refresh in flight) needs one paced request, about 1 s. Open decision: accept the overlap case, or let single-request island layers (rain, lightning) jump the queue, which would push a running location refresh back by about 1–2 s.
+
+### Rerun with rain and lightning at high priority (2026-11-17, owner decision)
+
+Same procedure, after `ProviderRequester` gained a priority lane (rain and lightning use `'high'`).
+
+| Check | Before | After |
+|---|---|---|
+| Rain fresh data during a location refresh (SC-005, under 5 s) | 10.5–12.1 s | **0.6–1.7 s** |
+| Lightning during a location refresh | 12.3–12.9 s | **2.3–2.6 s** |
+| Location refresh with both overlapping (SC-006, 10–15 s) | 9.8–10.5 s | **12.5–13.2 s** |
+| 429 responses | 0 | **0** |
+| Rain fetches per 2 minutes (SC-008) | 1 | **1** (repeats from cache) |
+
+All four success criteria checked here now pass.
