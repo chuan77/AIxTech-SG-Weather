@@ -158,13 +158,14 @@ description: "Task list for 010-vercel-container-hosting"
 
 - [X] T022 [US2] Local-mode guard checks (quickstart §1, step 4). Run `npm start` three times: with only `TURSO_DATABASE_URL`, with only `TURSO_AUTH_TOKEN`, and with `DATABASE_REQUIRE_REMOTE=true` and no Turso values. Each must exit non-zero with a log naming the variables, and with no values in the output. Then run `npm run dev` with no `TURSO_*` values: the log must show `kind: "local"` and your local locations (FR-005, spec US2 scenario 4).
   - Result (2026-11-17): `npm start` exited 1 in every case, with a `ConfigError` log naming only variables: URL only and token only gave "must be set together", the required-remote case gave "a hosted database is required here", and an `ftp://` URL and an unparseable URL got their own messages. Sentinel values never appeared in the output. Empty `TURSO_*` values override `.env`, because dotenv never replaces a variable that is already set. Local mode ran the dev server entry (`tsx backend/src/server.ts`) on a free port against a copy of `backend/weather.db`, not `npm run dev`, so it wouldn't clash with the dev server already on port 1355. It logged `kind: "local"`, `migrationsApplied: 0`, and served all 10 local locations. Node also prints the uncaught stack after the log line; that is harmless.
-- [ ] T023 [US2] Persistence drill on the live app (quickstart §6), owner-assisted:
+- [X] T023 [US2] Persistence drill on the live app (quickstart §6), owner-assisted:
   - Save a test location.
   - After at least 1 hour idle, it's still present.
   - After a redeploy (`npx vercel@<pinned> deploy --prod`, or a no-op merge once US3 exists), it's still present.
   - Delete the test location afterwards. Record the results for SC-003.
   - Idle result (2026-11-17): at 08:00 SGT the live list held 9 locations (ids 15, 14, 13, 10, 9, 8, 6, 5, 3), with id 15 the newest and several locations deleted by the owner beforehand. At 09:22 SGT, after 82 minutes with no checks from me, the list was identical: nothing lost, and no deleted location came back. I have no direct proof that the instance stopped, because only owner visits could have kept it awake.
-  - Redeploy result: this record is merged as a no-op docs PR, and CI deploys a fresh container. The check after the deploy follows.
+  - Redeploy result: merging the docs-only PR #11 triggered CI run 43995445250, which passed verify and deployed a fresh production container. At 09:27 SGT the list still held the same 9 ids.
+  - Cleanup: test location 15 was deleted through `DELETE /api/locations/15`, which returned 204. 8 locations remain. SC-003 met.
 
 **Checkpoint**: data survives, and a misconfiguration can't silently lose data.
 
