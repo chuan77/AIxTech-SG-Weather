@@ -1,0 +1,76 @@
+# Quickstart: validating Island-wide Rain on the Map
+
+**Feature**: [spec.md](spec.md) | **Contract**: [contracts/rain-refresh.md](contracts/rain-refresh.md) | **Data model**: [data-model.md](data-model.md)
+
+Run everything from the repo root. None of these checks may call data.gov.sg, except §6, which is optional and run once by hand.
+
+## 0. Gate 2: mock-up review (before any feature code)
+
+1. Open the throwaway mock-up (plan task 1): about 88 rain station symbols at real positions. It shows every level, dry, partial and "no reading", plus the key and status strip. It is drawn on:
+   - the card map at 375 px;
+   - the full-screen map at 375 px and at desktop width;
+   - at least the `apple` theme and one dark theme (`radar`).
+2. The owner decides:
+   - **Accept**: continue with §1 onward.
+   - **Reject**: stop. Record the verdict as kill in `.specify/assessments/station-reading-map-layers/decision.md`, with the mock-up as the reason.
+   - **Accept with changes**: note the changes in spec.md Clarifications, for example a combined Layers menu or different thresholds.
+
+## 1. Unit and route tests
+
+```bash
+npx vitest run backend/src/rain.test.ts backend/src/routes/rain.test.ts frontend/src/components/map/rainHelpers.test.ts
+```
+
+Expected: all pass, with no network access. The tests cover:
+- parsing and the newest-usable-period anchor, skipping an incomplete newest period;
+- sums and `periods_covered`, collapsing duplicate timestamps, and the midnight carry-over request;
+- the 2-minute cache and shared in-flight load;
+- stale fallback and 502 handling;
+- levels at the boundaries (0, 0.2, 0.4, 0.6, 2.4, 2.5, 2.6 mm);
+- coverage labels, the out-of-date rule (20 min) and status text;
+- the on/off preference defaulting to off.
+
+## 2. Full gate
+
+```bash
+npm run verify
+```
+
+Expected: lint, typecheck, tests and build all pass. A failing gate means the work is not done.
+
+## 3. Local look with the fixture
+
+```bash
+RAIN_FIXTURE=demo npm run dev   # http://weather-starter.localhost:1355
+```
+
+1. Load the page. No rain request appears in the network log, and the Rain switch is **off**.
+2. Turn Rain on. The loading state shows, then the stations appear with the key. The status reads "Rain at N stations · to HH:MM".
+3. Tap a heavy, a partial and a "no reading" station. Each popup shows the name, total, level and period, or the note that applies.
+4. Turn Rain off. The stations and key disappear, and pins and lightning are unchanged. Reload: the switch keeps its last state. If it was on, it shows the "Show latest rain" prompt and makes no request.
+5. Open full screen. The same readings appear with no new request.
+
+## 4. Browser check script
+
+```bash
+npm run verify && scripts/e2e/rain-view.sh [us1|us2|us3|us4|us5|themes]
+```
+
+The script stubs `POST /api/rain/refresh` with `agent-browser network route`, and runs `assert_clean` after every open, reload and view switch. It checks:
+- **US1**: every stubbed station is drawn at its position; dry and wet look different; the popup content.
+- **US2**: each level's symbol size and shape; the key lists every level.
+- **US3**: "no reading" and partial symbols; the age text; the out-of-date label for a stub with `window_end` 25 min old or `stale: true`.
+- **US4**: no request on load; off by default; toggle in under 1 s with data loaded (SC-004); the remembered state; card and full-screen maps share the data.
+- **US5**: refresh keeps the earlier readings while loading; a 502 stub shows "unavailable" and keeps the earlier readings; saved locations and lightning still work.
+- **themes**: all six themes at 375 px. The symbol contrast against the basemap is at least 3:1, and the key and strip text are at least 4.5:1.
+
+## 5. Rate budget (SC-006, SC-008)
+
+With the Development key on the server you started for this check (not the user's `npm run dev` database), run 5 overlapping saved-location refreshes while turning rain on and refreshing it. Check the server log:
+- zero 429 responses;
+- each `refresh timing` line is in the 10–15 s range;
+- `rain refresh timing` shows `served: fetch` at most once per 2 minutes. Every other request shows `cache` or `shared`.
+
+## 6. Live sanity check (optional, by hand, once)
+
+On a showery day, with the Development key, turn Rain on in a dev server started without `RAIN_FIXTURE`. Compare a few stations' totals with the sum of the last three complete readings from one `rainfall?date=<today>` call. They should match, and the anchor time should be the newest period that holds about the full station count. This also confirms that wet values parse (research Gate 1, finding 4).
