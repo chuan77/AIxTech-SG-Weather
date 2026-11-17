@@ -137,13 +137,27 @@ fullscreen_rain_on() { # turn rain on in the full-screen map and wait for the st
   wait_for "document.querySelectorAll('$FS .leaflet-rain-pane .rain-mark').length >= $STATION_COUNT" >/dev/null || true
 }
 
+fullscreen_rain_off_on() { # turn rain off, then on again (data under 2 minutes old is reused)
+  click "$FS [role=switch][aria-label=Rain]" >/dev/null
+  ab wait 300 >/dev/null
+  fullscreen_rain_on
+  ab wait 300 >/dev/null
+}
+
 open_station_popup() { # open_station_popup <kind>: click the first station of that kind
   js "(() => { const m = document.querySelector('$FS .leaflet-rain-pane .rain-$1'); m?.closest('.leaflet-marker-icon')?.click(); return Boolean(m); })()" >/dev/null
   ab wait 400 >/dev/null
   text_of "$FS .leaflet-popup-content"
 }
 
-fresh_start() { js 'localStorage.removeItem("weather-starter.rain.enabled"); localStorage.setItem("weather-theme", "apple"); 1' >/dev/null; }
+fresh_start() { js 'localStorage.removeItem("weather-starter.rain.enabled"); localStorage.removeItem("weather-starter.rain.legendSeen"); localStorage.setItem("weather-theme", "apple"); 1' >/dev/null; }
+
+legend_button() { echo "[...document.querySelectorAll('$FS button')].find((b) => b.textContent.trim() === 'Legend')"; }
+legend_shown() { js "Boolean(document.querySelector('$FS .rain-legend'))"; }
+open_legend() { # opens the full-screen legend unless it is already open
+  js "(() => { const b = $(legend_button); if (b && b.getAttribute('aria-expanded') !== 'true') b.click(); return 1; })()" >/dev/null
+  ab wait 300 >/dev/null
+}
 
 e2e_start_server
 e2e_launch_browser
@@ -186,8 +200,9 @@ if want us2; then
     test "$(size light),$(size moderate),$(size heavy)" = "14px,18px,24px"
   check "dry is a ring, wet levels are drops" \
     test "$(js "Boolean(document.querySelector('$FS .rain-dry circle')) && Boolean(document.querySelector('$FS .rain-heavy path'))")" = true
-  js "[...document.querySelectorAll('$FS button')].find((b) => b.textContent.trim() === 'Key')?.click(); 1" >/dev/null
   ab wait 300 >/dev/null
+  check "the legend opens by itself the first time readings show" test "$(legend_shown)" = true
+  check "the button is labelled Legend" test "$(js "Boolean($(legend_button))")" = true
   legend="$(text_of "$FS .rain-legend")"
   for level in Light Moderate Heavy "No reading" "Dry (0 mm)" "Singapore Open Data Licence version 1.0"; do
     check "the key lists $level" grep -q "$level" <<<"$legend"
@@ -195,6 +210,14 @@ if want us2; then
   check "the key gives the heavy range" grep -q "2.5 mm or more" <<<"$legend"
   shot "us2-key"
   assert_clean "open the key"
+  js "$(legend_button)?.click(); 1" >/dev/null
+  ab wait 300 >/dev/null
+  check "the Legend button closes it" test "$(legend_shown)" = false
+  check "the first opening is remembered" \
+    test "$(js "localStorage.getItem('weather-starter.rain.legendSeen')")" = true
+  fullscreen_rain_off_on
+  check "it does not open by itself a second time" test "$(legend_shown)" = false
+  assert_clean "legend stays closed"
 fi
 
 # --- US3: freshness and missing stations ---------------------------------------------------
@@ -322,8 +345,7 @@ if want themes; then
     open_fullscreen
     fullscreen_rain_on
     check "$theme: every station drawn" test "$(marks "$FS")" -eq "$STATION_COUNT"
-    js "[...document.querySelectorAll('$FS button')].find((b) => b.textContent.trim() === 'Key')?.click(); 1" >/dev/null
-    ab wait 300 >/dev/null
+    open_legend
     # Outline vs the theme's nominal basemap colour (voyager/light_all land or dark_all land), and
     # strip text vs the strip background: the rule in docs/theming.md.
     ratios="$(js "(() => {

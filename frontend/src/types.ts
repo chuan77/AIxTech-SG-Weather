@@ -148,6 +148,9 @@ export interface RainState {
   setEnabled: (enabled: boolean) => void;
   /** Loads island rain; a no-op while the data is under 2 minutes old. Never called on page load. */
   refresh: (trigger?: 'toggle' | 'refresh' | 'prompt') => Promise<void>;
+  /** Whether the legend has already opened by itself for this viewer (remembered per browser). */
+  legendSeen: boolean;
+  markLegendSeen: () => void;
 }
 
 export interface LocationError {
