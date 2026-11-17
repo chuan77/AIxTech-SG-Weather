@@ -82,11 +82,21 @@ npx vercel@65.9.0 deploy --prod   # production
 ## Rollback
 
 1. **Preferred: `git revert`.** Revert the bad commit in a PR to `main`. It goes through `verify` and deploys like any change.
-2. **Fast: Instant Rollback.** In Vercel → Project → Deployments, use **Instant Rollback** on the current production deployment. Hobby can only roll back to the **immediately previous** deployment. After a rollback, Vercel stops assigning new production deploys to the domain. Once the fix is merged and deployed, restore it with:
+2. **Fast: Instant Rollback.** In Vercel → Project → Deployments, use **Instant Rollback** on the current production deployment. Hobby can only roll back to the **immediately previous** deployment. The same works from the CLI: list the production deployments, then roll back to the second one in the list:
 
    ```bash
-   npx vercel@65.9.0 promote <deployment-url-or-id>
+   npx vercel@65.9.0 ls --prod
+   npx vercel@65.9.0 rollback <previous-deployment-url> --yes
+   npx vercel@65.9.0 inspect lepak-weather.vercel.app   # shows which deployment the domain serves
    ```
+
+   After a rollback, Vercel stops assigning new production deploys to the domain. Once the fix is merged and deployed, restore it with:
+
+   ```bash
+   npx vercel@65.9.0 promote <deployment-url-or-id> --yes
+   ```
+
+   Drill (2026-11-17): the rollback and the promote each took about 3 s, and the domain served the chosen deployment straight away. Health was 200 and the saved locations were unchanged at each step, because they live in Turso, not in the deployment.
 
 ## Known limits
 

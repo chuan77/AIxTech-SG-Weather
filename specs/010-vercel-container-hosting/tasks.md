@@ -213,7 +213,8 @@ description: "Task list for 010-vercel-container-hosting"
   - Rollback: (a) Instant Rollback (Hobby: previous deployment only), then `vercel promote <deployment>` to restore production auto-assignment; (b) `git revert` on `main` through the pipeline, which is preferred (research R7).
   - Known limits: beta runtime, cold start (filled in by T030), shared list, per-instance rate pacing and cache.
   - Troubleshooting for the "hosted database is required" and partial-config errors.
-- [ ] T029 [US4] Rollback drill on the live app, following only `docs/deployment.md`, owner-assisted (quickstart §8). Fix any step in the guide that didn't work.
+- [X] T029 [US4] Rollback drill on the live app, following only `docs/deployment.md`, owner-assisted (quickstart §8). Fix any step in the guide that didn't work.
+  - Result (2026-11-17, 10:04–10:05 SGT): `vercel rollback` moved production from `o2wf2tcxu` (PR #12) to `byimbukqd` (PR #11) in 3 s. Health returned 200 with 8 locations. `vercel promote` moved it back to `o2wf2tcxu` in 3 s, again with health 200 and 8 locations. Every step in the guide worked. The guide gained the CLI rollback commands, and the merge of this record confirmed that new production deploys are assigned to the domain automatically again after the promote.
 
 **Checkpoint**: the setup is documented and repeatable.
 
