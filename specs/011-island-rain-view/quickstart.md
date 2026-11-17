@@ -74,3 +74,16 @@ With the Development key on the server you started for this check (not the user'
 ## 6. Live sanity check (optional, by hand, once)
 
 On a showery day, with the Development key, turn Rain on in a dev server started without `RAIN_FIXTURE`. Compare a few stations' totals with the sum of the last three complete readings from one `rainfall?date=<today>` call. They should match, and the anchor time should be the newest period that holds about the full station count. This also confirms that wet values parse (research Gate 1, finding 4).
+
+## Results: §5 rate budget (T057, 2026-11-17)
+
+Own temporary server, throwaway database, Development key. One saved place; five runs about 2 minutes apart, each starting a location refresh and, 0.2 s later, rain and lightning together; then three more rain presses 20 s apart inside the 2-minute window.
+
+| Check | Result |
+|---|---|
+| 429 responses (SC-006) | **0** across all runs (no retries) |
+| Saved-location refresh with rain and lightning overlapping (SC-006) | **9.8–10.5 s**: within 10–15 s |
+| Rain fetches per 2 minutes (SC-008) | **1** per run; every repeat press `served: cache` in about 0.02 s |
+| Rain fresh data while a location refresh is running (SC-005) | **10.5–12.1 s: misses the 5 s target.** `pacingWaitMs` 10.4–12.0 s: the one rain request waits behind the location refresh's ~12 queued calls in the shared, first-come paced queue |
+
+Research R6 expected rain to delay location refreshes, not the reverse. Rain alone (no refresh in flight) needs one paced request, about 1 s. Open decision: accept the overlap case, or let single-request island layers (rain, lightning) jump the queue, which would push a running location refresh back by about 1–2 s.

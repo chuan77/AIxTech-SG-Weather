@@ -349,7 +349,7 @@ Also read `docs/architecture.md`, `docs/theming.md` and `docs/testing.md` first 
 - [X] T054 [P] Update `docs/theming.md` with the `--rain-*` variables, the size and shape rule for symbols, the 3:1 outline rule and the measured ratios. Update `docs/testing.md` with `scripts/e2e/rain-view.sh [us1|us2|us3|us4|us5|themes]` and the fact that it stubs the route.
 - [X] T055 Run `npm run verify` (lint → typecheck → tests → build). Fix every failure until it passes. A failing gate means the work is not done.
 - [X] T056 Run `scripts/e2e/rain-view.sh` for `us1`, `us2`, `us3`, `us4`, `us5` and `themes` against its own temporary server, not the owner's `npm run dev`. Also re-run `scripts/e2e/lightning-markers.sh` and `scripts/e2e/lightning-grouping.sh`, because the card's lightning switch moved into the Layers menu (T020). Update any selector in those scripts that targeted the card's lightning switch or strip. All must pass, with no process left holding a port.
-- [ ] T057 Run the rate-budget check from quickstart.md §5 on a server you start yourself with the Development key: 5 overlapping saved-location refreshes while toggling and refreshing rain. Record in `specs/011-island-rain-view/quickstart.md` (a "Results" note):
+- [X] T057 Run the rate-budget check from quickstart.md §5 on a server you start yourself with the Development key: 5 overlapping saved-location refreshes while toggling and refreshing rain. Record in `specs/011-island-rain-view/quickstart.md` (a "Results" note):
   - the number of 429s (must be 0);
   - each `refresh timing` (must be within 10–15 s);
   - the `rain refresh timing` `served` values (at most one `fetch` per 2 minutes) (SC-006, SC-008).
