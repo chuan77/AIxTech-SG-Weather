@@ -24,7 +24,7 @@ Inputs: [spec.md](spec.md), the assessment in `.specify/assessments/vercel-web-a
 - `GET /_vercel/insights/script.js` → `HTTP/2 200`, `content-type: application/javascript`, `server: Vercel`, `x-vercel-cache: HIT`, `x-vercel-id: sin1:…`. The body is minified JavaScript (`"use strict";(()=>{…`), with no `<!DOCTYPE html>`. Vercel's edge answers the path before the request reaches the container, so the Express catch-all is never hit.
 - `GET /health` → `200 {"status":"healthy"}` (same deployment, for comparison).
 - A plain `curl` gets `302` (Vercel Authentication), as expected for previews. Production is public.
-- Whether `VERCEL=1` reaches the container at runtime is still unrecorded. It will show in the `web analytics mode` log line once T010 ships (informational only; `WEB_ANALYTICS=on` is set explicitly).
+- **`VERCEL=1` does reach the container at runtime**: the preview's startup log shows `vercel: true` (2026-11-17, T019). `WEB_ANALYTICS=on` stays set explicitly anyway.
 
 ## R3. How the app knows measurement is active (FR-004, FR-004a, FR-007, FR-007a)
 

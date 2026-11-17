@@ -94,11 +94,11 @@ description: "Tasks for spec 012: anonymous visitor measurement with a privacy n
 
   `mode="production"` is required: without it the package's auto mode can load `va.vercel-scripts.com` debug script (research R1). No other props.
 - [x] T017 [US1] Local measure-mode smoke check (no network leaves the machine): `npm run build -w frontend`, start a temporary server per `scripts/e2e/lib.sh` conventions with `WEB_ANALYTICS=on`, and confirm the page has `<meta name="web-analytics" content="measure" />` and requests `/_vercel/insights/script.js` exactly once. Locally this returns `index.html`, the expected local-only error (PR #17's failure mode), which proves the conditional works. Tear the server down and confirm the port is free. Don't add this to the e2e suite.
-- [ ] T018 [US1] Owner action (outward): in Vercel → lepak-weather → Settings → Environment Variables, add `WEB_ANALYTICS=on` for **Production** and **Preview**. Record it in the PR description; the value isn't secret.
-- [ ] T019 [US1] Preview verification (quickstart §4 steps 2–4), owner approves the deploy:
+- [x] T018 [US1] Owner action (outward): in Vercel → lepak-weather → Settings → Environment Variables, add `WEB_ANALYTICS=on` for **Production** and **Preview**. Record it in the PR description; the value isn't secret. **Done 2026-11-17** with `vercel env add WEB_ANALYTICS -e production,preview --value on --no-sensitive` (type Config).
+- [x] T019 [US1] Preview verification (quickstart §4 steps 2–4), owner approves the deploy:
   1. `npx vercel@65.9.0 deploy` from the feature branch.
   2. On phone and laptop: no console errors, `/_vercel/insights/script.js` 200 JavaScript, visit visible under the Analytics **Preview** filter. Note the startup log line `web analytics mode` and whether `VERCEL` was present (research R2/R3).
-  3. Set Preview `WEB_ANALYTICS=off`, redeploy, confirm no script request and no notice, then restore `on`.
+  3. Set Preview `WEB_ANALYTICS=off`, redeploy, confirm no script request and no notice, then restore `on`. **Done 2026-11-17**: preview `lepak-weather-3n9uwbos4-snaic-nexus.vercel.app` (commit `ebceca8`): meta `measure`; `/_vercel/insights/script.js` 200; `/_vercel/insights/view` 200; notice shown; no app console errors (one Chrome-extension messaging exception, not the app); startup log `webAnalytics: measure, vercel: true`. Analytics → Preview showed 1 visitor, 1 page view on `/` within minutes. Off test: Preview `WEB_ANALYTICS=off` → `lepak-weather-dckhh802z-snaic-nexus.vercel.app`: no meta, no script or insights request, no notice, app loads; log `webAnalytics: off`. Preview restored to `on` (confirmed by `env pull`).
 
 **Checkpoint**: MVP measurement works on a hosted preview. Production follows on merge.
 
