@@ -163,6 +163,8 @@ description: "Task list for 010-vercel-container-hosting"
   - After at least 1 hour idle, it's still present.
   - After a redeploy (`npx vercel@<pinned> deploy --prod`, or a no-op merge once US3 exists), it's still present.
   - Delete the test location afterwards. Record the results for SC-003.
+  - Idle result (2026-11-17): at 08:00 SGT the live list held 9 locations (ids 15, 14, 13, 10, 9, 8, 6, 5, 3), with id 15 the newest and several locations deleted by the owner beforehand. At 09:22 SGT, after 82 minutes with no checks from me, the list was identical: nothing lost, and no deleted location came back. I have no direct proof that the instance stopped, because only owner visits could have kept it awake.
+  - Redeploy result: this record is merged as a no-op docs PR, and CI deploys a fresh container. The check after the deploy follows.
 
 **Checkpoint**: data survives, and a misconfiguration can't silently lose data.
 
