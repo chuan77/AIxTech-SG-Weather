@@ -56,7 +56,9 @@ export function PrivacyNotice() {
         built-in tool, records the page, the site that linked here, your country, region and city,
         and your device type, operating system and browser. It uses no cookies, no account and no
         precise location, and never sees your saved places. Visitors are told apart by an anonymous
-        value that resets every day.
+        value that resets every day. Places you save are kept on our server under a random code
+        stored only in this browser, so no one else can see them. Clearing this browser&rsquo;s data
+        loses them, and they&rsquo;re deleted after 90 days without use.
       </p>
     </div>
   );

@@ -1,11 +1,11 @@
 import { join } from 'node:path';
-import { and, desc, eq } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { drizzle } from 'drizzle-orm/sqlite-proxy';
 import { migrate } from 'drizzle-orm/sqlite-proxy/migrator';
 import { createLocalAdapter, createTursoAdapter, type DatabaseAdapter } from './dbAdapter.js';
 import { resolveDatabaseConfig, type DatabaseConfig } from './dbConfig.js';
 import { logger } from './logger.js';
-import { locations, type WeatherSnapshot } from './schema.js';
+import { locations, visitors, type VisitorRow, type WeatherSnapshot } from './schema.js';
 
 export interface LocationRecord {
   id: number;
@@ -81,7 +81,7 @@ async function openDatabase() {
       config.kind === 'local'
         ? createLocalAdapter(config.path)
         : createTursoAdapter(config.url, config.authToken);
-    const database = drizzle(adapter.query, { schema: { locations } });
+    const database = drizzle(adapter.query, { schema: { locations, visitors } });
     const before = await countMigrations();
     await migrate(
       database,
@@ -104,29 +104,46 @@ async function openDatabase() {
 
 const db = await openDatabase();
 
-export async function listLocations(): Promise<LocationRecord[]> {
+/** One visitor's saved places, newest first. Every location query is scoped to its owner (spec 013). */
+export async function listLocations(visitorId: number): Promise<LocationRecord[]> {
   return (
-    await db.select().from(locations).orderBy(desc(locations.createdAt), desc(locations.id)).all()
+    await db
+      .select()
+      .from(locations)
+      .where(eq(locations.visitorId, visitorId))
+      .orderBy(desc(locations.createdAt), desc(locations.id))
+      .all()
   ).map(rowToRecord);
 }
 
-export async function createLocation(latitude: number, longitude: number): Promise<LocationRecord> {
+export async function createLocation(
+  visitorId: number,
+  latitude: number,
+  longitude: number,
+): Promise<LocationRecord> {
   const duplicate = await db
     .select({ id: locations.id })
     .from(locations)
-    .where(and(eq(locations.latitude, latitude), eq(locations.longitude, longitude)))
+    .where(
+      and(
+        eq(locations.visitorId, visitorId),
+        eq(locations.latitude, latitude),
+        eq(locations.longitude, longitude),
+      ),
+    )
     .get();
 
   if (duplicate) {
     throw duplicateLocationError();
   }
 
-  const createdAt = new Date().toISOString().slice(0, 19);
+  const createdAt = timestamp(new Date());
   const weather = weatherToColumns(defaultWeather);
   try {
     const row = await db
       .insert(locations)
       .values({
+        visitorId,
         latitude,
         longitude,
         createdAt,
@@ -151,29 +168,171 @@ function duplicateLocationError(): Error {
   return error;
 }
 
-export async function getLocation(id: number): Promise<LocationRecord | null> {
-  const row = await db.select().from(locations).where(eq(locations.id, id)).get();
+/** The row only if it belongs to this visitor; anyone else's row reads as missing (FR-004). */
+function owned(visitorId: number, id: number) {
+  return and(eq(locations.id, id), eq(locations.visitorId, visitorId));
+}
+
+export async function getLocation(visitorId: number, id: number): Promise<LocationRecord | null> {
+  const row = await db.select().from(locations).where(owned(visitorId, id)).get();
   return row ? rowToRecord(row) : null;
 }
 
 export async function updateWeather(
+  visitorId: number,
   id: number,
   weather: WeatherSnapshot,
 ): Promise<LocationRecord | null> {
   const columns = weatherToColumns(weather);
-  const row = await db.update(locations).set(columns).where(eq(locations.id, id)).returning().get();
+  const row = await db.update(locations).set(columns).where(owned(visitorId, id)).returning().get();
 
   return row ? rowToRecord(row) : null;
 }
 
-export async function deleteLocation(id: number): Promise<boolean> {
+export async function deleteLocation(visitorId: number, id: number): Promise<boolean> {
   const row = await db
     .delete(locations)
-    .where(eq(locations.id, id))
+    .where(owned(visitorId, id))
     .returning({ id: locations.id })
     .get();
 
   return row !== undefined;
+}
+
+/** `YYYY-MM-DDTHH:MM:SS` in UTC, the format of every stored date; sorts as text. */
+export function timestamp(date: Date): string {
+  return date.toISOString().slice(0, 19);
+}
+
+export async function findVisitorByHash(keyHash: string): Promise<number | null> {
+  const row = await db
+    .select({ id: visitors.id })
+    .from(visitors)
+    .where(eq(visitors.keyHash, keyHash))
+    .get();
+  return row?.id ?? null;
+}
+
+/** The visitor with this key hash, created if new. Safe when two first saves race. */
+export async function ensureVisitorByHash(keyHash: string, now: Date): Promise<number> {
+  const at = timestamp(now);
+  await db
+    .insert(visitors)
+    .values({ keyHash, createdAt: at, lastUsedAt: at })
+    .onConflictDoNothing({ target: visitors.keyHash })
+    .run();
+  const id = await findVisitorByHash(keyHash);
+  if (id === null) throw new Error('visitor could not be created');
+  return id;
+}
+
+/** Records a use, writing only when the stored time is older than `staleBefore` (one write an hour). */
+export async function touchVisitorRow(id: number, now: Date, staleBefore: Date): Promise<void> {
+  await db
+    .update(visitors)
+    .set({ lastUsedAt: timestamp(now) })
+    .where(and(eq(visitors.id, id), lt(visitors.lastUsedAt, timestamp(staleBefore))))
+    .run();
+}
+
+/**
+ * Deletes visitors last used before `cutoff`, and their places first. Rows with no owner
+ * (pre-spec-013, awaiting the owner's claim) are never touched. Makes no weather call.
+ */
+export async function purgeVisitorsUnusedSince(
+  cutoff: Date,
+): Promise<{ visitors: number; locations: number }> {
+  const stale = (
+    await db
+      .select({ id: visitors.id })
+      .from(visitors)
+      .where(lt(visitors.lastUsedAt, timestamp(cutoff)))
+      .all()
+  ).map((row) => row.id);
+  if (stale.length === 0) return { visitors: 0, locations: 0 };
+
+  const removedLocations = await db
+    .delete(locations)
+    .where(inArray(locations.visitorId, stale))
+    .returning({ id: locations.id })
+    .all();
+  const removedVisitors = await db
+    .delete(visitors)
+    .where(inArray(visitors.id, stale))
+    .returning({ id: visitors.id })
+    .all();
+  return { visitors: removedVisitors.length, locations: removedLocations.length };
+}
+
+/**
+ * Gives every unowned (pre-spec-013) place to one visitor, leaving any whose coordinates that
+ * visitor already has. Running it again claims nothing new.
+ */
+export async function claimUnownedLocations(
+  visitorId: number,
+): Promise<{ claimed: number; skipped: number }> {
+  const claimed = await db
+    .update(locations)
+    .set({ visitorId })
+    .where(
+      and(
+        isNull(locations.visitorId),
+        sql`NOT EXISTS (SELECT 1 FROM ${locations} AS mine WHERE mine.visitor_id = ${visitorId}
+          AND mine.latitude = ${locations.latitude} AND mine.longitude = ${locations.longitude})`,
+        // Unowned duplicates of one spot (possible once the global unique index is gone): claim
+        // only the oldest, so the per-visitor unique index can't fail the whole update.
+        sql`${locations.id} = (SELECT min(dup.id) FROM ${locations} AS dup
+          WHERE dup.visitor_id IS NULL AND dup.latitude = ${locations.latitude}
+          AND dup.longitude = ${locations.longitude})`,
+      ),
+    )
+    .returning({ id: locations.id })
+    .all();
+  const skipped = await db
+    .select({ n: count() })
+    .from(locations)
+    .where(isNull(locations.visitorId))
+    .get();
+  return { claimed: claimed.length, skipped: skipped?.n ?? 0 };
+}
+
+// Test helpers: read-only views and an unowned insert, so tests can check what no route exposes.
+export async function getVisitorForTest(id: number): Promise<VisitorRow | undefined> {
+  return db.select().from(visitors).where(eq(visitors.id, id)).get();
+}
+
+export async function countVisitorsForTest(): Promise<number> {
+  return (await db.select({ n: count() }).from(visitors).get())?.n ?? 0;
+}
+
+export async function countUnownedLocationsForTest(): Promise<number> {
+  return (
+    (await db.select({ n: count() }).from(locations).where(isNull(locations.visitorId)).get())?.n ??
+    0
+  );
+}
+
+export function getDefaultWeatherForTest(): WeatherSnapshot {
+  return { ...defaultWeather };
+}
+
+export async function insertUnownedLocationForTest(
+  latitude: number,
+  longitude: number,
+  weather: WeatherSnapshot = defaultWeather,
+): Promise<number> {
+  const row = await db
+    .insert(locations)
+    .values({
+      visitorId: null,
+      latitude,
+      longitude,
+      createdAt: timestamp(new Date()),
+      ...weatherToColumns(weather),
+    })
+    .returning({ id: locations.id })
+    .get();
+  return row.id;
 }
 
 export function closeDatabase(): void {
@@ -182,7 +341,8 @@ export function closeDatabase(): void {
 
 export async function resetStore(): Promise<void> {
   await db.delete(locations).run();
-  await adapter.execute("DELETE FROM sqlite_sequence WHERE name = 'locations'");
+  await db.delete(visitors).run();
+  await adapter.execute("DELETE FROM sqlite_sequence WHERE name IN ('locations', 'visitors')");
 }
 
 function weatherToColumns(weather: WeatherSnapshot) {

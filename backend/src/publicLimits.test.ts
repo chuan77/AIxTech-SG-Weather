@@ -21,6 +21,9 @@ const countingClient: WeatherClient = {
   },
 };
 
+// Spec 013: saved places belong to a visitor key; one visitor on two devices here.
+const VISITOR_KEY = 'v'.repeat(43);
+
 describe('public limits', () => {
   let tempDir: string;
   let app: Awaited<ReturnType<typeof import('./server.js').createApp>>;
@@ -56,12 +59,14 @@ describe('public limits', () => {
     const created = await request(app)
       .post('/api/locations')
       .set('x-forwarded-for', device)
+      .set('x-visitor-key', VISITOR_KEY)
       .send({ latitude: 1.35, longitude: 103.85 })
       .expect(201);
     for (let i = 0; i < 29; i += 1) {
       await request(app)
         .post(`/api/locations/${created.body.id}/refresh`)
         .set('x-forwarded-for', device)
+        .set('x-visitor-key', VISITOR_KEY)
         .expect(200);
     }
     expect(calls).toBe(30);
@@ -69,12 +74,14 @@ describe('public limits', () => {
     const blocked = await request(app)
       .post(`/api/locations/${created.body.id}/refresh`)
       .set('x-forwarded-for', device)
+      .set('x-visitor-key', VISITOR_KEY)
       .expect(429);
     expect(blocked.body.detail).toMatch(/too many weather updates/i);
     expect(blocked.headers['retry-after']).toBeDefined();
     await request(app)
       .post('/api/locations')
       .set('x-forwarded-for', device)
+      .set('x-visitor-key', VISITOR_KEY)
       .send({ latitude: 1.36, longitude: 103.86 })
       .expect(429);
     expect(calls).toBe(30);
@@ -83,6 +90,7 @@ describe('public limits', () => {
     await request(app)
       .post(`/api/locations/${created.body.id}/refresh`)
       .set('x-forwarded-for', '198.51.100.8')
+      .set('x-visitor-key', VISITOR_KEY)
       .expect(200);
     await request(app).get('/api/locations').set('x-forwarded-for', device).expect(200);
   });

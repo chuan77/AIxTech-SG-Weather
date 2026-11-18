@@ -4,6 +4,7 @@ import type {
   LightningObservation,
   Location,
 } from './types';
+import { VISITOR_KEY_HEADER, getVisitorKey } from './visitorKey';
 
 const API_BASE = '/api';
 
@@ -25,12 +26,21 @@ class ApiRequestError extends Error {
   }
 }
 
+/** Saved places belong to this browser's visitor key (spec 013); other endpoints don't need it. */
+function visitorHeaders(endpoint: string): Record<string, string> {
+  return endpoint.startsWith('/locations') ? { [VISITOR_KEY_HEADER]: getVisitorKey() } : {};
+}
+
 async function send(endpoint: string, options: RequestInit = {}): Promise<Response> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE}${endpoint}`, {
-      headers: { 'Content-Type': 'application/json', ...options.headers },
       ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...visitorHeaders(endpoint),
+        ...options.headers,
+      },
     });
   } catch {
     // fetch only rejects when the request never got a response; the browser's text ("Failed to fetch") means nothing to people.
@@ -59,7 +69,11 @@ export const deleteLocation = (id: number) =>
 
 /** Fire-and-forget delete that survives the page closing (used to flush a pending undo window). */
 export function deleteLocationOnUnload(id: number) {
-  void fetch(`${API_BASE}/locations/${id}`, { method: 'DELETE', keepalive: true }).catch(() => {});
+  void fetch(`${API_BASE}/locations/${id}`, {
+    method: 'DELETE',
+    headers: visitorHeaders('/locations'),
+    keepalive: true,
+  }).catch(() => {});
 }
 
 export const refreshLocation = (id: number) =>

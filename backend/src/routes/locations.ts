@@ -1,4 +1,4 @@
-import type { Router } from 'express';
+import type { Request, Router } from 'express';
 import { Router as createRouter } from 'express';
 import {
   createLocation,
@@ -10,6 +10,29 @@ import {
 import { SingaporeWeatherClient, WeatherProviderError, type WeatherSnapshot } from '../weather.js';
 import { logger } from '../logger.js';
 import type { ProviderRequester } from '../providerHttp.js';
+import {
+  ensureVisitor,
+  findVisitor,
+  retentionSweep,
+  touchVisitor,
+  visitorKeyFrom,
+} from '../visitors.js';
+
+const NOT_FOUND = { detail: 'Location not found' };
+
+/**
+ * The requesting visitor's id (spec 013), or null with no valid key or no saved places yet. A known
+ * visitor's use is recorded for the 90-day retention, and the sweep may start in the background;
+ * neither delays the response's data. Another visitor's place is answered like a missing one.
+ */
+async function currentVisitor(request: Request): Promise<number | null> {
+  void retentionSweep.maybeSweep();
+  const key = visitorKeyFrom(request);
+  if (!key) return null;
+  const visitorId = await findVisitor(key);
+  if (visitorId !== null) await touchVisitor(visitorId);
+  return visitorId;
+}
 
 export interface WeatherClient {
   getCurrentWeather(latitude: number, longitude: number): Promise<WeatherSnapshot>;
@@ -29,9 +52,10 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
       requester: options.requester,
     });
 
-  router.get('/locations', async (_request, response, next) => {
+  router.get('/locations', async (request, response, next) => {
     try {
-      response.json({ locations: await listLocations() });
+      const visitorId = await currentVisitor(request);
+      response.json({ locations: visitorId === null ? [] : await listLocations(visitorId) });
     } catch (error) {
       next(error);
     }
@@ -53,14 +77,22 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
         return;
       }
 
-      const location = await createLocation(latitude, longitude);
+      const key = visitorKeyFrom(request);
+      if (!key) {
+        response.status(400).json({ detail: 'A visitor key is required' });
+        return;
+      }
+      void retentionSweep.maybeSweep();
+      const visitorId = await ensureVisitor(key);
+      await touchVisitor(visitorId);
+      const location = await createLocation(visitorId, latitude, longitude);
 
       try {
         const snapshot = await weatherClient.getCurrentWeather(
           location.latitude,
           location.longitude,
         );
-        const updated = await updateWeather(location.id, snapshot);
+        const updated = await updateWeather(visitorId, location.id, snapshot);
         response.status(201).json(updated ?? location);
       } catch (error) {
         // The location is already saved (FR-011): any refresh failure leaves it as "not refreshed".
@@ -82,9 +114,11 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
 
   router.get('/locations/:locationId', async (request, response, next) => {
     try {
-      const location = await getLocation(Number(request.params.locationId));
+      const visitorId = await currentVisitor(request);
+      const location =
+        visitorId === null ? null : await getLocation(visitorId, Number(request.params.locationId));
       if (!location) {
-        response.status(404).json({ detail: 'Location not found' });
+        response.status(404).json(NOT_FOUND);
         return;
       }
       response.json(location);
@@ -96,13 +130,14 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
   router.delete('/locations/:locationId', async (request, response, next) => {
     try {
       const locationId = Number(request.params.locationId);
-      if (!Number.isSafeInteger(locationId) || locationId <= 0) {
-        response.status(404).json({ detail: 'Location not found' });
+      const visitorId = await currentVisitor(request);
+      if (visitorId === null || !Number.isSafeInteger(locationId) || locationId <= 0) {
+        response.status(404).json(NOT_FOUND);
         return;
       }
 
-      if (!(await deleteLocation(locationId))) {
-        response.status(404).json({ detail: 'Location not found' });
+      if (!(await deleteLocation(visitorId, locationId))) {
+        response.status(404).json(NOT_FOUND);
         return;
       }
 
@@ -115,14 +150,15 @@ export function createLocationsRouter(options: LocationsRouterOptions = {}): Rou
   router.post('/locations/:locationId/refresh', async (request, response, next) => {
     try {
       const locationId = Number(request.params.locationId);
-      const location = await getLocation(locationId);
-      if (!location) {
-        response.status(404).json({ detail: 'Location not found' });
+      const visitorId = await currentVisitor(request);
+      const location = visitorId === null ? null : await getLocation(visitorId, locationId);
+      if (visitorId === null || !location) {
+        response.status(404).json(NOT_FOUND);
         return;
       }
 
       const snapshot = await weatherClient.getCurrentWeather(location.latitude, location.longitude);
-      const updated = await updateWeather(locationId, snapshot);
+      const updated = await updateWeather(visitorId, locationId, snapshot);
       response.json(updated);
     } catch (error) {
       if (error instanceof WeatherProviderError) {

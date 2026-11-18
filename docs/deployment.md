@@ -101,6 +101,25 @@ npx vercel@65.9.0 deploy --prod   # production
 
    Drill (2026-11-17): the rollback and the promote each took about 3 s, and the domain served the chosen deployment straight away. Health was 200 and the saved locations were unchanged at each step, because they live in Turso, not in the deployment.
 
+## Per-visitor saved places (spec 013)
+
+Each browser keeps a random key in `localStorage` (`weather-starter.visitor.key`) and sends it as the `X-Visitor-Key` header. The database stores only its SHA-256 (`visitors.key_hash`), and every saved place carries a `visitor_id`. Migration `0004` adds both. Places saved before spec 013 have `visitor_id` NULL and are shown to no one until the owner claims them.
+
+**Retention.** Visitors unused for 90 days are deleted with their places. The sweep runs once at startup and then at most every 6 hours per instance, triggered by a locations request. It never deletes unclaimed (NULL) places, and it makes no data.gov.sg call. Successful removals log `visitor retention sweep` with counts only.
+
+**One-off owner claim, after the first deploy of spec 013:**
+
+1. Open the hosted app in your own browser. The list is empty.
+2. In DevTools, run `localStorage.getItem('weather-starter.visitor.key')` and copy the value.
+3. In a terminal at the repo root, export the production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (don't commit or paste them anywhere), then run:
+   ```bash
+   npm run claim-legacy -- <your key> --remote
+   ```
+   Expect `database: hosted (Turso)` then `claimed <n>, skipped <m> (already in list)`.
+4. Reload the app. Your old places are back with their snapshots, and a private window still shows an empty list. Running the command again prints `claimed 0`.
+
+The command never loads `.env`. With Turso exported it refuses without `--remote`, and with `--remote` it refuses without Turso. So an accidental run can't reach production. It prints counts only, never the key, coordinates or the URL. Places whose coordinates you already saved are skipped and stay unclaimed.
+
 ## Web Analytics
 
 Visitor counts come from Vercel Web Analytics on the Hobby plan (spec 012). Hosted deployments load Vercel's `/_vercel/insights/script.js`, which Vercel serves in front of the container (checked on a preview, 2026-11-17). Local runs, tests and the e2e checks never load it.
@@ -117,7 +136,7 @@ Visitor counts come from Vercel Web Analytics on the Hobby plan (spec 012). Host
 - The Container runtime is in beta on Vercel.
 - Instances stop after 5 idle minutes, so the next visit waits for a cold start. Measured cold start: about 5 s for the first request after a deploy (preview, 2026-11-16), then 5–25 ms per request.
 - Size: container 94.7 MB compressed on Vercel (429 MB uncompressed in a local build); whole deployment 238 MB of the 5 GiB limit (2026-11-16).
-- One saved-locations list is shared by every visitor until per-visitor storage ships.
+- Saved places are per visitor (spec 013): a list lives on one browser and is lost if that browser's data is cleared. Lists unused for 90 days are deleted. Every visitor's refreshes share one paced queue on the data.gov.sg key: about one full refresh every 10 s on a Development key. Before promoting the URL widely, request a Production key and set `WEATHER_API_RATE_LIMIT`.
 - Rate pacing for data.gov.sg and the lightning cache are per instance. That's fine for fewer than 5 visitors.
 - The URL is public, so the image turns on per-device limits (`RATE_LIMITS=on`, keyed on the visitor address from `TRUST_PROXY=1`): 30 weather fetches per 10 minutes and 60 `/api/logs` events per minute, plus a 2 KB cap on log metadata. Lightning needs no limit: its 2-minute cache already caps data.gov.sg calls. The limits are in memory per instance: they reset on a cold start, and a parallel burst makes Vercel start more instances (9 in a 64-request test), each with its own allowance. So they stop a simple loop, not a determined burst. For a limit across all instances, add the Vercel Firewall rate-limit rule below (Hobby allows one).
 - Region: `vercel.json` asks for `sin1`. Confirm it in the deployment's runtime logs, and set it in Project Settings if Vercel ignores the file for containers.

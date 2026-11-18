@@ -210,6 +210,11 @@ if (import.meta.url === pathToFileURL(process.argv[1]).href) {
     logger.info({ url: `http://${host}:${port}` }, 'Weather Starter listening');
   });
 
+  // Spec 013: remove lists unused for 90 days once at start, then at most every 6 hours on use.
+  // In the background; a failure is logged and retried later. Tests never reach this block.
+  const { retentionSweep } = await import('./visitors.js');
+  void retentionSweep.maybeSweep();
+
   // The hosting platform sends SIGTERM before stopping an idle or replaced instance and allows
   // 30 s: stop taking requests, let in-flight ones finish, close the database, exit. Ctrl+C
   // (SIGINT) keeps Node's default so local development stops at once.

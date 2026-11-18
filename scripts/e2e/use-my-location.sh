@@ -54,7 +54,9 @@ want() { [ "$FILTER" = all ] || [ "$FILTER" = "$1" ]; }
 js() { ab eval "$1" | sed -e 's/^"//' -e 's/"$//'; }
 shot() { ab screenshot "$OUT/$1.png" >/dev/null; }
 
-locations_json() { curl -sf "$BASE_URL/api/locations"; }
+# Saved places belong to the browser's visitor key (spec 013): read this session's list with it.
+visitor_key() { js "(() => { try { return localStorage.getItem('weather-starter.visitor.key') || ''; } catch { return ''; } })()"; }
+locations_json() { curl -sf -H "X-Visitor-Key: $(visitor_key)" "$BASE_URL/api/locations"; }
 location_count() {
   locations_json | node -e '
     let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", () => {
