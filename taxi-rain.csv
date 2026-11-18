@@ -1,0 +1,2 @@
+run_at_utc,taxi_timestamp,taxi_total,rain_timestamp,rain_stations_reporting,rain_stations_wet,raffles_taxis_1km,raffles_rain_mm,raffles_rain_station_km,orchard_taxis_1km,orchard_rain_mm,orchard_rain_station_km,tampines_taxis_1km,tampines_rain_mm,tampines_rain_station_km,jurongwest_taxis_1km,jurongwest_rain_mm,jurongwest_rain_station_km,woodlands_taxis_1km,woodlands_rain_mm,woodlands_rain_station_km,errors
+2026-11-18T13:56:34.293Z,2026-11-18T21:56:11+08:00,4220,2026-11-18T21:50:00+08:00,87,0,58,0,1.75,33,0,0.73,60,0,0.97,24,0,0.91,66,0,0.88,
