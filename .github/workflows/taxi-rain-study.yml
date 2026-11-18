@@ -1,0 +1,59 @@
+# Taxi vs rain study (assessment sg-transport-data, Option B). Research only: it doesn't build,
+# test or deploy the app and uses no secrets.
+# Every 15 minutes it runs scripts/research/taxi-rain-sample.mjs (two keyless data.gov.sg calls) and
+# appends one row to taxi-rain.csv on the research/taxi-rain-data branch, never on main.
+# The script stops collecting after STUDY_END; disable or delete this workflow once the study is
+# written up. GitHub may delay or skip scheduled runs when busy, so expect gaps.
+name: Taxi rain study
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: taxi-rain-study
+  cancel-in-progress: false
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      DATA_BRANCH: research/taxi-rain-data
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+      - name: Check out the data branch (created on the first run)
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git ls-remote --exit-code --heads origin "$DATA_BRANCH" >/dev/null; then
+            git fetch --depth 1 origin "$DATA_BRANCH"
+            git worktree add -B "$DATA_BRANCH" data "origin/$DATA_BRANCH"
+          else
+            git worktree add --orphan -b "$DATA_BRANCH" data
+            printf '%s\n' '# Taxi vs rain study data' '' \
+              'Collected by .github/workflows/taxi-rain-study.yml on main for assessment' \
+              '`.specify/assessments/sg-transport-data`. One row per run in taxi-rain.csv.' \
+              'Sources: LTA Taxi Availability and NEA rainfall via data.gov.sg, under the' \
+              'Singapore Open Data Licence (https://data.gov.sg/open-data-licence).' > data/README.md
+          fi
+      - name: Sample taxis and rain
+        run: node scripts/research/taxi-rain-sample.mjs data/taxi-rain.csv
+      - name: Commit the new row
+        working-directory: data
+        run: |
+          git add -A
+          git diff --cached --quiet && exit 0
+          git commit -q -m "data: taxi rain sample $(date -u +%Y-%m-%dT%H:%MZ)"
+          for attempt in 1 2 3; do
+            git push -q origin "HEAD:$DATA_BRANCH" && exit 0
+            git pull -q --rebase origin "$DATA_BRANCH" || true
+          done
+          exit 1
