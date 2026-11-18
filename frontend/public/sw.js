@@ -5,9 +5,11 @@
 // that fails for lack of a connection does the offline page answer instead. Every other request
 // is left alone, so deploys and rollbacks reach users on their next online visit.
 //
-// Bump CACHE whenever offline.html changes. To switch this helper off, see scripts/pwa/sw-kill.js.
+// CACHE ends in the first 8 hex digits of the SHA-256 of offline.html, so editing that page also
+// changes this file and installed devices pick up the new page. offlineCacheName.test.ts fails
+// and prints the new name when they drift. To switch this helper off, see scripts/pwa/sw-kill.js.
 
-const CACHE = 'lepak-offline-v1';
+const CACHE = 'lepak-offline-70ef888b';
 const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', (event) => {
@@ -21,8 +23,10 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches
-      .keys()
+    // Navigation preload starts the page request while the worker is still starting, so a
+    // sleeping worker doesn't delay each launch. Not every browser has it.
+    Promise.resolve(self.registration.navigationPreload?.enable())
+      .then(() => caches.keys())
       .then((names) =>
         Promise.all(
           names
@@ -41,10 +45,12 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     // Any HTTP response, error statuses included, passes through as is. Only a rejected fetch
     // (no connection) falls back to the offline page.
-    fetch(request).catch(() =>
-      caches
-        .match(OFFLINE_URL, { cacheName: CACHE })
-        .then((response) => response || Response.error()),
-    ),
+    Promise.resolve(event.preloadResponse)
+      .then((preloaded) => preloaded || fetch(request))
+      .catch(() =>
+        caches
+          .match(OFFLINE_URL, { cacheName: CACHE })
+          .then((response) => response || Response.error()),
+      ),
   );
 });
