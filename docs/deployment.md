@@ -110,15 +110,19 @@ Each browser keeps a random key in `localStorage` (`weather-starter.visitor.key`
 **One-off owner claim, after the first deploy of spec 013:**
 
 1. Open the hosted app in your own browser. The list is empty.
-2. In DevTools, run `localStorage.getItem('weather-starter.visitor.key')` and copy the value.
-3. In a terminal at the repo root, export the production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (don't commit or paste them anywhere), then run:
+2. In DevTools, run `copy(localStorage.getItem('weather-starter.visitor.key'))`. This copies the key without the quotes the console shows.
+3. In a terminal at the repo root, export the production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` (`set -a; source .env; set +a`; don't commit or paste them anywhere), then run:
    ```bash
-   npm run claim-legacy -- <your key> --remote
+   KEY="$(pbpaste)"; echo ${#KEY}                         # must print 43
+   npx tsx backend/src/claimLegacyCli.ts "$KEY" --remote
+   unset TURSO_DATABASE_URL TURSO_AUTH_TOKEN KEY           # afterwards
    ```
-   Expect `database: hosted (Turso)` then `claimed <n>, skipped <m> (already in list)`.
+   Expect `database: hosted (Turso)` then `claimed <n>, skipped <m> (already in list)`. Call the script with `npx tsx` and avoid `npm run claim-legacy -- <key>`. A key can start with `-` or `--` (base64url), and if the `--` separator is missing, npm takes such a key as its own option. The command then fails with `visitor key must be 43 base64url characters`.
 4. Reload the app. Your old places are back with their snapshots, and a private window still shows an empty list. Running the command again prints `claimed 0`.
 
 The command never loads `.env`. With Turso exported it refuses without `--remote`, and with `--remote` it refuses without Turso. So an accidental run can't reach production. It prints counts only, never the key, coordinates or the URL. Places whose coordinates you already saved are skipped and stay unclaimed.
+
+**If places end up under the wrong key** (a lost or test key), release them in the Turso dashboard (Edit Data → SQL), then claim again. Check `select id, created_at from visitors;` first, and release only that visitor's rows: `update locations set visitor_id = null where visitor_id = <id>; delete from visitors where id = <id>;`. Done on 2026-11-18 after a smoke test claimed the 9 pre-spec-013 places under a throwaway key. The owner then claimed all 9.
 
 ## Web Analytics
 
