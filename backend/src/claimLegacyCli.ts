@@ -2,7 +2,7 @@
 import { INVALID_KEY_MESSAGE, isVisitorKey } from './visitorKeyFormat.js';
 
 /**
- * `npm run claim-legacy -- <visitorKey> [--remote]` from the repo root (spec 013). Prints only
+ * `npx tsx backend/src/claimLegacyCli.ts "$KEY" [--remote]` from the repo root (spec 013). Prints only
  * counts: never the key, its hash, coordinates or the database URL.
  *
  * Deliberately does NOT load `.env`: that file can hold the production Turso settings, and a

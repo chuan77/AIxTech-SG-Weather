@@ -46,7 +46,7 @@ Follow CLAUDE.md "Browser checks": start on `about:blank`, clear errors and cons
 
 1. Open the hosted app in your own browser and add nothing. The list is empty, and the pre-feature places are hidden (US3 scenario 1).
 2. In DevTools, copy `localStorage.getItem('weather-starter.visitor.key')`. It already exists, because the page's first list request created it.
-3. On your machine, with the production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` exported, run `npm run claim-legacy -- <key> --remote`. Expect `database: hosted (Turso)`, then `claimed <n>, skipped 0`. The command never loads `.env`, and it refuses Turso without `--remote`.
+3. On your machine, with the production `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` exported, run `npx tsx backend/src/claimLegacyCli.ts "$KEY" --remote` (not `npm run claim-legacy`: npm can take a key starting with `--` as its own option). Expect `database: hosted (Turso)`, then `claimed <n>, skipped 0`. The command never loads `.env`, and it refuses Turso without `--remote`.
 4. Reload the hosted app. Your old places appear with their snapshots. A private window still shows an empty list (SC-008).
 5. Run it again. Expect `claimed 0, skipped 0`.
 
