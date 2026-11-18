@@ -39,7 +39,7 @@ It starts its own temporary production server (`lib.sh`) and tears it down on ex
 ## 4. iPhone (manual, SC-002, SC-006, research R1)
 
 1. In Safari with no saved places: no Add to Home Screen button in the Add row.
-2. Save one place: the round button appears next to Add, with a dot. Tap it: the tip shows the contract text.
+2. Save one place: the labelled **Add Lepak to Home Screen** button appears on its own line under the Add row, with a dot. Tap it: the tip shows the contract text and the dot goes away. A tap outside closes the tip and leaves the button.
 3. Follow it: Share → Add to Home Screen. The suggested name is **Lepak** and the icon is the app's.
 4. Open from the home screen: full-screen, the normal empty state, no error. This confirms R1, the separate list.
 5. Back in Safari: after Got it, the button is gone, and stays gone after a reload.
@@ -49,6 +49,12 @@ It starts its own temporary production server (`lib.sh`) and tears it down on ex
 1. Open the installed app once online.
 2. Turn on airplane mode and open the app again: the "You're offline" page appears in the app's colours.
 3. Turn airplane mode off and tap Try again: the dashboard loads with current data.
+
+**Results, 2026-11-18 (production, https://lepak-weather.vercel.app, owner's devices):**
+- §4 iPhone Safari, steps 1–5: pass. No button with no places; the button and dot appeared after one save; the tip opened and closed as described; Add to Home Screen suggested **Lepak** with the app icon; the home-screen app opened full-screen to the empty state with no error, confirming R1 (a separate list); after Got it the button stayed gone across a reload.
+- §5 Offline (installed iPhone app): pass. Airplane mode showed "You're offline" in the app's colours; Try again brought the dashboard back once online.
+- §3 Android Chrome: not run, no Android device available. Covered only by the automated Chrome check (§2) and the live manifest check.
+- §3 step 5, desktop Chrome/Edge: not run.
 
 ## 6. Rollback and kill-switch drills (SC-005, FR-017)
 
@@ -69,7 +75,10 @@ Run these on a local production server you started yourself (`E2E_BASE_URL`), or
 - Rollback: build A with the helper active, then B (a `meta` marker added to `index.html`): the next open showed B. Rolling back to A: the next open showed A, with no clearing. Pass.
 - Kill switch: `sw-kill.js` copied over `sw.js`, built with `VITE_OFFLINE_HELPER=off`. After two opens there was no registration and no `lepak-offline-*` cache, and the dashboard worked. No runtime errors. Pass.
 - Note: run the drill only after `frontend/public/sw.js` is committed, so `git checkout frontend/public/sw.js` can restore it.
-- The production Instant Rollback drill (step 1.4) is still to do after merge (task T032).
+- Production Instant Rollback drill (step 1.4), 2026-11-18, iPhone with Lepak installed: pass.
+  - Rolled back at 06:29 UTC from `lepak-weather-7wycbx2co` (`dpl_EJxQ8xd6vnySi1meqnEuBAfFMnWR`, spec 014) to `lepak-weather-2d85zugii` (`dpl_FYzdod6SdmrDJn9d8jEDaGx4uGag`, before spec 014). Hobby allows only the previous deployment, so the pre-014 build was the marker: `/manifest.webmanifest` and `/sw.js` came back as `text/html`, `/health` stayed healthy.
+  - The installed app, reopened online, loaded the usual dashboard with no offline page and no error, and Safari showed the usual dashboard, with no data cleared. This also confirms the `docs/deployment.md` note that the helper is harmless under a pre-014 build.
+  - Restored with `promote` at 06:34 UTC: the manifest and `sw.js` are served with their own types again. Each step took 2–3 s.
 
 ## 7. Privacy
 
