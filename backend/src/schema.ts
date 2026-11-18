@@ -59,10 +59,28 @@ export interface WeatherSnapshot {
   }>;
 }
 
+/**
+ * One anonymous visitor (spec 013): a browser known only by the SHA-256 of the random key it holds.
+ * The key itself is never stored, logged or sent anywhere but the `X-Visitor-Key` header.
+ */
+export const visitors = sqliteTable('visitors', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  /** Lowercase hex SHA-256 of the 43-character browser key. */
+  keyHash: text('key_hash').notNull().unique(),
+  createdAt: text('created_at').notNull(),
+  /** Bumped by any use at most once an hour; visitors unused for 90 days are swept. */
+  lastUsedAt: text('last_used_at').notNull(),
+});
+
+export type VisitorRow = typeof visitors.$inferSelect;
+
 export const locations = sqliteTable(
   'locations',
   {
     id: integer('id').primaryKey({ autoIncrement: true }),
+    // Owner (visitors.id). Null only for rows saved before spec 013, until the owner claims them.
+    // No foreign key: adding one makes drizzle-kit rebuild the table (spec 013 research R4).
+    visitorId: integer('visitor_id'),
     latitude: real('latitude').notNull(),
     longitude: real('longitude').notNull(),
     createdAt: text('created_at').notNull(),
@@ -103,6 +121,11 @@ export const locations = sqliteTable(
       .notNull(),
   },
   (table) => [
-    uniqueIndex('locations_latitude_longitude_unique').on(table.latitude, table.longitude),
+    // One place per coordinate within a visitor's list; different visitors may share coordinates.
+    uniqueIndex('locations_visitor_latitude_longitude_unique').on(
+      table.visitorId,
+      table.latitude,
+      table.longitude,
+    ),
   ],
 );

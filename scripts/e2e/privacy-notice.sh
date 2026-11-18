@@ -100,6 +100,8 @@ toggles() { # toggles <context>: click, Enter, Space and Escape all behave
   check "$ctx: click opens it" test "$(expanded)" = true
   check "$ctx: explanation shown in place" test "$(explanation_visible)" = true
   check "$ctx: explanation names the tool and says no cookies" test "$(js "(() => { const b = $BUTTON; const t = document.getElementById(b.getAttribute('aria-controls')).textContent; return /Vercel Web Analytics/.test(t) && /no cookies/.test(t) && /resets every day/.test(t); })()")" = true
+  check "$ctx: explanation says where saved places are kept (spec 013)" test "$(js "(() => { const b = $BUTTON; const t = document.getElementById(b.getAttribute('aria-controls')).textContent; return /kept on our server under a random code/.test(t) && /90 days without use/.test(t); })()")" = true
+  check "$ctx: collapsed line still says no cookies" test "$(js "(() => /no cookies/.test($BUTTON.textContent))()")" = true
   click_button
   check "$ctx: click again closes it" test "$(expanded)" = false
   check "$ctx: button takes focus" test "$(focus_button)" = true

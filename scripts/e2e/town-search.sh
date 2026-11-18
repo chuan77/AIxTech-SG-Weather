@@ -39,7 +39,9 @@ check() { # check <description> <command...>
 # Run JS in the page and print its result as plain text (agent-browser prints JSON strings quoted).
 js() { ab eval "$1" | sed -e 's/^"//' -e 's/"$//'; }
 
-locations_json() { curl -sf "$BASE_URL/api/locations"; }
+# Saved places belong to the browser's visitor key (spec 013): read this session's list with it.
+visitor_key() { js "(() => { try { return localStorage.getItem('weather-starter.visitor.key') || ''; } catch { return ''; } })()"; }
+locations_json() { curl -sf -H "X-Visitor-Key: $(visitor_key)" "$BASE_URL/api/locations"; }
 
 # Number of saved locations whose forecast area is $1.
 saved_count() {
