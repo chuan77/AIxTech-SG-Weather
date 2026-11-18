@@ -101,6 +101,18 @@ npx vercel@65.9.0 deploy --prod   # production
 
    Drill (2026-11-17): the rollback and the promote each took about 3 s, and the domain served the chosen deployment straight away. Health was 200 and the saved locations were unchanged at each step, because they live in Turso, not in the deployment.
 
+   **Installed apps (spec 014).** The offline helper never caches the app's own files, so after a rollback an installed app gets the rolled-back version on its next online open, with nothing to clear. Rolling back to a build from before spec 014 leaves the helper installed on devices that already have it: the old build has no `/sw.js`, the update check gets HTML and fails, and the helper stays. That is harmless, because it passes every online request through and only shows the offline page with no connection. To remove it, use the switch-off steps below.
+
+## Switching off the offline helper (spec 014)
+
+Only if the offline helper itself has to go (for example a bug in `sw.js`):
+
+1. `cp scripts/pwa/sw-kill.js frontend/public/sw.js`
+2. Build and deploy with `VITE_OFFLINE_HELPER=off` set for the frontend build, so the page unregisters any helper instead of registering one.
+3. Keep that `sw.js` live at `/sw.js` for at least 90 days, so devices that come back later pick it up. On its next online visit each device installs it at once, deletes the `lepak-offline-*` caches, unregisters it and reloads.
+
+Never just delete `sw.js`: a missing file falls through to `index.html`, the browser's update check fails, and the old helper stays installed. `/sw.js` and `/manifest.webmanifest` are served with `Cache-Control: no-cache` (`backend/src/staticHeaders.ts`), so a new `sw.js` is seen on the next page load. Drilled locally on 2026-11-18 (`specs/014-installable-app/quickstart.md` §6).
+
 ## Per-visitor saved places (spec 013)
 
 Each browser keeps a random key in `localStorage` (`weather-starter.visitor.key`) and sends it as the `X-Visitor-Key` header. The database stores only its SHA-256 (`visitors.key_hash`), and every saved place carries a `visitor_id`. Migration `0004` adds both. Places saved before spec 013 have `visitor_id` NULL and are shown to no one until the owner claims them.

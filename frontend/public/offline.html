@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#202a36" />
+    <title>Lepak – offline</title>
+    <!--
+      Shown by the offline helper (sw.js) when the app is opened with no connection (spec 014).
+      It is the only file the helper keeps, so it must stay self-contained: inline styles and
+      artwork, no fonts, images or scripts from anywhere else, and no visitor data. Colours are
+      fixed copies of the default theme (docs/theming.md). Changing this file? Bump CACHE in sw.js.
+    -->
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      body {
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        box-sizing: border-box;
+        background: #202a36;
+        color: #ffffff;
+        font-family:
+          -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto, Helvetica, Arial,
+          sans-serif;
+        text-align: center;
+      }
+      main {
+        max-width: 22rem;
+      }
+      svg {
+        width: 96px;
+        height: 96px;
+      }
+      h1 {
+        margin: 16px 0 8px;
+        font-size: 1.75rem;
+        font-weight: 400;
+      }
+      p {
+        margin: 0 0 24px;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.85);
+      }
+      button {
+        min-height: 44px;
+        padding: 0 20px;
+        border: 1px solid rgba(255, 255, 255, 0.35);
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:hover {
+        background: rgba(255, 255, 255, 0.16);
+      }
+      button:focus-visible {
+        outline: 2px solid #ffffff;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <svg viewBox="0 0 512 512" aria-hidden="true" focusable="false">
+        <g transform="translate(-24 28)">
+          <g stroke="#ffffff" stroke-width="18" stroke-linecap="round" fill="none">
+            <circle cx="306" cy="196" r="58" />
+            <path
+              d="M306 104v-26M306 314v-26M398 196h26M188 196h26M371 131l18-18M223 279l-18 18M371 261l18 18M241 131l-18-18"
+            />
+          </g>
+          <g fill="#202a36" stroke="#202a36" stroke-width="32" stroke-linejoin="round">
+            <circle cx="196" cy="304" r="58" />
+            <circle cx="270" cy="282" r="70" />
+            <circle cx="334" cy="318" r="46" />
+            <rect x="140" y="304" width="240" height="66" rx="33" />
+          </g>
+          <g fill="#ffffff">
+            <circle cx="196" cy="304" r="58" />
+            <circle cx="270" cy="282" r="70" />
+            <circle cx="334" cy="318" r="46" />
+            <rect x="140" y="304" width="240" height="66" rx="33" />
+          </g>
+        </g>
+      </svg>
+      <h1>You're offline</h1>
+      <p>
+        Lepak can't reach the internet right now. Your places and weather will be here when you're
+        back online.
+      </p>
+      <button type="button" onclick="location.reload()">Try again</button>
+    </main>
+  </body>
+</html>

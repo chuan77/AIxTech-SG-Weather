@@ -1,14 +1,31 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Installable app (spec 014). Fixed colours from the default theme: see docs/theming.md. -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#202a36" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="Lepak" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <title>Weather</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <script type="module">
       if (import.meta.env.DEV) {
-        import("react-grab").then((m) => m.init({"activationKey":"k","activationMode":"hold","keyHoldDuration":150,"allowActivationInsideInput":true,"maxContextLines":10}));
+        import('react-grab').then((m) =>
+          m.init({
+            activationKey: 'k',
+            activationMode: 'hold',
+            keyHoldDuration: 150,
+            allowActivationInsideInput: true,
+            maxContextLines: 10,
+          }),
+        );
       }
     </script>
   </head>

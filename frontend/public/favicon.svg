@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Lepak tab icon (spec 014): the app mark on a rounded square. Source: frontend/icons/lepak-mark.svg -->
+  <rect width="512" height="512" rx="112" fill="#202a36"/>
+  <g transform="translate(-24 28)">
+    <g stroke="#ffffff" stroke-width="22" stroke-linecap="round" fill="none">
+      <circle cx="306" cy="196" r="58"/>
+      <path d="M306 104v-26M306 314v-26M398 196h26M188 196h26M371 131l18-18M223 279l-18 18M371 261l18 18M241 131l-18-18"/>
+    </g>
+    <g fill="#202a36" stroke="#202a36" stroke-width="32" stroke-linejoin="round">
+      <circle cx="196" cy="304" r="58"/>
+      <circle cx="270" cy="282" r="70"/>
+      <circle cx="334" cy="318" r="46"/>
+      <rect x="140" y="304" width="240" height="66" rx="33"/>
+    </g>
+    <g fill="#ffffff">
+      <circle cx="196" cy="304" r="58"/>
+      <circle cx="270" cy="282" r="70"/>
+      <circle cx="334" cy="318" r="46"/>
+      <rect x="140" y="304" width="240" height="66" rx="33"/>
+    </g>
+  </g>
+</svg>

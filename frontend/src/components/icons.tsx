@@ -96,6 +96,16 @@ export function PlusIcon({ className = 'h-4 w-4' }: IconProps) {
   );
 }
 
+/** iOS Share: an open box with an arrow leaving it upwards (spec 014's Add to Home Screen tip). */
+export function ShareIcon({ className = 'h-4 w-4' }: IconProps) {
+  return (
+    <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" className={className} {...base}>
+      <path d="M12 3v12M8 7l4-4 4 4" />
+      <path d="M8 10H6a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9a1 1 0 0 0-1-1h-2" />
+    </svg>
+  );
+}
+
 /** Crosshair for "Use my location": a ring, a centre dot and four cardinal ticks. */
 export function LocateIcon({ className = 'h-4 w-4' }: IconProps) {
   return (
