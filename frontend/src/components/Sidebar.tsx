@@ -4,6 +4,7 @@ import { SearchIcon } from './icons';
 import { SidebarCard } from './SidebarCard';
 import { AddLocationForm } from './AddLocationForm';
 import { UseMyLocation } from './UseMyLocation';
+import { InstallHint } from './InstallHint';
 import { useNow } from './map/useNow';
 import { RefreshAll } from './RefreshAll';
 
@@ -46,6 +47,8 @@ export function Sidebar() {
       <div className="flex flex-wrap gap-2">
         <UseMyLocation />
         <AddLocationForm />
+        {/* iPhone/iPad Safari only (spec 014): in the row, so phones see it too. */}
+        <InstallHint savedCount={locations.length} />
       </div>
 
       <RefreshAll placement="sidebar" now={now} />

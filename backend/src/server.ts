@@ -2,7 +2,7 @@ import 'dotenv/config';
 import compression from 'compression';
 import express from 'express';
 import { readFileSync } from 'node:fs';
-import { dirname, resolve } from 'node:path';
+import { dirname, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
 import { createLightningRouter } from './routes/lightning.js';
@@ -19,6 +19,7 @@ import { resolveListenConfig } from './listenConfig.js';
 import { logger } from './logger.js';
 import { createRequestLogger } from './requestLogging.js';
 import { renderIndexHtml } from './indexHtml.js';
+import { headersFor } from './staticHeaders.js';
 import { resolveAnalyticsMode } from './analyticsMode.js';
 import { ProviderRequester } from './providerHttp.js';
 import { createRateLimiter } from './rateLimit.js';
@@ -172,7 +173,18 @@ export async function createApp(options: AppOptions = {}) {
       app.get('/index.html', (_request, response) => {
         response.type('html').send(indexHtml);
       });
-      app.use(express.static(staticPath, { index: false }));
+      app.use(
+        express.static(staticPath, {
+          index: false,
+          // /sw.js and the manifest are always revalidated (spec 014, staticHeaders.ts).
+          setHeaders: (response, filePath) => {
+            const urlPath = '/' + relative(staticPath, filePath).split(sep).join('/');
+            for (const [name, value] of Object.entries(headersFor(urlPath))) {
+              response.setHeader(name, value);
+            }
+          },
+        }),
+      );
       app.get('*', (_request, response) => {
         response.type('html').send(indexHtml);
       });

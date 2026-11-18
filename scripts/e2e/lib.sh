@@ -5,6 +5,7 @@
 # Otherwise e2e_start_server starts a temporary server: production mode (the built frontend in
 # frontend/dist), a free port on 127.0.0.1 and a throwaway database (E2E_DATABASE_PATH to keep
 # one between runs). It runs in its own process group, so teardown reaches every child.
+# E2E_PORT=<n> starts it on that port instead of a free one.
 # Web analytics (spec 012) is off on that server: WEB_ANALYTICS and VERCEL are blanked, so no
 # visit is ever measured. E2E_WEB_ANALYTICS=notice-only shows the privacy notice without loading
 # the script (scripts/e2e/privacy-notice.sh).
@@ -66,7 +67,9 @@ e2e_start_server() {
     exit 2
   fi
   local port
-  port="$(node -e 'const s = require("net").createServer().listen(0, "127.0.0.1", () => { console.log(s.address().port); s.close(); });')"
+  # E2E_PORT reuses a port, so a check can stop and restart the server on the same origin
+  # (installable-app.sh simulates "no connection" for the service worker that way).
+  port="${E2E_PORT:-$(node -e 'const s = require("net").createServer().listen(0, "127.0.0.1", () => { console.log(s.address().port); s.close(); });')}"
   if [ -n "${E2E_DATABASE_PATH:-}" ]; then
     E2E_DB="$E2E_DATABASE_PATH"
     E2E_KEEP_DB=1

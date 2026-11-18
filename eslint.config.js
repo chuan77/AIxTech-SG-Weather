@@ -50,6 +50,12 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
 
+  // Service workers (spec 014): plain scripts copied as is, run in the worker global scope
+  {
+    files: ['frontend/public/**/*.js', 'scripts/pwa/**/*.js'],
+    languageOptions: { globals: globals.serviceworker, sourceType: 'script' },
+  },
+
   // Must stay last: turns off rules that conflict with Prettier
   prettier,
 );
