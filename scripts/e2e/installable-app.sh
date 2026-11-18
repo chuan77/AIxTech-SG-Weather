@@ -236,8 +236,12 @@ check_us3() {
   stub_locations 1
   load "us3: online open"
   check "worker controls the page" wait_for_controller
-  check "only one cache: lepak-offline-v1" test "$(js '(async () => JSON.stringify(await caches.keys()))()')" = '[\"lepak-offline-v1\"]'
-  check "that cache holds only /offline.html" test "$(js '(async () => { const c = await caches.open("lepak-offline-v1"); return JSON.stringify((await c.keys()).map((r) => new URL(r.url).pathname)); })()')" = '[\"/offline.html\"]'
+  # The cache name carries a hash of offline.html (sw.js), so read it rather than hard-code it.
+  local cache
+  cache="$(sed -n "s/^const CACHE = '\([^']*\)';$/\1/p" frontend/public/sw.js)"
+  check "only one cache: $cache" test "$(js '(async () => JSON.stringify(await caches.keys()))()')" = "[\\\"$cache\\\"]"
+  check "that cache holds only /offline.html" test "$(js "(async () => { const c = await caches.open('$cache'); return JSON.stringify((await c.keys()).map((r) => new URL(r.url).pathname)); })()")" = '[\"/offline.html\"]'
+  check "navigation preload is on (where supported)" test "$(js '(async () => { const r = await navigator.serviceWorker.ready; return r.navigationPreload ? (await r.navigationPreload.getState()).enabled : true; })()')" = true
   check "/sw.js: Cache-Control no-cache" test "$(header /sw.js cache-control)" = no-cache
   check "/sw.js: JavaScript" bash -c "[[ '$(header /sw.js content-type)' == *javascript* ]]"
 
