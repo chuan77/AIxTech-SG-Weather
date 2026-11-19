@@ -23,6 +23,7 @@ The backend loads `.env` from the repo root through `dotenv/config`. `.env.examp
 | `LOG_LEVEL` | `info` (`silent` in tests) | `logger.ts` | pino log level. |
 | `LOG_FILE_PATH` | `backend/logs/app.log` | `logger.ts` | Second log destination alongside stdout. The container image sets `/tmp/lepak-weather.log`. |
 | `LIGHTNING_FIXTURE` | unset | `server.ts` | `demo` serves three fake strikes instead of calling data.gov.sg. Ignored when `NODE_ENV=production`. |
+| `TEMP_WIND_FIXTURE` | unset | `server.ts` | `demo` serves 17 fake temperature and wind stations (every wind level and calm, wind only, temperature only, no reading, unnamed, speed without direction) instead of calling data.gov.sg. Ignored when `NODE_ENV=production`. |
 | `RAIN_FIXTURE` | unset | `server.ts` | `demo` serves 20 fake rain stations (every level, partial and missing) instead of calling data.gov.sg. Ignored when `NODE_ENV=production`. |
 
 ## Dev server

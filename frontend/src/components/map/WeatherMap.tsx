@@ -9,6 +9,7 @@ import { pinMarkup } from './pinMarkup';
 import { prefersReducedMotion } from '../motion';
 import { LightningLayer } from './LightningLayer';
 import { RainLayer } from './RainLayer';
+import { TempWindLayer } from './TempWindLayer';
 import {
   DEFAULT_ZOOM,
   getBounds,
@@ -185,6 +186,8 @@ interface WeatherMapProps {
   onLightningGroupSelect?: (view: MapView) => void;
   /** False hides this map's rain (spec 011); follows `showLightning` unless set. */
   showRain?: boolean;
+  /** True only on the full-screen map: temperature and wind never show on the card (spec 015). */
+  showTempWind?: boolean;
   className?: string;
 }
 
@@ -200,6 +203,7 @@ export function WeatherMap({
   showLightning = true,
   onLightningGroupSelect,
   showRain = showLightning,
+  showTempWind = false,
   className = 'h-full w-full',
 }: WeatherMapProps) {
   const touchLocked = !interactive && isCoarsePointer();
@@ -236,6 +240,7 @@ export function WeatherMap({
         />
       ))}
       <RainLayer showRain={showRain} />
+      <TempWindLayer showTempWind={showTempWind} />
       <LightningLayer showLightning={showLightning} onGroupSelect={onLightningGroupSelect} />
       <FitBounds locations={locations} skipFirstFit={initialView !== undefined} />
       <FocusSelected locations={locations} selectedId={selectedId} focusKey={focusKey} />

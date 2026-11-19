@@ -1,6 +1,6 @@
 ---
 title: Data flow
-description: The snapshot pattern for locations and the on-demand paths for lightning and rain.
+description: The snapshot pattern for locations and the on-demand paths for lightning, rain, and temperature and wind.
 sidebar:
   order: 2
 ---
@@ -117,6 +117,10 @@ Nothing from lightning is written to SQLite or to any `WeatherSnapshot`. Concurr
 ## Rain (the second exception)
 
 Island-wide rain (spec 011) follows the lightning path: the store's rain slice calls `refreshRain()` only on a user action (turning Rain on, its refresh button, or the "Show latest rain" prompt), skipping it while a request is in flight or the data is under 2 minutes old. `POST /api/rain/refresh` asks `SingaporeRainClient`, which serves its 2-minute cache or makes one `rainfall?date=today` request (two just after midnight), sums each station's last three five-minute periods and returns an `IslandRainObservation`; on failure it serves the previous one with `stale: true`, or the route answers 502. Nothing is written to SQLite or to any `WeatherSnapshot`. Rain is off by default; a remembered "on" shows the prompt rather than fetching on load. Events: `rain_toggled`, `rain_refreshed`. See [Rain](../../backend/rain/).
+
+## Temperature and wind (the third exception)
+
+Island-wide temperature and wind (spec 015, constitution 1.6.0) follows the rain path, on the full-screen map only: the store's `tempWind` slice calls `refreshTempWind()` only on a user action (turning the view on, its refresh button, or the "Show latest temperature & wind" prompt), skipping it while a request is in flight or the data is under 2 minutes old. `POST /api/temp-wind/refresh` asks `SingaporeTempWindClient`, which serves its 2-minute cache or makes three "latest" requests (`air-temperature`, `wind-speed`, `wind-direction`), joins them by station and returns an `IslandConditionsObservation`. One measure can fail while the other shows (`measures`); when all three fail it serves the previous observation with `stale: true`, or the route answers 502. Nothing is written to SQLite or to any `WeatherSnapshot`. Off by default; a remembered "on" shows the prompt rather than fetching on load. Events: `temp_wind_toggled`, `temp_wind_refreshed`. See [Temperature and wind](../../backend/temp-wind/).
 
 ## Frontend interaction logging
 

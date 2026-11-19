@@ -1,5 +1,6 @@
 import type {
   CreateLocationPayload,
+  IslandConditionsObservation,
   IslandRainObservation,
   LightningObservation,
   Location,
@@ -105,6 +106,18 @@ export async function refreshRain(): Promise<{
   const response = await send('/rain/refresh', { method: 'POST' });
   return {
     observation: (await response.json()) as IslandRainObservation,
+    serverTiming: response.headers.get('Server-Timing'),
+  };
+}
+
+/** Island-wide temperature and wind (spec 015): an explicit user action, never on page load. */
+export async function refreshTempWind(): Promise<{
+  observation: IslandConditionsObservation;
+  serverTiming: string | null;
+}> {
+  const response = await send('/temp-wind/refresh', { method: 'POST' });
+  return {
+    observation: (await response.json()) as IslandConditionsObservation,
     serverTiming: response.headers.get('Server-Timing'),
   };
 }
