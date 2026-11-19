@@ -153,6 +153,48 @@ export interface RainState {
   markLegendSeen: () => void;
 }
 
+/** One station's latest air temperature and wind (spec 015, `POST /api/temp-wind/refresh`). */
+export interface TempWindStation {
+  id: string;
+  /** null when the provider gives no name or only the id; the UI shows "Station S199". */
+  name: string | null;
+  latitude: number;
+  longitude: number;
+  /** 10–45 °C, to 0.1; null when missing, out of range or the temperature measure failed. */
+  temperature_c: number | null;
+  /** 0–150 knots; null when missing, out of range or wind failed. */
+  wind_speed_knots: number | null;
+  /** 0 to under 360, the direction the wind comes FROM; null when missing or wind failed. */
+  wind_direction_deg: number | null;
+}
+
+/** One shared, short-lived set of station readings for the whole island. Never stored. */
+export interface IslandConditionsObservation {
+  stations: TempWindStation[];
+  measures: { temperature: 'ok' | 'unavailable'; wind: 'ok' | 'unavailable' };
+  /** Provider time (SGT ISO) of the temperature reading; null when unavailable. */
+  temperature_at: string | null;
+  /** The older of the speed and direction times; null when wind is unavailable. */
+  wind_at: string | null;
+  fetched_at: string;
+  stale: boolean;
+}
+
+/** `ready` includes a stale copy, which the UI marks out of date (unlike rain's `ok`/`empty`). */
+export type TempWindStatus = 'idle' | 'loading' | 'ready' | 'unavailable';
+
+export interface TempWindState {
+  enabled: boolean;
+  status: TempWindStatus;
+  observation: IslandConditionsObservation | null;
+  setEnabled: (enabled: boolean) => void;
+  /** Loads the readings; a no-op while the data is under 2 minutes old. Never called on page load. */
+  refresh: (trigger?: 'toggle' | 'refresh' | 'prompt') => Promise<void>;
+  /** Whether the legend has already opened by itself for this viewer (remembered per browser). */
+  legendSeen: boolean;
+  markLegendSeen: () => void;
+}
+
 export interface LocationError {
   id: number;
   message: string;
@@ -212,6 +254,7 @@ export interface StoreValue {
   reload: () => Promise<void>;
   lightning: LightningState;
   rain: RainState;
+  tempWind: TempWindState;
 }
 
 export interface ProviderProps {

@@ -15,6 +15,7 @@ import {
   refreshLocation,
   refreshLightning,
   refreshRain,
+  refreshTempWind,
   serverTimingOf,
   logInteraction,
 } from '../api';
@@ -39,15 +40,24 @@ import {
   RAIN_STORAGE_KEY,
   serialiseRainEnabled,
 } from '../components/map/rainHelpers';
+import {
+  parseTempWindEnabled,
+  parseTempWindLegendSeen,
+  serialiseTempWindEnabled,
+  TEMP_WIND_LEGEND_SEEN_KEY,
+  TEMP_WIND_STORAGE_KEY,
+} from '../components/map/tempWindHelpers';
 import type {
   BulkRefresh,
   BulkRefreshFailure,
   CreateLocationOptions,
   CreateLocationPayload,
+  IslandConditionsObservation,
   IslandRainObservation,
   LightningObservation,
   LightningStatus,
   RainStatus,
+  TempWindStatus,
   Location,
   LocationError,
   PendingDelete,
@@ -119,6 +129,38 @@ function writeLegendSeen(): void {
   }
 }
 
+function readTempWindEnabled(): boolean {
+  try {
+    return parseTempWindEnabled(window.localStorage.getItem(TEMP_WIND_STORAGE_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function writeTempWindEnabled(enabled: boolean): void {
+  try {
+    window.localStorage.setItem(TEMP_WIND_STORAGE_KEY, serialiseTempWindEnabled(enabled));
+  } catch {
+    // Storage can be blocked; the choice then only lasts for this page session.
+  }
+}
+
+function readTempWindLegendSeen(): boolean {
+  try {
+    return parseTempWindLegendSeen(window.localStorage.getItem(TEMP_WIND_LEGEND_SEEN_KEY));
+  } catch {
+    return false;
+  }
+}
+
+function writeTempWindLegendSeen(): void {
+  try {
+    window.localStorage.setItem(TEMP_WIND_LEGEND_SEEN_KEY, 'true');
+  } catch {
+    // Storage can be blocked; the legend then opens by itself once per page session.
+  }
+}
+
 export function StoreProvider({ children }: ProviderProps) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -144,6 +186,15 @@ export function StoreProvider({ children }: ProviderProps) {
   const rainObservationRef = useRef<IslandRainObservation | null>(null);
   const rainInFlightRef = useRef(false);
   const [rainLegendSeen, setRainLegendSeen] = useState(readLegendSeen);
+  // Island-wide temperature and wind (spec 015): off by default, full-screen map only, and
+  // fetched only on a user action. A remembered "on" stays idle until the user asks.
+  const [tempWindEnabled, setTempWindEnabled] = useState(readTempWindEnabled);
+  const [tempWindStatus, setTempWindStatus] = useState<TempWindStatus>('idle');
+  const [tempWindObservation, setTempWindObservation] =
+    useState<IslandConditionsObservation | null>(null);
+  const tempWindObservationRef = useRef<IslandConditionsObservation | null>(null);
+  const tempWindInFlightRef = useRef(false);
+  const [tempWindLegendSeen, setTempWindLegendSeen] = useState(readTempWindLegendSeen);
   const lightningInFlightRef = useRef(false);
   // The refresh whose timing record waits for a map to report it drew the new strikes.
   const lightningTimingRef = useRef<{
@@ -558,6 +609,47 @@ export function StoreProvider({ children }: ProviderProps) {
     [refreshRainData],
   );
 
+  // Temperature and wind: never called on mount (constitution I). A failure here only touches this
+  // slice: no shared error banner, and locations, rain and lightning keep working (FR-014).
+  const refreshTempWindData = useCallback(
+    async (_trigger: 'toggle' | 'refresh' | 'prompt' = 'refresh') => {
+      if (tempWindInFlightRef.current) return;
+      if (isFresh(tempWindObservationRef.current, Date.now())) return;
+
+      tempWindInFlightRef.current = true;
+      setTempWindStatus('loading');
+      logInteraction('temp_wind_refreshed');
+      try {
+        const { observation: next } = await refreshTempWind();
+        tempWindObservationRef.current = next;
+        setTempWindObservation(next);
+        // A stale copy is still shown; the strip marks it out of date.
+        setTempWindStatus('ready');
+      } catch {
+        // Keep any readings loaded earlier on screen; only the status changes.
+        setTempWindStatus('unavailable');
+      } finally {
+        tempWindInFlightRef.current = false;
+      }
+    },
+    [],
+  );
+
+  const markTempWindLegendSeen = useCallback(() => {
+    setTempWindLegendSeen(true);
+    writeTempWindLegendSeen();
+  }, []);
+
+  const setTempWindEnabledAndLoad = useCallback(
+    (enabled: boolean) => {
+      setTempWindEnabled(enabled);
+      writeTempWindEnabled(enabled);
+      logInteraction('temp_wind_toggled', { enabled });
+      if (enabled) void refreshTempWindData('toggle');
+    },
+    [refreshTempWindData],
+  );
+
   const setAdding = useCallback((nextIsAdding: boolean) => {
     setIsAdding(nextIsAdding);
     if (nextIsAdding) logInteraction('location_form_opened');
@@ -611,6 +703,15 @@ export function StoreProvider({ children }: ProviderProps) {
         legendSeen: rainLegendSeen,
         markLegendSeen,
       },
+      tempWind: {
+        enabled: tempWindEnabled,
+        status: tempWindStatus,
+        observation: tempWindObservation,
+        setEnabled: setTempWindEnabledAndLoad,
+        refresh: refreshTempWindData,
+        legendSeen: tempWindLegendSeen,
+        markLegendSeen: markTempWindLegendSeen,
+      },
     }),
     [
       visibleLocations,
@@ -647,6 +748,13 @@ export function StoreProvider({ children }: ProviderProps) {
       refreshRainData,
       rainLegendSeen,
       markLegendSeen,
+      tempWindEnabled,
+      tempWindStatus,
+      tempWindObservation,
+      setTempWindEnabledAndLoad,
+      refreshTempWindData,
+      tempWindLegendSeen,
+      markTempWindLegendSeen,
     ],
   );
 

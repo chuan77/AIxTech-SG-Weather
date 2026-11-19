@@ -1,3 +1,15 @@
+<!--
+Sync Impact Report
+- Version change: 1.5.0 → 1.6.0 (MINOR: Principle I permits a third island-wide layer)
+- Modified principles: I. Snapshot-Only Weather Data — adds air temperature and wind station
+  readings (`POST /api/temp-wind/refresh`, spec 015) on the same terms as lightning and rain
+- Added sections: none
+- Removed sections: none
+- Templates requiring updates: none (plan, spec and tasks templates reference principles generically)
+- Synced: docs/architecture.md; docs site backend/api.md, backend/temp-wind.md, frontend/map.md,
+  configuration.md
+- Follow-up TODOs: none
+-->
 # Weather Starter Constitution
 
 ## Core Principles
@@ -8,9 +20,10 @@ location is created or explicitly refreshed (`POST /api/locations/:id/refresh`),
 `WeatherSnapshot`, and stored in SQLite. `GET /api/locations` MUST only read stored data. Map pins
 and other views MUST derive from that stored data and make no weather calls of their own.
 Exception: island-wide data that is not tied to any saved location MAY be fetched through a
-dedicated endpoint only on an explicit user action, never during a page load. Two such layers are
-permitted: lightning strikes (`POST /api/lightning/refresh`) and rainfall station totals
-(`POST /api/rain/refresh`). Each MUST NOT be stored in SQLite or in any location's
+dedicated endpoint only on an explicit user action, never during a page load. Three such layers
+are permitted: lightning strikes (`POST /api/lightning/refresh`), rainfall station totals
+(`POST /api/rain/refresh`), and air temperature and wind station readings
+(`POST /api/temp-wind/refresh`). Each MUST NOT be stored in SQLite or in any location's
 `WeatherSnapshot`, MUST be cached server-side for at least 2 minutes so repeated actions do not
 call data.gov.sg again, and MUST degrade to an "unavailable" state without affecting the rest of
 the app. Any further exception requires its own amendment.
@@ -101,4 +114,4 @@ Every plan and review MUST check compliance with the principles; any deviation M
 in writing in the plan or pull request. `CLAUDE.md` and `docs/` provide runtime development
 guidance and MUST NOT contradict this document.
 
-**Version**: 1.5.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-17
+**Version**: 1.6.0 | **Ratified**: 2026-11-11 | **Last Amended**: 2026-11-19

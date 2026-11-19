@@ -1,6 +1,6 @@
 ---
-title: Map, lightning and rain layers
-description: The Leaflet map card, fullscreen view, pins, and the lightning and rain overlays.
+title: Map, lightning, rain and temperature & wind layers
+description: The Leaflet map card, fullscreen view, pins, and the lightning, rain and temperature & wind overlays.
 sidebar:
   order: 2
 ---
@@ -20,6 +20,9 @@ The map lives in `frontend/src/components/map/` and uses Leaflet through react-l
 | `RainLayer.tsx` | One symbol per rain station in the `rain` pane (below lightning and pins), with a popup |
 | `RainControl.tsx` | Rain switch, refresh button, status strip and legend (full-screen map), shared pieces for the card |
 | `rainHelpers.ts` / `rainMarker.ts` | Pure rain logic (levels, coverage, out of date, status and popup text, preference) and symbol markup |
+| `TempWindLayer.tsx` | One label per temperature and wind station in the `temp-wind` pane (z-index 445: above rain, below lightning and pins), with a popup. Full-screen map only. |
+| `TempWindControl.tsx` | Temperature & wind switch, refresh button, status strip and legend (full-screen map only) |
+| `tempWindHelpers.ts` / `tempWindMarker.ts` | Pure temperature and wind logic (km/h levels, arrow rotation, compass points, out of date, status and popup text, preference) and label markup |
 | `useNow.ts` | A clock that re-renders on an interval |
 
 ## Pins
@@ -67,3 +70,13 @@ Island-wide rain (spec 011) shows each station's rainfall over the latest 15 min
 - **Status** (`rainStatusMessage()`): "Show latest rain", "Loading rain…", "Rain at N stations", "No rain in the last 15 minutes" or "Rain data unavailable", with "to 8:15 am · 10 min ago" and "out of date" when the newest reading is over 20 minutes old or was served after a failure. Earlier readings stay drawn while loading and after a failure.
 - **Card map** (Gate 2): one Layers button holds the Rain and Lightning switches and the rain legend, and one single-line strip (`combinedStatusSegments()`) reports both. The full-screen map keeps separate switches and stacks the rain strip above lightning's.
 - **Legend** credits the data under the Singapore Open Data Licence version 1.0. It opens by itself the first time readings show (status ok or empty), in whichever map the viewer is using (on the card, only while the Layers menu is open); `weather-starter.rain.legendSeen` then keeps it closed until asked for.
+
+## Temperature and wind layer
+
+Island-wide temperature and wind (spec 015) shows each NEA station's latest air temperature and an arrow for the wind. It is on the **full-screen map only**: at the card's focus zoom only about one station is in view, so `WeatherMap`'s `showTempWind` prop defaults to `false` and only `MapFullscreen` passes `true`. The card's Layers menu and combined strip are unchanged.
+
+- **Never on page load, off by default.** Data is requested only by turning the view on, pressing its refresh button, or the "Show latest temperature & wind" prompt. The choice is remembered under `weather-starter.tempWind.enabled`; only `"true"` counts as on. Data under 2 minutes old is reused, so closing and reopening full screen makes no request.
+- **Labels.** Each station is a pill with its temperature to one decimal ("27.4°") and an arrow pointing the way the wind blows: the provider gives where it comes **from**, so the arrow is turned `(direction + 180) mod 360`. Strength is the arrow's size: light under 20 km/h (14 px), moderate 20–38 km/h (18 px), strong 39 km/h and up (22 px, heavier stroke); under 2 km/h the arrow is replaced by "calm". The speed number appears only in the popup ("15 km/h, light, from SW (228°)"). No temperature shows "–°"; no wind (or a speed without a direction) shows a solid struck-through wind glyph the size of a light arrow.
+- **Status** (`tempWindStatusMessage()`): the prompt, "Loading…" or "Updating temperature & wind…", "Temp & wind at N stations" or "Calm across the island", plus "Wind unavailable" or "Temperature unavailable" when one measure failed, and "at 1:33 pm · 7 min ago". The time is the older of the two measures' times. "out of date" is added after 15 minutes (the provider normally lags 3–7 minutes) or after a failed refresh, when earlier readings stay drawn with "Fresh data unavailable, showing earlier readings".
+- **Top bar.** The full-screen controls run Rain, Temperature & wind, Lightning, left of the close button, and wrap onto a second row when they don't fit (375 px). The row lets map gestures through; only the 44 px controls take taps. The strip sits between rain's and lightning's.
+- **Legend** explains every level, calm and no reading, and credits the three datasets under the Singapore Open Data Licence version 1.0. It opens by itself the first time readings show; `weather-starter.tempWind.legendSeen` then keeps it closed until asked for.

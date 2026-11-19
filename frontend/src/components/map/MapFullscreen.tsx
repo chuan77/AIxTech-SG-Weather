@@ -5,6 +5,7 @@ import type { Location } from '../../types';
 import { CloseIcon } from '../icons';
 import { LightningButtons, LightningStatusStrip } from './LightningControl';
 import { RainRefreshButton, RainStatusStrip, RainSwitch } from './RainControl';
+import { TempWindRefreshButton, TempWindStatusStrip, TempWindSwitch } from './TempWindControl';
 import type { MapView } from './mapHelpers';
 import { WeatherMap } from './WeatherMap';
 
@@ -26,7 +27,7 @@ export function MapFullscreen({
   onClose,
 }: MapFullscreenProps) {
   const closeRef = useRef<HTMLButtonElement>(null);
-  const { rain, lightning } = useStore();
+  const { rain, lightning, tempWind } = useStore();
 
   useEffect(() => {
     const previouslyFocused = document.activeElement as HTMLElement | null;
@@ -64,16 +65,26 @@ export function MapFullscreen({
         interactive
         initialView={initialView}
         focusKey={focusKey}
+        showTempWind
       />
-      <div className="absolute right-[calc(max(0.75rem,env(safe-area-inset-right))+3.5rem)] top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] flex items-center gap-2">
+      {/* The layer controls sit left of the close button and wrap onto a second row when they
+          don't fit (375 px with temperature & wind on, spec 015). The row itself lets map
+          gestures through; only the controls take taps. */}
+      <div
+        data-testid="map-layer-controls"
+        className="pointer-events-none absolute left-[max(0.75rem,env(safe-area-inset-left))] right-[calc(max(0.75rem,env(safe-area-inset-right))+3.5rem)] top-[max(0.75rem,env(safe-area-inset-top))] z-[1000] flex flex-wrap items-center justify-end gap-2 [&>*]:pointer-events-auto"
+      >
         <RainRefreshButton />
         <RainSwitch />
+        <TempWindRefreshButton />
+        <TempWindSwitch />
         <LightningButtons />
       </div>
-      {(rain.enabled || lightning.enabled) && (
-        // Rain stacks above lightning, both above the attribution row (spec 011).
+      {(rain.enabled || tempWind.enabled || lightning.enabled) && (
+        // Rain, then temperature & wind, then lightning, all above the attribution row.
         <div className="absolute bottom-8 left-2 z-[1000] flex max-w-[70%] flex-col items-start gap-1.5">
           {rain.enabled && <RainStatusStrip />}
+          {tempWind.enabled && <TempWindStatusStrip />}
           {lightning.enabled && <LightningStatusStrip />}
         </div>
       )}

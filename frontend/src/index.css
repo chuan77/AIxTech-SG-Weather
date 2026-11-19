@@ -37,6 +37,13 @@ body,
   --rain-moderate: #2f7ce0;
   --rain-heavy: #0a3a8c;
   --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
+  /* Temperature and wind labels (spec 015): an opaque pill so the text never depends on the
+     basemap. On the label: text and arrow 14.5:1, missing 7.8:1; the label on voyager: worst 9.1:1. */
+  --tw-label-bg: #202a36;
+  --tw-label-text: #ffffff;
+  --tw-label-border: rgba(255, 255, 255, 0.55);
+  --tw-arrow: #ffffff;
+  --tw-missing: #b4bfcc;
   --scrollbar-thumb: rgba(255, 255, 255, 0.18);
   --card-radius: 1rem;
   --card-border: rgba(255, 255, 255, 0.15);
@@ -131,6 +138,13 @@ body,
   --rain-moderate: #2f7ce0;
   --rain-heavy: #0a3a8c;
   --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
+  /* Temperature and wind labels (spec 015): an opaque pill so the text never depends on the
+     basemap. On the label: text and arrow 13.0:1, missing 7.5:1; the label on voyager: worst 8.1:1. */
+  --tw-label-bg: #12315a;
+  --tw-label-text: #ffffff;
+  --tw-label-border: rgba(255, 255, 255, 0.6);
+  --tw-arrow: #ffffff;
+  --tw-missing: #b3c6e0;
   --scrollbar-thumb: rgba(255, 255, 255, 0.3);
 }
 
@@ -173,6 +187,13 @@ body,
   --rain-moderate: #1fa2ff;
   --rain-heavy: #b44bff;
   --rain-missing: #9aa7b4; /* dashed "no reading" ring: nominal worst 3.6:1 */
+  /* Temperature and wind labels (spec 015): an opaque pill so the text never depends on the
+     basemap. On the label: text 15.9:1, arrow 11.8:1, missing 7.4:1; the outline on dark_all: worst 7.4:1. */
+  --tw-label-bg: #0d1626;
+  --tw-label-text: #d6f6ff;
+  --tw-label-border: #5ce1ff;
+  --tw-arrow: #5ce1ff;
+  --tw-missing: #93a8b8;
   --scrollbar-thumb: rgba(0, 229, 255, 0.25);
 }
 
@@ -296,6 +317,13 @@ body,
   --rain-moderate: #2f7ce0;
   --rain-heavy: #0a3a8c;
   --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
+  /* Temperature and wind labels (spec 015): an opaque pill so the text never depends on the
+     basemap. On the label: text and arrow 8.1:1, missing 5.9:1; the label on light_all: worst 5.8:1. */
+  --tw-label-bg: #5b3aa3;
+  --tw-label-text: #ffffff;
+  --tw-label-border: #fff8e1;
+  --tw-arrow: #ffffff;
+  --tw-missing: #e2d6ff;
   --scrollbar-thumb: rgba(74, 59, 92, 0.3);
 }
 
@@ -349,6 +377,13 @@ body,
   --rain-moderate: #2f7ce0;
   --rain-heavy: #0a3a8c;
   --rain-missing: #4b5563; /* dashed "no reading" ring: nominal worst 5.1:1 */
+  /* Temperature and wind labels (spec 015): an opaque pill so the text never depends on the
+     basemap. On the label: text and arrow 18.9:1, missing 6.7:1; the outline on light_all: worst 13.4:1. */
+  --tw-label-bg: #ffffff;
+  --tw-label-text: #111111;
+  --tw-label-border: #111111;
+  --tw-arrow: #111111;
+  --tw-missing: #5c5c5c;
   --scrollbar-thumb: rgba(17, 17, 17, 0.3);
 }
 
@@ -512,6 +547,13 @@ body,
   --rain-moderate: #1fa2ff;
   --rain-heavy: #b44bff;
   --rain-missing: #9aa7b4; /* dashed "no reading" ring: nominal worst 3.6:1 */
+  /* Temperature and wind labels (spec 015): an opaque pill so the text never depends on the
+     basemap. On the label: text and arrow 16.4:1, missing 8.6:1; the outline on dark_all: worst 6.0:1. */
+  --tw-label-bg: #1f1d33;
+  --tw-label-text: #ffffff;
+  --tw-label-border: #bdb8d9;
+  --tw-arrow: #ffffff;
+  --tw-missing: #bdb8d9;
   --scrollbar-thumb: rgba(214, 208, 255, 0.22);
 
   /* NEA flag colours, banded at the official cut-offs so the marker sits on its band's colour.
@@ -924,6 +966,91 @@ textarea {
 }
 
 .rain-popup__source {
+  opacity: 0.8;
+}
+
+/* Island-wide temperature and wind (spec 015, full-screen map only). A pill with the temperature
+   and an arrow pointing the way the wind blows; strength is the arrow's size, and strong also gets
+   a heavier stroke, so no level relies on colour. Colours come only from the theme's --tw-*. */
+.tw-mark-wrapper {
+  background: none;
+  border: none;
+}
+
+.tw-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 1.5px solid var(--tw-label-border);
+  border-radius: 9999px;
+  background: var(--tw-label-bg);
+  color: var(--tw-label-text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.tw-mark-wrapper .tw-mark {
+  width: 100%;
+  justify-content: center;
+}
+
+.tw-wind {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+}
+
+.tw-wind svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tw-arrow svg {
+  stroke: var(--tw-arrow);
+  stroke-width: 2.5;
+}
+
+.tw-arrow svg .tw-arrow__head {
+  fill: var(--tw-arrow);
+}
+
+.tw-arrow-strong svg {
+  stroke-width: 3.5;
+}
+
+.tw-calm {
+  font-size: 11px;
+  font-weight: 500;
+  font-style: italic;
+}
+
+/* No wind reading: three wind lines struck through, solid (Gate 1 found a dashed ring faint). */
+.tw-wind-missing svg {
+  stroke: var(--tw-missing);
+  stroke-width: 2.25;
+}
+
+.tw-temp-missing {
+  color: var(--tw-missing);
+}
+
+.tw-legend .tw-mark {
+  height: 24px;
+}
+
+.tw-popup__source {
   opacity: 0.8;
 }
 

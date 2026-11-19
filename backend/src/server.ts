@@ -7,9 +7,12 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createLocationsRouter, type WeatherClient } from './routes/locations.js';
 import { createLightningRouter } from './routes/lightning.js';
 import { createRainRouter } from './routes/rain.js';
+import { createTempWindRouter } from './routes/tempWind.js';
 import type { LightningClient } from './lightning.js';
 import type { RainClient } from './rain.js';
 import { createFixtureRainClient } from './rainFixture.js';
+import type { TempWindClient } from './tempWind.js';
+import { createFixtureTempWindClient } from './tempWindFixture.js';
 import {
   createBusyLightningClient,
   createFixtureLightningClient,
@@ -38,6 +41,7 @@ interface AppOptions {
   weatherClient?: WeatherClient;
   lightningClient?: LightningClient;
   rainClient?: RainClient;
+  tempWindClient?: TempWindClient;
 }
 
 export async function createApp(options: AppOptions = {}) {
@@ -143,9 +147,21 @@ export async function createApp(options: AppOptions = {}) {
     rainClient = createFixtureRainClient();
   }
 
+  let tempWindClient = options.tempWindClient;
+  if (
+    !tempWindClient &&
+    process.env.TEMP_WIND_FIXTURE === 'demo' &&
+    process.env.NODE_ENV !== 'production'
+  ) {
+    logger.warn(
+      'TEMP_WIND_FIXTURE=demo: serving fake temperature and wind readings (development only)',
+    );
+    tempWindClient = createFixtureTempWindClient();
+  }
+
   // The provider's rate limit is per key, so every default client shares one paced requester.
   const requester =
-    !options.weatherClient || !lightningClient || !rainClient
+    !options.weatherClient || !lightningClient || !rainClient || !tempWindClient
       ? new ProviderRequester({ apiKey: process.env.WEATHER_API_KEY })
       : undefined;
   app.use('/api', createLocationsRouter({ weatherClient: options.weatherClient, requester }));
@@ -153,6 +169,9 @@ export async function createApp(options: AppOptions = {}) {
   // No per-device limiter here, as for lightning: the rain client's 2-minute shared cache already
   // caps data.gov.sg at one rain fetch per 2 minutes, and a failure is remembered for 2 minutes too.
   app.use('/api', createRainRouter({ rainClient, requester }));
+  // No per-device limiter either: the 2-minute shared cache caps data.gov.sg at one set of three
+  // temperature and wind calls per 2 minutes, and a total failure is remembered for 2 minutes too.
+  app.use('/api', createTempWindRouter({ tempWindClient, requester }));
 
   if (serveFrontend) {
     if (process.env.NODE_ENV === 'production') {
