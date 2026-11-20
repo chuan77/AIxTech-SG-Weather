@@ -37,7 +37,10 @@ describe('renderIndexHtml web analytics mode', () => {
   });
 
   it('adds no tag when measurement is off or the value is unknown', () => {
-    expect(renderIndexHtml(page, { WEB_ANALYTICS: 'off', VERCEL: '1' })).toBe(page);
+    // SPEED_INSIGHTS=off too: VERCEL=1 alone would also turn on page-speed measurement (spec 016).
+    expect(
+      renderIndexHtml(page, { WEB_ANALYTICS: 'off', SPEED_INSIGHTS: 'off', VERCEL: '1' }),
+    ).toBe(page);
     expect(renderIndexHtml(page, { WEB_ANALYTICS: '"><script>x</script>' })).toBe(page);
   });
 
@@ -46,5 +49,60 @@ describe('renderIndexHtml web analytics mode', () => {
     expect(html.match(/name="carto-api-key"/g)).toHaveLength(1);
     expect(html.match(/name="web-analytics"/g)).toHaveLength(1);
     expect(html.indexOf('web-analytics')).toBeLessThan(html.indexOf('</head>'));
+  });
+});
+
+describe('renderIndexHtml speed insights mode', () => {
+  it('marks the page for measuring when SPEED_INSIGHTS=on', () => {
+    const html = renderIndexHtml(page, { SPEED_INSIGHTS: 'on' });
+    expect(html).toContain('<meta name="speed-insights" content="measure" />');
+  });
+
+  it('marks the page notice-only when SPEED_INSIGHTS=notice-only', () => {
+    const html = renderIndexHtml(page, { SPEED_INSIGHTS: 'notice-only' });
+    expect(html).toContain('<meta name="speed-insights" content="notice-only" />\n</head>');
+  });
+
+  it('adds no tag when SPEED_INSIGHTS is off or unknown', () => {
+    expect(
+      renderIndexHtml(page, { SPEED_INSIGHTS: 'off', VERCEL: '1', WEB_ANALYTICS: 'off' }),
+    ).toBe(page);
+    expect(renderIndexHtml(page, { SPEED_INSIGHTS: '"><script>x</script>' })).toBe(page);
+  });
+
+  it('writes every tag once next to the map key and visit counting', () => {
+    const html = renderIndexHtml(page, {
+      VITE_CARTO_API_KEY: 'k',
+      WEB_ANALYTICS: 'on',
+      SPEED_INSIGHTS: 'on',
+    });
+    for (const name of ['carto-api-key', 'web-analytics', 'speed-insights']) {
+      expect(html.match(new RegExp(`name="${name}"`, 'g'))).toHaveLength(1);
+    }
+    expect(html.indexOf('name="speed-insights"')).toBeLessThan(html.indexOf('</head>'));
+  });
+});
+
+describe('renderIndexHtml speed insights visit label', () => {
+  it('writes the visit label when measuring', () => {
+    expect(renderIndexHtml(page, { SPEED_INSIGHTS: 'on' }, { visit: 'cold' })).toContain(
+      '<meta name="speed-insights-visit" content="cold" />',
+    );
+    expect(renderIndexHtml(page, { SPEED_INSIGHTS: 'on' }, { visit: 'warm' })).toContain(
+      '<meta name="speed-insights-visit" content="warm" />',
+    );
+  });
+
+  it('defaults to warm when measuring with no label given', () => {
+    expect(renderIndexHtml(page, { SPEED_INSIGHTS: 'on' })).toContain(
+      '<meta name="speed-insights-visit" content="warm" />',
+    );
+  });
+
+  it('writes no label in notice-only or off', () => {
+    for (const SPEED_INSIGHTS of ['notice-only', 'off']) {
+      const html = renderIndexHtml(page, { SPEED_INSIGHTS }, { visit: 'cold' });
+      expect(html).not.toContain('speed-insights-visit');
+    }
   });
 });

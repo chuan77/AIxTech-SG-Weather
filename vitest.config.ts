@@ -19,6 +19,8 @@ export default defineConfig({
       TURSO_AUTH_TOKEN: '',
       // Never measure visits from tests (spec 012), even if .env sets WEB_ANALYTICS.
       WEB_ANALYTICS: '',
+      // Never measure page speed from tests (spec 016) either.
+      SPEED_INSIGHTS: '',
       VERCEL: '',
     },
   },
