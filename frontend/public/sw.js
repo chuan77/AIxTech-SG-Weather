@@ -9,7 +9,7 @@
 // changes this file and installed devices pick up the new page. offlineCacheName.test.ts fails
 // and prints the new name when they drift. To switch this helper off, see scripts/pwa/sw-kill.js.
 
-const CACHE = 'lepak-offline-70ef888b';
+const CACHE = 'lepak-offline-b0ed0296';
 const OFFLINE_URL = '/offline.html';
 
 self.addEventListener('install', (event) => {

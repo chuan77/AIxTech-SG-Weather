@@ -1,24 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <!-- Lepak app icon (spec 014). Full-bleed background so it also works as a maskable icon:
-       all artwork stays inside the central 80% circle (radius 205 around 256,256).
+  <!-- Lepak app icon "Hammock Sun": the sun lying in a hammock (lepak = to chill).
+       Full-bleed background so it also works as a maskable icon: all artwork stays inside the
+       central 80% circle (radius 205 around 256,256). Three flat layers (sky, sun, hammock), no
+       baked gloss, so iOS and Android can add their own depth.
        Render to PNGs with scripts/icons/render-icons.sh. -->
-  <rect width="512" height="512" fill="#202a36"/>
-  <g transform="translate(-24 28)">
-    <g stroke="#ffffff" stroke-width="18" stroke-linecap="round" fill="none">
-      <circle cx="306" cy="196" r="58"/>
-      <path d="M306 104v-26M306 314v-26M398 196h26M188 196h26M371 131l18-18M223 279l-18 18M371 261l18 18M241 131l-18-18"/>
-    </g>
-    <g fill="#202a36" stroke="#202a36" stroke-width="32" stroke-linejoin="round">
-      <circle cx="196" cy="304" r="58"/>
-      <circle cx="270" cy="282" r="70"/>
-      <circle cx="334" cy="318" r="46"/>
-      <rect x="140" y="304" width="240" height="66" rx="33"/>
-    </g>
-    <g fill="#ffffff">
-      <circle cx="196" cy="304" r="58"/>
-      <circle cx="270" cy="282" r="70"/>
-      <circle cx="334" cy="318" r="46"/>
-      <rect x="140" y="304" width="240" height="66" rx="33"/>
-    </g>
-  </g>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2f4b68"/>
+      <stop offset="1" stop-color="#202a36"/>
+    </linearGradient>
+    <radialGradient id="glow">
+      <stop offset="0" stop-color="#ffb547" stop-opacity=".35"/>
+      <stop offset="1" stop-color="#ffb547" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="256" cy="236" r="150" fill="url(#glow)"/>
+  <circle cx="256" cy="238" r="76" fill="#ffb547"/>
+  <path d="M104 236Q256 432 408 236" fill="none" stroke="#ffffff" stroke-width="32" stroke-linecap="round"/>
 </svg>
