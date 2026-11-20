@@ -14,9 +14,15 @@ import { nearestStrike } from './map/lightningHelpers';
 import { useNow } from './map/useNow';
 import { PrivacyNotice } from './PrivacyNotice';
 import { readAnalyticsMode } from '../analytics/analyticsMode';
+import { readSpeedInsightsMode } from '../analytics/speedInsightsMode';
+import { privacyCopy } from '../analytics/privacyCopy';
 
-// The notice follows measurement (spec 012): shown only where visits are counted.
-const showPrivacyNotice = readAnalyticsMode() !== 'off';
+// The notice follows measurement (specs 012 and 016): shown only where visits are counted or page
+// speed is measured, and it names only what is active. null means neither, so no notice.
+const privacy = privacyCopy({
+  visits: readAnalyticsMode() !== 'off',
+  speed: readSpeedInsightsMode() !== 'off',
+});
 
 export function Hero() {
   const { locations, refresh, refreshingId, refreshError, remove, bulkRefresh, lightning } =
@@ -27,7 +33,7 @@ export function Hero() {
 
   if (!selected) {
     return (
-      <main id="weather" tabIndex={-1} className="relative flex flex-1 flex-col p-10 outline-none">
+      <main id="weather" tabIndex={-1} className="relative flex flex-1 flex-col px-4 py-10 outline-none md:p-10">
         <ThemeSelector placement="panel" />
         <div className="flex flex-1 items-center justify-center">
           <div className="text-center">
@@ -35,9 +41,9 @@ export function Hero() {
             <p className="mt-2 text-sm text-ink-muted">
               Add a Singapore town or coordinates from the sidebar to see its weather.
             </p>
-            {showPrivacyNotice && (
+            {privacy && (
               <div className="mt-4">
-                <PrivacyNotice />
+                <PrivacyNotice copy={privacy} />
               </div>
             )}
           </div>
@@ -211,7 +217,7 @@ export function Hero() {
             Weather for {area}
             {source ? ` · ${source}` : ''}
           </p>
-          {showPrivacyNotice && <PrivacyNotice />}
+          {privacy && <PrivacyNotice copy={privacy} />}
         </footer>
       </div>
       {/* Last in the DOM so the tab order reaches the weather and Refresh first; it still
