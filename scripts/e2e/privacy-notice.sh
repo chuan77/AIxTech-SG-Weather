@@ -1,19 +1,23 @@
 #!/usr/bin/env bash
-# Browser E2E checks for the web analytics privacy notice (specs/012-vercel-web-analytics).
+# Browser E2E checks for the privacy notice (specs/012-vercel-web-analytics and
+# specs/016-speed-insights).
 #
 # Runs its server with E2E_WEB_ANALYTICS=notice-only: the page shows the notice exactly as it does
-# when visits are measured, but never loads the measurement script. Every sub-check asserts that
-# no request went to /_vercel/insights/ or va.vercel-scripts.com. Stubs GET /api/locations with
+# when visits are measured, but never loads the measurement script. The variants check restarts it
+# with E2E_SPEED_INSIGHTS=notice-only (speed only, then both). Every sub-check asserts that no
+# request went to /_vercel/insights/, /_vercel/speed-insights/ or va.vercel-scripts.com. Stubs GET /api/locations with
 # `agent-browser network route` (none saved, or one), so it never calls data.gov.sg.
 #
 # Usage (from the repo root, after `npm run verify` has built frontend/dist):
-#   scripts/e2e/privacy-notice.sh [us1|us2|themes|off]   # no argument runs everything
+#   scripts/e2e/privacy-notice.sh [us1|us2|themes|variants|off]   # no argument runs everything
 #
 # us1     empty state: notice present; click, Enter and Space toggle it; Escape closes it
 # us2     selected location: notice under "Weather for"; at 375 px one line, clear of the phone
 #         dock, and opening it moves nothing above it
 # themes  all six themes: notice and explanation text reach 4.5:1
-# off     a second server with measurement off: no notice in either view
+# variants visits only, speed only and both (spec 016): exact label, explanation names only what is active,
+#         label on one line and the button no taller than 44 px at 375 px in all six themes
+# off     a server with both measurements off: no notice in either view
 #
 # Starts its own temporary server on a throwaway database and tears it down, with the browser,
 # on exit (scripts/e2e/lib.sh). Any uncaught page error or console.error fails the run.
@@ -68,9 +72,16 @@ locations_json() { # locations_json <0|1>
 
 # --- page helpers ---------------------------------------------------------------------------
 
-BUTTON='[...document.querySelectorAll("button")].find((b) => b.textContent.trim().startsWith("Anonymous visit counts"))'
+# The label names what is active (spec 016): "Anonymous <visit counts|speed stats|visit & speed
+# stats> · no cookies".
+BUTTON='[...document.querySelectorAll("button")].find((b) => /^Anonymous .+ · no cookies$/.test(b.textContent.trim()))'
 notice_count() {
-  js '[...document.querySelectorAll("button")].filter((b) => b.textContent.trim().startsWith("Anonymous visit counts")).length'
+  js '[...document.querySelectorAll("button")].filter((b) => /^Anonymous .+ · no cookies$/.test(b.textContent.trim())).length'
+}
+label() { js "($BUTTON)?.textContent.trim() ?? 'missing'"; }
+explanation_text() { js "(() => { const b = $BUTTON; return b ? document.getElementById(b.getAttribute('aria-controls')).textContent : ''; })()"; }
+one_line() { # the collapsed label renders as one line box and the button stays at its 44 px minimum
+  js "(() => { const b = $BUTTON; const r = document.createRange(); r.selectNodeContents(b.firstChild); return r.getClientRects().length === 1 && b.getBoundingClientRect().height <= 44.5; })()"
 }
 expanded() { js "($BUTTON)?.getAttribute('aria-expanded') ?? 'missing'"; }
 explanation_visible() {
@@ -80,7 +91,7 @@ focus_button() { js "(() => { const b = $BUTTON; b?.focus(); return document.act
 button_focused() { js "document.activeElement === ($BUTTON)"; }
 click_button() { js "(() => { const b = $BUTTON; b?.click(); return Boolean(b); })()" >/dev/null; }
 measurement_requests() {
-  js 'performance.getEntriesByType("resource").filter((e) => /\/_vercel\/insights\/|va\.vercel-scripts\.com/.test(e.name)).length + document.querySelectorAll("script[src*=\"_vercel\"], script[src*=\"vercel-scripts\"]").length'
+  js 'performance.getEntriesByType("resource").filter((e) => /\/_vercel\/(insights|speed-insights)\/|va\.vercel-scripts\.com/.test(e.name)).length + document.querySelectorAll("script[src*=\"_vercel\"], script[src*=\"vercel-scripts\"]").length'
 }
 no_measurement() { check "no measurement request: $1" test "$(measurement_requests)" -eq 0; }
 
@@ -128,6 +139,8 @@ if want us1; then
   echo "US1: empty state"
   open_app "empty state" 0
   check "empty state: one notice" test "$(notice_count)" -eq 1
+  check "empty state: visits-only label" test "$(label)" = "Anonymous visit counts · no cookies"
+  check "empty state: explanation doesn't mention Speed Insights" test "$(js "(() => { const b = $BUTTON; return /Speed Insights/.test(document.getElementById(b.getAttribute('aria-controls')).textContent); })()")" = false
   check "empty state: notice sits under the add hint" test "$(js "(() => { const hint = [...document.querySelectorAll('main p')].find((p) => p.textContent.startsWith('Add a Singapore town')); const b = $BUTTON; return Boolean(hint && b && hint.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING); })()")" = true
   toggles "empty state"
   shot "us1-empty-desktop"
@@ -204,17 +217,71 @@ if want themes; then
   no_measurement "themes"
 fi
 
+# --- variants: speed only and both (spec 016) ------------------------------------------------
+
+if want variants; then
+  for variant in visits speed both; do
+    echo "Variant: $variant"
+    e2e_stop_server
+    if [ "$variant" = speed ]; then export E2E_WEB_ANALYTICS=off; else export E2E_WEB_ANALYTICS=notice-only; fi
+    if [ "$variant" = visits ]; then export E2E_SPEED_INSIGHTS=off; else export E2E_SPEED_INSIGHTS=notice-only; fi
+    e2e_start_server
+    if [ "$variant" = visits ]; then
+      want_label="Anonymous visit counts · no cookies"
+    elif [ "$variant" = speed ]; then
+      want_label="Anonymous speed stats · no cookies"
+    else
+      want_label="Anonymous visits & speed · no cookies"
+    fi
+    ab set viewport 375 812 >/dev/null
+    for theme in apple glass radar sticker memphis singapore; do
+      js "localStorage.setItem('weather-theme', '$theme'); 1" >/dev/null
+      for view in 0 1; do
+        open_app "$variant, $theme, saved=$view" "$view"
+        check "$variant $theme saved=$view: one notice" test "$(notice_count)" -eq 1
+        check "$variant $theme saved=$view: label" test "$(label)" = "$want_label"
+        check "$variant $theme saved=$view: one line, at most 44 px tall" test "$(one_line)" = true
+      done
+    done
+    js "localStorage.setItem('weather-theme', 'apple'); 1" >/dev/null
+    open_app "$variant, explanation" 1
+    click_button
+    ab wait 150 >/dev/null
+    text="$(explanation_text)"
+    if [ "$variant" = visits ]; then
+      check "visits: explanation doesn't mention Speed Insights" node -e 'process.exit(/Speed Insights/.test(process.argv[1]) ? 1 : 0)' "$text"
+    else
+      check "$variant: explanation names Speed Insights, network speed and the slowest part" \
+        node -e 'const t = process.argv[1]; process.exit(/Speed Insights/.test(t) && /network speed/.test(t) && /slowest/.test(t) ? 0 : 1)' "$text"
+    fi
+    if [ "$variant" = visits ]; then
+      :
+    elif [ "$variant" = speed ]; then
+      check "speed: explanation doesn't mention Web Analytics" node -e 'process.exit(/Web Analytics/.test(process.argv[1]) ? 1 : 0)' "$text"
+    else
+      check "both: explanation names Web Analytics too" node -e 'process.exit(/Web Analytics/.test(process.argv[1]) ? 0 : 1)' "$text"
+    fi
+    check "$variant: explanation still says no cookies and where saved places are kept" \
+      node -e 'const t = process.argv[1]; process.exit(/no cookies/.test(t) && /90 days without use/.test(t) ? 0 : 1)' "$text"
+    check "$variant: notice-only page has no visit label meta" test "$(js 'document.querySelectorAll("meta[name=speed-insights-visit]").length')" -eq 0
+    no_measurement "$variant"
+    shot "variant-$variant-375-open"
+    ab set viewport 1280 900 >/dev/null
+  done
+fi
+
 # --- off: measurement switched off ----------------------------------------------------------
 
 if want off; then
   echo "Off: no notice when measurement is off"
   e2e_stop_server
-  export E2E_WEB_ANALYTICS=off
+  export E2E_WEB_ANALYTICS=off E2E_SPEED_INSIGHTS=off
   e2e_start_server
   for view in 0 1; do
     open_app "off, saved=$view" "$view"
     check "off, saved=$view: no notice" test "$(notice_count)" -eq 0
     check "off, saved=$view: no web-analytics meta" test "$(js 'document.querySelectorAll("meta[name=web-analytics]").length')" -eq 0
+    check "off, saved=$view: no speed-insights metas" test "$(js 'document.querySelectorAll("meta[name^=speed-insights]").length')" -eq 0
     no_measurement "off, saved=$view"
   done
 fi
