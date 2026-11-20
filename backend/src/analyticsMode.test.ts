@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveAnalyticsMode } from './analyticsMode.js';
+import { resolveAnalyticsMode, resolveSpeedInsightsMode } from './analyticsMode.js';
 
 describe('resolveAnalyticsMode', () => {
   it('measures when WEB_ANALYTICS=on, whatever VERCEL says', () => {
@@ -43,6 +43,56 @@ describe('resolveAnalyticsMode', () => {
     expect(resolveAnalyticsMode({ WEB_ANALYTICS: 'measure' })).toEqual({
       mode: 'off',
       invalid: 'measure',
+    });
+  });
+});
+
+describe('resolveSpeedInsightsMode', () => {
+  it('measures when SPEED_INSIGHTS=on, whatever VERCEL says', () => {
+    expect(resolveSpeedInsightsMode({ SPEED_INSIGHTS: 'on' })).toEqual({ mode: 'measure' });
+    expect(resolveSpeedInsightsMode({ SPEED_INSIGHTS: 'on', VERCEL: '1' })).toEqual({
+      mode: 'measure',
+    });
+  });
+
+  it('is off when SPEED_INSIGHTS=off, even on Vercel', () => {
+    expect(resolveSpeedInsightsMode({ SPEED_INSIGHTS: 'off', VERCEL: '1' })).toEqual({
+      mode: 'off',
+    });
+  });
+
+  it('shows only the notice when SPEED_INSIGHTS=notice-only', () => {
+    expect(resolveSpeedInsightsMode({ SPEED_INSIGHTS: 'notice-only' })).toEqual({
+      mode: 'notice-only',
+    });
+  });
+
+  it('falls back to VERCEL=1 when SPEED_INSIGHTS is unset or blank', () => {
+    expect(resolveSpeedInsightsMode({ VERCEL: '1' })).toEqual({ mode: 'measure' });
+    expect(resolveSpeedInsightsMode({ SPEED_INSIGHTS: ' ', VERCEL: '1' })).toEqual({
+      mode: 'measure',
+    });
+    expect(resolveSpeedInsightsMode({})).toEqual({ mode: 'off' });
+    expect(resolveSpeedInsightsMode({ VERCEL: 'true' })).toEqual({ mode: 'off' });
+  });
+
+  it('trims, ignores case and reports anything else as invalid', () => {
+    expect(resolveSpeedInsightsMode({ SPEED_INSIGHTS: ' ON ' })).toEqual({ mode: 'measure' });
+    expect(resolveSpeedInsightsMode({ SPEED_INSIGHTS: 'yes', VERCEL: '1' })).toEqual({
+      mode: 'off',
+      invalid: 'yes',
+    });
+  });
+
+  it('is independent of WEB_ANALYTICS', () => {
+    expect(resolveSpeedInsightsMode({ WEB_ANALYTICS: 'off', SPEED_INSIGHTS: 'on' })).toEqual({
+      mode: 'measure',
+    });
+    expect(resolveSpeedInsightsMode({ WEB_ANALYTICS: 'on', SPEED_INSIGHTS: 'off' })).toEqual({
+      mode: 'off',
+    });
+    expect(resolveAnalyticsMode({ WEB_ANALYTICS: 'on', SPEED_INSIGHTS: 'off' })).toEqual({
+      mode: 'measure',
     });
   });
 });

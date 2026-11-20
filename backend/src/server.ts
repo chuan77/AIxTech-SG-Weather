@@ -23,7 +23,8 @@ import { logger } from './logger.js';
 import { createRequestLogger } from './requestLogging.js';
 import { renderIndexHtml } from './indexHtml.js';
 import { headersFor } from './staticHeaders.js';
-import { resolveAnalyticsMode } from './analyticsMode.js';
+import { resolveAnalyticsMode, resolveSpeedInsightsMode } from './analyticsMode.js';
+import { pageFor } from './speedInsights.js';
 import { ProviderRequester } from './providerHttp.js';
 import { createRateLimiter } from './rateLimit.js';
 
@@ -42,6 +43,10 @@ interface AppOptions {
   lightningClient?: LightningClient;
   rainClient?: RainClient;
   tempWindClient?: TempWindClient;
+  /** Serve the built frontend from this directory, whatever NODE_ENV is (tests). Default: frontend/dist in production. */
+  frontendDist?: string;
+  /** Seconds since the instance started, for the cold/warm page label (spec 016). Default: process.uptime. */
+  uptime?: () => number;
 }
 
 export async function createApp(options: AppOptions = {}) {
@@ -174,10 +179,17 @@ export async function createApp(options: AppOptions = {}) {
   app.use('/api', createTempWindRouter({ tempWindClient, requester }));
 
   if (serveFrontend) {
-    if (process.env.NODE_ENV === 'production') {
-      const staticPath = resolve(__dirname, '..', '..', 'frontend', 'dist');
+    if (options.frontendDist !== undefined || process.env.NODE_ENV === 'production') {
+      const staticPath = options.frontendDist ?? resolve(__dirname, '..', '..', 'frontend', 'dist');
+      const uptime = options.uptime ?? (() => process.uptime());
       // index.html is never served as a static file: it gets runtime settings (the map key) first.
-      const indexHtml = renderIndexHtml(readFileSync(resolve(staticPath, 'index.html'), 'utf8'));
+      // Two copies differ only in the Speed Insights visit label (spec 016); each page request
+      // picks one by the instance's age, with no other per-request work.
+      const rawIndexHtml = readFileSync(resolve(staticPath, 'index.html'), 'utf8');
+      const indexPages = {
+        cold: renderIndexHtml(rawIndexHtml, process.env, { visit: 'cold' }),
+        warm: renderIndexHtml(rawIndexHtml, process.env, { visit: 'warm' }),
+      };
       // Logs the mode only (and the rejected WEB_ANALYTICS value), never other settings.
       const analytics = resolveAnalyticsMode();
       if (analytics.invalid !== undefined) {
@@ -189,8 +201,19 @@ export async function createApp(options: AppOptions = {}) {
         { webAnalytics: analytics.mode, vercel: process.env.VERCEL === '1' },
         'web analytics mode',
       );
+      // Same for page-speed measurement (spec 016): the mode only, never other settings.
+      const speedInsights = resolveSpeedInsightsMode();
+      if (speedInsights.invalid !== undefined) {
+        logger.warn(
+          `SPEED_INSIGHTS=${speedInsights.invalid} is not on, off or notice-only; measurement is off`,
+        );
+      }
+      logger.info(
+        { speedInsights: speedInsights.mode, vercel: process.env.VERCEL === '1' },
+        'speed insights mode',
+      );
       app.get('/index.html', (_request, response) => {
-        response.type('html').send(indexHtml);
+        response.type('html').send(pageFor(indexPages, uptime()));
       });
       app.use(
         express.static(staticPath, {
@@ -205,7 +228,7 @@ export async function createApp(options: AppOptions = {}) {
         }),
       );
       app.get('*', (_request, response) => {
-        response.type('html').send(indexHtml);
+        response.type('html').send(pageFor(indexPages, uptime()));
       });
     } else {
       const { createServer } = await import('vite');

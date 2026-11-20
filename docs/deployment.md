@@ -30,6 +30,7 @@ Names only. Values never go in the repo, in logs or in chat.
 | `VITE_CARTO_API_KEY` | Vercel → Production env. Read at **runtime**: the server adds it to `index.html` as `<meta name="carto-api-key">` (`backend/src/indexHtml.ts`), because Vercel does not pass project variables into a container image build. A change needs only a redeploy or restart. It is public by design, so restrict it to `lepak-weather.vercel.app` at CARTO | Frontend map tiles |
 | `PORT` = `3000` | Vercel → Production env (also set in the image) | Vercel routing |
 | `WEB_ANALYTICS` = `on` | Vercel → **Production and Preview** env. Read at **runtime** by `backend/src/analyticsMode.ts`; the server adds `<meta name="web-analytics">` to `index.html`. `off` switches measurement and the privacy notice off; `notice-only` is for browser checks only. Unset falls back to on only when Vercel's `VERCEL=1` reaches the container. A change needs a redeploy or restart. Not a secret | Web Analytics (spec 012) |
+| `SPEED_INSIGHTS` = `on` | Vercel → **Production and Preview** env. Read at **runtime** by `backend/src/analyticsMode.ts`, with the same rules as `WEB_ANALYTICS` but independent of it; the server adds `<meta name="speed-insights">` and a per-request `speed-insights-visit` label to `index.html`. `off` switches page-speed measurement off (the notice then names only what is still active); `notice-only` is for browser checks only. Unset falls back to on only when `VERCEL=1` reaches the container. A change needs a redeploy or restart. Not a secret | Speed Insights (spec 016) |
 | `VERCEL_TOKEN` | GitHub → repo → Settings → Secrets and variables → Actions → Secrets | `deploy` job |
 | `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID` | GitHub Actions secrets (`orgId` and `id` in `.vercel/repo.json` after `vercel link`) | `deploy` job |
 | `PRODUCTION_URL` | GitHub Actions **variable**, for example `https://lepak-weather.vercel.app` | smoke check |
@@ -146,6 +147,32 @@ Visitor counts come from Vercel Web Analytics on the Hobby plan (spec 012). Host
 - **Privacy:** no cookies. Vercel tells visitors apart with a request hash that resets daily. The reported URL has its query string and fragment removed (`frontend/src/analytics/stripUrl.ts`). Wherever measurement runs, the page shows "Anonymous visit counts · no cookies", which opens a short explanation (`frontend/src/components/PrivacyNotice.tsx`).
 - **Switching it off:** set `WEB_ANALYTICS=off` in Vercel and redeploy. The script and the notice both go. Disabling Web Analytics only in the dashboard leaves the app requesting the script, which then fails on every page load, so change the variable first.
 - **Startup log:** each production start logs `web analytics mode` with `webAnalytics` (`measure` or `off`) and `vercel` (whether `VERCEL=1` was present). An invalid `WEB_ANALYTICS` value logs a warning and turns measurement off.
+
+## Speed Insights
+
+Page-speed scores come from Vercel Speed Insights on the free Hobby tier (spec 016). Hosted deployments load Vercel's `/_vercel/speed-insights/script.js`, which Vercel serves in front of the container (checked on production, 2026-11-20). Local runs, tests and the e2e checks never load it.
+
+- **Where to look:** Vercel → lepak-weather → Speed Insights. Pick Desktop or Mobile and the environment (Production or Preview). The free tier shows the Real Experience Score (RES), a weighted 0–100 score of real visitors' load and interaction speed at the 75th percentile, for the last 24 hours or 7 days.
+- **Cold vs warm:** each page load is reported with the route `/cold` or `/warm`. It is `cold` when the instance serving the page started less than 10 seconds before the request (`backend/src/speedInsights.ts`), which means that visitor waited for the about-5 s cold start; otherwise `warm`. The free tier does show the score per route: open the **Routes** tab under the score (checked on a preview, 2026-11-20, when the first readings were a RES of 76 for `/cold` only). Either way the labels are sent, and the lab baseline below separates the frontend from the cold start.
+- **What the free tier hides:** the separate metrics (FCP, LCP, INP, CLS, TTFB), most breakdowns, countries, and history beyond 7 days. Those need Speed Insights Plus, which is Pro-only ($10 per project a month plus usage) and out of scope.
+- **Limits:** 10,000 events per rolling 30 days, shared by every project on the account. A visit sends 3–5 events. Above the allowance, collection pauses for at least 14 days, and stays paused while 30-day use is above half the allowance. No charge.
+- **Not counted:** visitors whose ad or content blocker stops the script. The app keeps working for them, with no error.
+- **Privacy:** no cookies, no visitor identifier. Vercel stores per reading the route, URL, browser, OS, device type, country, network speed, the metric and which page element it came from. The reported URL has its query string and fragment removed (`frontend/src/analytics/stripUrl.ts`). The privacy line names what is active: "Anonymous visits & speed · no cookies" when both run (`frontend/src/analytics/privacyCopy.ts`).
+- **Switching it off:** set `SPEED_INSIGHTS=off` in Vercel and redeploy. The script goes, and the notice drops the speed wording. Disabling Speed Insights only in the dashboard leaves the app requesting the script, which then fails on every page load, so change the variable first.
+- **Startup log:** each production start logs `speed insights mode` with `speedInsights` (`measure` or `off`) and `vercel`. An invalid `SPEED_INSIGHTS` value logs a warning and turns measurement off.
+
+### Lab baseline
+
+The field score mixes cold starts with the frontend. A lab reading on an awake instance gives the frontend alone, with each metric, for free:
+
+1. Wake the instance: `curl -s -o /dev/null https://lepak-weather.vercel.app/`.
+2. Within 4 minutes (the instance idles out after 5), run [PageSpeed Insights](https://pagespeed.web.dev/) on `https://lepak-weather.vercel.app/` 3 times for **Mobile** and 3 times for **Desktop**. Previews sit behind Vercel Authentication, which PageSpeed Insights can't pass, so use production.
+3. Record the median of each value below, with the date. TBT is the lab stand-in for INP.
+
+| Date | Profile | Score | FCP | LCP | TBT | CLS | Speed Index | TTFB |
+|---|---|---|---|---|---|---|---|---|
+| _to record after merge (spec 016 T033)_ | Mobile | | | | | | | |
+| | Desktop | | | | | | | |
 
 ## Known limits
 
