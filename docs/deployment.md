@@ -14,7 +14,7 @@ push / PR to main ─▶ verify (npm run verify: lint, typecheck, tests, build)
 ```
 
 - Workflow: `.github/workflows/ci.yml`. The job name `verify` is the required check in the `main` ruleset, so don't rename it.
-- `vercel.json` turns off Vercel's own Git deploys (`git.deploymentEnabled: false`), so nothing reaches production without passing `verify`. There are no preview deployments from Git.
+- `vercel.json` turns off Vercel's own Git deploys (`git.deploymentEnabled: false`), so nothing reaches production without passing `verify`. There are no preview deployments from Git. Vercel reads that file from the pushed commit, so any branch without it (such as an orphan branch) gets a failing Git preview: the taxi-rain workflow writes its own `vercel.json` into `research/taxi-rain-data` for this reason.
 - The image (`Dockerfile`) contains only production dependencies, `backend/dist`, `backend/drizzle` and `frontend/dist`. It runs as the `node` user on `0.0.0.0:3000`.
 - Request logs hold only method, URL, status and response time (`backend/src/requestLogging.ts`). Behind Vercel, request headers carry each visitor's IP, city and postcode plus Vercel tokens, so they are never logged.
 

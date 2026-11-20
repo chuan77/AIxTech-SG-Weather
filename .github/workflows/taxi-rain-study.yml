@@ -44,6 +44,10 @@ jobs:
               'Sources: LTA Taxi Availability and NEA rainfall via data.gov.sg, under the' \
               'Singapore Open Data Licence (https://data.gov.sg/open-data-licence).' > data/README.md
           fi
+          # Vercel's Git integration reads vercel.json from the pushed commit. Without this file the
+          # orphan data branch has no `git.deploymentEnabled: false`, so every push started a
+          # failing preview build of lepak-weather (no Dockerfile on this branch).
+          printf '%s\n' '{ "git": { "deploymentEnabled": false } }' > data/vercel.json
       - name: Sample taxis and rain
         run: node scripts/research/taxi-rain-sample.mjs data/taxi-rain.csv
       - name: Commit the new row
