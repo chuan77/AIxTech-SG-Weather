@@ -240,7 +240,7 @@ export function WeatherMap({
         />
       ))}
       <RainLayer showRain={showRain} />
-      <TempWindLayer showTempWind={showTempWind} />
+      <TempWindLayer showTempWind={showTempWind} pins={locations} />
       <LightningLayer showLightning={showLightning} onGroupSelect={onLightningGroupSelect} />
       <FitBounds locations={locations} skipFirstFit={initialView !== undefined} />
       <FocusSelected locations={locations} selectedId={selectedId} focusKey={focusKey} />

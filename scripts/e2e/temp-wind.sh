@@ -47,7 +47,7 @@ ABORT_NOISE='Failed to load resource|ERR_FAILED|net::'
 
 # --- stubs --------------------------------------------------------------------------------
 
-STATION_COUNT=9
+STATION_COUNT=10
 
 tw_json() { # tw_json [reading age in minutes] [stale true|false] [wind ok|unavailable] [fetched seconds ago]
   node -e '
@@ -71,6 +71,8 @@ tw_json() { # tw_json [reading age in minutes] [stale true|false] [wind ok|unava
         s("T06", "Temperature Only", 1.3678, 103.9823, 31.2, null, null),
         s("T07", "No Reading", 1.3484, 103.8164, null, null, null),
         s("T08", "Speed Only", 1.3404, 103.709, 30, 5, null),
+        // Right at the saved place, so its label would sit under the pin unless nudged off.
+        s("T09", "Beside Pin", 1.3352, 103.8502, 27.4, 6, 45),
       ],
       measures: { temperature: "ok", wind },
       temperature_at: sgt(at), wind_at: windOk ? sgt(at) : null,
@@ -200,11 +202,22 @@ if want us1; then
   assert_clean "turn temperature & wind on"
   check "one mark per stubbed station ($STATION_COUNT)" test "$(marks "$FS")" -eq "$STATION_COUNT"
   check "temperatures show to one decimal place" \
-    test "$(js "[...document.querySelectorAll('$FS $PANE .tw-temp:not(.tw-temp-missing)')].map((e) => e.textContent).sort().join(',')")" = "26.3°,27.0°,28.1°,29.0°,30.0°,31.2°"
+    test "$(js "[...document.querySelectorAll('$FS $PANE .tw-temp:not(.tw-temp-missing)')].map((e) => e.textContent).sort().join(',')")" = "26.3°,27.0°,27.4°,28.1°,29.0°,30.0°,31.2°"
   check "location pins sit above the temperature & wind pane" \
     test "$(js "Number(getComputedStyle(document.querySelector('$FS $PANE')).zIndex) < Number(getComputedStyle(document.querySelector('$FS .leaflet-marker-pane')).zIndex)")" = true
   check "the pane sits between rain (440) and lightning (450)" \
     test "$(js "getComputedStyle(document.querySelector('$FS $PANE')).zIndex")" = 445
+  # Leaflet icon boxes: every label clear of every pin (2 px tolerance for sub-pixel rounding).
+  no_label_under_pin="(() => { const pins = [...document.querySelectorAll('$FS .weather-pin-wrapper')].map((e) => e.getBoundingClientRect()); const marks = [...document.querySelectorAll('$FS $PANE .tw-mark-wrapper')].map((e) => e.getBoundingClientRect()); return pins.length > 0 && marks.every((m) => pins.every((p) => m.right <= p.left + 2 || m.left >= p.right - 2 || m.bottom <= p.top + 2 || m.top >= p.bottom - 2)); })()"
+  check "no station label sits under a location pin" test "$(js "$no_label_under_pin")" = true
+  ab mouse move 640 450 >/dev/null
+  ab mouse wheel 300 >/dev/null
+  ab wait 1200 >/dev/null
+  check "nor after zooming out" test "$(js "$no_label_under_pin")" = true
+  ab mouse wheel -600 >/dev/null
+  ab wait 1200 >/dev/null
+  check "nor after zooming in" test "$(js "$no_label_under_pin")" = true
+  shot "us1-labels-off-pins"
   popup="$(open_popup "Clementi Road")"
   check "the popup names the station and gives its temperature" grep -q "Clementi Road.*Temperature: 26.3 °C" <<<"$popup"
   check "the popup gives the wind with speed and where it comes from" grep -q "15 km/h, light, from SW (228°)" <<<"$popup"
@@ -221,8 +234,8 @@ if want us2; then
   open_app "us2"
   open_fullscreen
   tw_on
-  check "three light, one moderate and one strong arrow" \
-    test "$(count .tw-arrow-light),$(count .tw-arrow-moderate),$(count .tw-arrow-strong)" = "3,1,1"
+  check "four light, one moderate and one strong arrow" \
+    test "$(count .tw-arrow-light),$(count .tw-arrow-moderate),$(count .tw-arrow-strong)" = "4,1,1"
   size() { js "document.querySelector('$FS $PANE .tw-arrow-$1')?.style.width"; }
   check "arrows grow with strength (14/18/22 px)" \
     test "$(size light),$(size moderate),$(size strong)" = "14px,18px,22px"

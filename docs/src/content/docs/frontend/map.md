@@ -20,7 +20,8 @@ The map lives in `frontend/src/components/map/` and uses Leaflet through react-l
 | `RainLayer.tsx` | One symbol per rain station in the `rain` pane (below lightning and pins), with a popup |
 | `RainControl.tsx` | Rain switch, refresh button, status strip and legend (full-screen map), shared pieces for the card |
 | `rainHelpers.ts` / `rainMarker.ts` | Pure rain logic (levels, coverage, out of date, status and popup text, preference) and symbol markup |
-| `TempWindLayer.tsx` | One label per temperature and wind station in the `temp-wind` pane (z-index 445: above rain, below lightning and pins), with a popup. Full-screen map only. |
+| `TempWindLayer.tsx` | One label per temperature and wind station in the `temp-wind` pane (z-index 445: above rain, below lightning and pins), with a popup. Full-screen map only. A label that would sit under a pin is nudged the shortest way clear of every pin, again after each zoom. |
+| `tempWindPlacement.ts` | Pure placement maths: the pixel offset that moves a label off the pins (`nudgeOffPins`) |
 | `TempWindControl.tsx` | Temperature & wind switch, refresh button, status strip and legend (full-screen map only) |
 | `tempWindHelpers.ts` / `tempWindMarker.ts` | Pure temperature and wind logic (km/h levels, arrow rotation, compass points, out of date, status and popup text, preference) and label markup |
 | `useNow.ts` | A clock that re-renders on an interval |
