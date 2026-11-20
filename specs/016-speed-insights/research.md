@@ -10,6 +10,7 @@ The assessment (`.specify/assessments/speed-insights/research.md`) covers platfo
 - **Rationale**: spec FR-001. The sibling `/_vercel/insights/script.js` passed this check on 2026-11-17 (`docs/deployment.md`). Speed Insights routes only exist once the product is enabled.
 - **Alternatives**: proxying the script through Express. Rejected, because the spec bans workarounds under this spec.
 - **Result (2026-11-20): pass.** Speed Insights was already enabled in the dashboard (owner's screenshot shows the score panel). On production, `GET https://lepak-weather.vercel.app/_vercel/speed-insights/script.js` returned `200 application/javascript` with Vercel's script, served in front of the container. A preview check is still part of the hosted check (quickstart §4).
+- **Preview result (2026-11-20): pass.** On the branch preview (`npx vercel deploy` of `068449a`, `SPEED_INSIGHTS=On`), `/_vercel/speed-insights/script.js` and the `/_vercel/speed-insights/vitals` beacon both returned 200 in the browser, with no console errors.
 
 ## R2. Package and how it's mounted
 
@@ -40,6 +41,15 @@ The assessment (`.specify/assessments/speed-insights/research.md`) covers platfo
   - A `Server-Timing` header read through `PerformanceNavigationTiming.serverTiming`: no HTML change, but it needs Safari 16.4+ and is harder to check in e2e.
   - A client-side guess from `responseStart`: it can't tell slow networks from cold starts.
   - "First request served": rejected in clarification, because probes and `/health` would mask a cold start.
+- **Preview result (2026-11-20): pass.** Checked in a browser on the branch preview:
+
+  | Load | Visit meta | Script `data-route` | Server first byte |
+  |---|---|---|---|
+  | First load (instance asleep) | `cold` | `/cold` | 4,709 ms |
+  | Reload a few seconds later | `cold` | `/cold` | 125 ms |
+  | Reload 12 s later | `warm` | `/warm` | 141 ms |
+
+  The second row is correct by the rule: the instance had been up for under 10 s. It shows the window also labels the visitor's own quick reloads straight after a wake-up as cold. The page showed "Anonymous visits & speed · no cookies", and no load logged a console error.
 
 ## R4. Route values and event cost
 
@@ -122,3 +132,4 @@ The assessment (`.specify/assessments/speed-insights/research.md`) covers platfo
 
 - **Decision**: check it during the hosted preview step (quickstart §4). Record the result in `docs/deployment.md`. Either way the labels are kept (clarification Q2).
 - **Rationale**: FR-007. Vercel's docs say free-tier breakdowns are limited to "Great and Needs Improvement entries", which leaves the route breakdown unclear until it is checked.
+- **Result (2026-11-20): the per-route view is on the free tier.** Speed Insights → Desktop → Preview → Last 7 Days showed a RES of **76** ("Needs Improvement", below 90) and a **Routes** tab listing `/cold` with 4 events and a score of 76. The free tier hides the separate metrics (FCP, LCP, INP, CLS and TTFB are shown as "—" with "Available in Plus"). The labels therefore do split the score by route on Hobby. This first reading came from cold loads only, so it includes the roughly 5 s container wake-up.
