@@ -171,8 +171,10 @@ The field score mixes cold starts with the frontend. A lab reading on an awake i
 
 | Date | Profile | Score | FCP | LCP | TBT | CLS | Speed Index | TTFB |
 |---|---|---|---|---|---|---|---|---|
-| _to record after merge (spec 016 T033)_ | Mobile | | | | | | | |
-| | Desktop | | | | | | | |
+| 2026-11-20 | Mobile | 99 | 0.8 s | 0.8 s | 0 ms | 0.061 | 0.8 s | 2 ms |
+| 2026-11-20 | Desktop | 100 | 0.2 s | 0.2 s | 0 ms | 0 | 0.3 s | 1 ms |
+
+First baseline: production right after spec 016 (#31), with Speed Insights and Web Analytics both on, and the instance kept awake. The three runs were nearly identical. Only Speed Index moved, from 1.2 s on the first Mobile run to 0.8 s and from 0.7 s to 0.3 s on Desktop. TTFB here is PageSpeed's "Server responds quickly (observed …)" figure, which leaves out the network round trip. Accessibility and Best Practices scored 100 and SEO 82 on both profiles. A cold start adds about 5 s before the first byte, and only the field score (`/cold` route) shows that.
 
 ## Known limits
 
