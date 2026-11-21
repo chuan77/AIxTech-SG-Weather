@@ -7,12 +7,15 @@
 //
 // Usage: node scripts/research/taxi-rain-sample.mjs <csv-file>
 // Stops collecting after STUDY_END (env, ISO time; default below) and exits 0 without calling out.
+// Keeps one row per 15-minute slot (spec 017): if the file already has a row in the current slot,
+// for example from the other trigger, it exits 0 without calling out.
 
-import { appendFileSync, existsSync } from 'node:fs';
+import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 
-const TAXI_URL = 'https://api.data.gov.sg/v1/transport/taxi-availability';
-const RAIN_URL = 'https://api-open.data.gov.sg/v2/real-time/api/rainfall';
-const STUDY_END = process.env.STUDY_END ?? '2026-12-02T16:00:00Z'; // 2026-12-03 00:00 SGT
+export const TAXI_URL = 'https://api.data.gov.sg/v1/transport/taxi-availability';
+export const RAIN_URL = 'https://api-open.data.gov.sg/v2/real-time/api/rainfall';
+export const STUDY_END = process.env.STUDY_END ?? '2026-12-02T16:00:00Z'; // 2026-12-03 00:00 SGT
+const SLOT_MS = 15 * 60_000;
 const RADIUS_KM = 1;
 
 // Representative spots: CBD, shopping belt, an east and a west heartland town, the north.
@@ -88,6 +91,35 @@ export function nearestRain(stations, spot) {
   return best;
 }
 
+/** ISO time → its 15-minute slot in UTC, e.g. '2026-11-20T09:00:00Z'. */
+export function slotOf(iso) {
+  const ms = Math.floor(new Date(iso).getTime() / SLOT_MS) * SLOT_MS;
+  return `${new Date(ms).toISOString().slice(0, 19)}Z`;
+}
+
+/** Slots from `fromIso` (inclusive) to `toIso` (exclusive), every 15 minutes. */
+export function listSlots(fromIso, toIso) {
+  const slots = [];
+  const end = new Date(toIso).getTime();
+  for (let ms = new Date(slotOf(fromIso)).getTime(); ms < end; ms += SLOT_MS) {
+    slots.push(slotOf(new Date(ms).toISOString()));
+  }
+  return slots;
+}
+
+/** The run_at_utc column of a sample CSV, without the header. */
+export function runTimes(csvText) {
+  return csvText
+    .split('\n')
+    .slice(1)
+    .map((line) => line.split(',')[0].trim())
+    .filter(Boolean);
+}
+
+export function slotTaken(csvText, slot) {
+  return runTimes(csvText).some((runAt) => slotOf(runAt) === slot);
+}
+
 export const HEADER = [
   'run_at_utc',
   'taxi_timestamp',
@@ -118,7 +150,7 @@ export function buildRow(runAt, taxis, rain, errors) {
   return cells.map((c) => (/[",\n]/.test(String(c)) ? `"${String(c).replace(/"/g, '""')}"` : c));
 }
 
-async function getJson(url) {
+export async function getJson(url) {
   const response = await fetch(url, {
     headers: { 'User-Agent': 'lepak-weather-research/1.0', Accept: 'application/json' },
     signal: AbortSignal.timeout(15_000),
@@ -136,6 +168,11 @@ async function main() {
   const runAt = new Date().toISOString();
   if (runAt > new Date(STUDY_END).toISOString()) {
     console.log(`study ended at ${STUDY_END}; nothing collected`);
+    return;
+  }
+  const slot = slotOf(runAt);
+  if (existsSync(file) && slotTaken(readFileSync(file, 'utf8'), slot)) {
+    console.log(`slot ${slot} already sampled; nothing collected`);
     return;
   }
   const errors = [];

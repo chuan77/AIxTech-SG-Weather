@@ -1,9 +1,19 @@
 # Taxi vs rain study (assessment sg-transport-data, Option B). Research only: it doesn't build,
 # test or deploy the app and uses no secrets.
-# Every 15 minutes it runs scripts/research/taxi-rain-sample.mjs (two keyless data.gov.sg calls) and
+# Each run executes scripts/research/taxi-rain-sample.mjs (two keyless data.gov.sg calls) and
 # appends one row to taxi-rain.csv on the research/taxi-rain-data branch, never on main.
-# The script stops collecting after STUDY_END; disable or delete this workflow once the study is
-# written up. GitHub may delay or skip scheduled runs when busy, so expect gaps.
+#
+# Triggers (spec 017):
+# - Primary: the owner's cron-job.org job calls workflow_dispatch every 15 minutes (Asia/Singapore)
+#   with a fine-grained token limited to this repo and Actions: write. GitHub's own schedule ran
+#   only every 6-8 hours (7 samples in the first 2 days), so it can't be relied on alone.
+# - Backup: the schedule below. The sampler keeps one row per 15-minute slot, so a backup run in a
+#   slot cron-job.org already sampled exits without calling out.
+# Keep workflow_dispatch until the study ends: removing it makes cron-job.org get 422 errors.
+#
+# End of study (STUDY_END, 2026-12-03 00:00 SGT; the script collects nothing after it):
+# disable the cron-job.org job, revoke its GitHub token, then delete this workflow once the
+# findings are written up (specs/017-taxi-sampler-schedule/quickstart.md section 4).
 name: Taxi rain study
 
 on:
@@ -44,6 +54,10 @@ jobs:
               'Sources: LTA Taxi Availability and NEA rainfall via data.gov.sg, under the' \
               'Singapore Open Data Licence (https://data.gov.sg/open-data-licence).' > data/README.md
           fi
+          # Vercel's Git integration reads vercel.json from the pushed commit. Without this file the
+          # orphan data branch has no `git.deploymentEnabled: false`, so every push started a
+          # failing preview build of lepak-weather (no Dockerfile on this branch).
+          printf '%s\n' '{ "git": { "deploymentEnabled": false } }' > data/vercel.json
       - name: Sample taxis and rain
         run: node scripts/research/taxi-rain-sample.mjs data/taxi-rain.csv
       - name: Commit the new row
