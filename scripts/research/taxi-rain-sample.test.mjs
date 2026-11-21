@@ -6,7 +6,11 @@ import {
   distanceKm,
   nearestRain,
   parseRain,
+  listSlots,
   parseTaxis,
+  runTimes,
+  slotOf,
+  slotTaken,
   taxisNear,
 } from './taxi-rain-sample.mjs';
 
@@ -74,5 +78,36 @@ describe('taxi-rain sample', () => {
     expect(row).toHaveLength(HEADER.length);
     expect(row[2]).toBe('');
     expect(row.at(-1)).toBe('"taxi: HTTP 500; rain: x, y"');
+  });
+
+  it('rounds a run time down to its 15-minute slot in UTC', () => {
+    expect(slotOf('2026-11-20T09:14:59.999Z')).toBe('2026-11-20T09:00:00Z');
+    expect(slotOf('2026-11-20T09:15:00.000Z')).toBe('2026-11-20T09:15:00Z');
+    expect(slotOf('2026-11-20T23:59:00Z')).toBe('2026-11-20T23:45:00Z');
+  });
+
+  it('reads run times from CSV text, skipping the header and blank lines', () => {
+    const csv = `${HEADER.join(',')}\n2026-11-20T09:07:12.000Z,a,b\n\n2026-11-20T09:20:00.000Z,c\n`;
+    expect(runTimes(csv)).toEqual(['2026-11-20T09:07:12.000Z', '2026-11-20T09:20:00.000Z']);
+    expect(runTimes('')).toEqual([]);
+    expect(runTimes(`${HEADER.join(',')}\n`)).toEqual([]);
+  });
+
+  it('lists 15-minute slots with the end excluded', () => {
+    expect(listSlots('2026-11-18T13:45:00Z', '2026-11-18T14:30:00Z')).toEqual([
+      '2026-11-18T13:45:00Z',
+      '2026-11-18T14:00:00Z',
+      '2026-11-18T14:15:00Z',
+    ]);
+    expect(listSlots('2026-11-18T14:00:00Z', '2026-11-18T14:00:00Z')).toEqual([]);
+  });
+
+  // Spec 017 bug: two triggers in one slot (cron-job.org and GitHub's backup schedule) gave two rows.
+  it('treats a slot as taken when any row falls inside it', () => {
+    const header = `${HEADER.join(',')}\n`;
+    expect(slotTaken(`${header}2026-11-20T09:07:12.000Z,x\n`, '2026-11-20T09:00:00Z')).toBe(true);
+    expect(slotTaken(`${header}2026-11-20T08:45:00.000Z,x\n`, '2026-11-20T09:00:00Z')).toBe(false);
+    expect(slotTaken(header, '2026-11-20T09:00:00Z')).toBe(false);
+    expect(slotTaken('', '2026-11-20T09:00:00Z')).toBe(false);
   });
 });

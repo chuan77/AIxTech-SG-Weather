@@ -32,6 +32,7 @@
   - [NEEDS CLARIFICATION: Is the owner willing to amend the constitution (a third data source, and non-weather data) if the study passes?]
 - **Revisit stage**: research (run Option B, then append a "Findings" section or a `findings.md` in this folder, then re-run decide)
 - **Study boundaries** (from concept.md): no app, API, database or constitution change; nothing shown to users; a few representative spots; a simple wet-vs-dry comparison; polling every 10–15 minutes for 1–2 weeks.
+- **Collection note (2026-11-21)**: GitHub throttled the `*/15` schedule to about one run every 6–8 hours, which left only 10 samples between 2026-11-18 and 2026-11-21. Since 2026-11-21 03:48Z, the owner's cron-job.org job starts the workflow every 15 minutes, and GitHub's schedule is kept only as a backup with one row per slot (spec 017). The missed slots are recovered from the sources' past-time queries into `taxi-rain-backfill.csv` on the data branch, so the 2026-12-03 end date stands.
 
 ## If go — Handoff to `/speckit-specify`
 
