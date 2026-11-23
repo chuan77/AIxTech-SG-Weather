@@ -782,13 +782,13 @@
         "id": "singapore",
         "label": "Singapore Sky",
         "basemap": "dark_all",
-        "note": "The only theme that reads data. data-sky on <html> from skyState(): storm (thunder now or in the period covering now) > haze (24h PSI > 100) > heat (NEA High WBGT, station within 10 km) > calm (also when data is missing). White ink, 85% ink-muted, 1.125rem radius, flat panels, system font stack, NEA flag pills and banded gauges, focus ring #ffe14a, selected pin #5eead4."
+        "note": "The only theme that reads data. data-sky on <html> from skyState(): storm (a thunder forecast in force, on a fresh reading) > haze (24h PSI > 100) > heat (NEA High WBGT, station within 10 km) > calm (also when data is missing or the reading is stale). White ink, 85% ink-muted, 1.125rem radius, flat panels, system font stack, NEA flag pills and banded gauges, focus ring #ffe14a, selected pin #5eead4."
       }
     ],
     "sky": {
       "states": {
         "calm": {
-          "trigger": "default, and whenever a reading is missing",
+          "trigger": "default, and whenever a reading is missing or stale",
           "stops": [
             "#1a2833",
             "#1c2e39",
@@ -800,7 +800,7 @@
           "popover": "#2b4352"
         },
         "storm": {
-          "trigger": "thunder in the current condition or the forecast period covering now",
+          "trigger": "a thunder forecast in force, on a fresh reading",
           "stops": [
             "#363250",
             "#2a2742",
@@ -969,7 +969,7 @@
   ],
   "narrative": {
     "northStar": "The Doorstep Glance",
-    "overview": "**Creative North Star: \"The Doorstep Glance\"**\n\nEvery screen is designed for the moment just before someone steps outside. They have a few seconds and one hand free. The page answers with one large reading: the place name, a very large hairline-weight temperature, and the day's high and low with the time of the last update. Everything below it is quieter and lighter, and holds back until the user wants more detail. Hierarchy comes from size and how strong the ink is. Colour carries very little of it.\n\nThe default Apple theme puts frosted, translucent panels over a gradient of the day's sky, slate blue going darker towards the bottom. One ink colour (white in Apple) does all the work. Text, borders, fills and dividers are that same ink at different opacities, so the panels look like part of the sky rather than objects placed on top of it. Components are quiet but tactile. At rest they are faint frosted panels with hairline edges. When pressed or selected they clearly brighten and lift, and on touch screens every control is big enough for a thumb.\n\nThe visual identity sits in a swappable set of CSS variables, while the layout stays fixed. Five alternative themes (Apple Glass, Midnight Radar, Pastel Sticker, Neo-Memphis, Singapore Sky), six themes in all, replace the materials completely and keep the same structure and hierarchy. Apple is the reference theme. It changes only in deliberate theming work.\n\nSingapore Sky is the only theme that reads data. Its ground is not a fixed palette but the selected place's sky, repainted from that location's stored snapshot so the page answers \"can I go out?\" before any number is read. Four dark Singapore skies, chosen in strict precedence storm > haze > heat > calm: a bruised-violet 3 pm storm under a lumpy cloud base with slanted rain sheets (thunder in the current condition, or in the forecast period covering now); a smoky sepia haze with a smoke veil and a dull sun disc (24-hour PSI above 100); a scorched rust heat burning up from the bottom edge (NEA High heat stress from a WBGT station within 10 km); and a blue-grey calm with cumulus heads, which is also the answer whenever a reading is missing, so the sky never guesses. White ink, NEA flag colours on the heat-stress pills and banded gauges, and the system font stack: its character comes from the sky and the flags.",
+    "overview": "**Creative North Star: \"The Doorstep Glance\"**\n\nEvery screen is designed for the moment just before someone steps outside. They have a few seconds and one hand free. The page answers with one large reading: the place name, a very large hairline-weight temperature, and the day's high and low with the time of the last update. Everything below it is quieter and lighter, and holds back until the user wants more detail. Hierarchy comes from size and how strong the ink is. Colour carries very little of it.\n\nThe default Apple theme puts frosted, translucent panels over a gradient of the day's sky, slate blue going darker towards the bottom. One ink colour (white in Apple) does all the work. Text, borders, fills and dividers are that same ink at different opacities, so the panels look like part of the sky rather than objects placed on top of it. Components are quiet but tactile. At rest they are faint frosted panels with hairline edges. When pressed or selected they clearly brighten and lift, and on touch screens every control is big enough for a thumb.\n\nThe visual identity sits in a swappable set of CSS variables, while the layout stays fixed. Five alternative themes (Apple Glass, Midnight Radar, Pastel Sticker, Neo-Memphis, Singapore Sky), six themes in all, replace the materials completely and keep the same structure and hierarchy. Apple is the reference theme. It changes only in deliberate theming work.\n\nSingapore Sky is the only theme that reads data. Its ground is not a fixed palette but the selected place's sky, repainted from that location's stored snapshot so the page answers \"can I go out?\" before any number is read. Four dark Singapore skies, chosen in strict precedence storm > haze > heat > calm: a bruised-violet 3 pm storm under a lumpy cloud base with slanted rain sheets (a thunder forecast in force, on a fresh reading); a smoky sepia haze with a smoke veil and a dull sun disc (24-hour PSI above 100); a scorched rust heat burning up from the bottom edge (NEA High heat stress from a WBGT station within 10 km); and a blue-grey calm with cumulus heads, which is also the answer whenever a reading is missing or stale, so the sky never guesses. White ink, NEA flag colours on the heat-stress pills and banded gauges, and the system font stack: its character comes from the sky and the flags.",
     "keyCharacteristics": [
       "One huge, hairline-weight current temperature (6.5rem, weight 200) is the single focal point.",
       "One ink colour, used at different opacities, makes every text colour, border and fill.",
@@ -997,7 +997,7 @@
       },
       {
         "name": "The Sky Is Data Rule",
-        "body": "In Singapore Sky the ground is a measurement. It changes only through `skyState()` (storm > haze > heat > calm, calm when data is missing), never for decoration, time of day or mood. A new sky state needs a data trigger and a place in that precedence.",
+        "body": "In Singapore Sky the ground is a measurement. It changes only through `skyState()` (storm > haze > heat > calm, calm when data is missing or the reading is stale), never for decoration, time of day or mood. A new sky state needs a data trigger and a place in that precedence.",
         "section": "colors"
       },
       {

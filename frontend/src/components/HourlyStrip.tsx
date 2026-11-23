@@ -1,14 +1,12 @@
 import { ConditionIcon } from './ConditionIcon';
 import { ClockIcon } from './icons';
 import { conditionToIcon } from './map/mapHelpers';
-import { periodStartLabel } from './periodLabel';
-import { singaporeDate } from './sunTimes';
 import type { ForecastPeriod } from '../types';
 
 interface HourlyStripProps {
   periods?: ForecastPeriod[];
-  /** An old snapshot's first period isn't "now"; it keeps its own date and time label. */
-  stale?: boolean;
+  /** One per period, from `stripLabels`: the strip reads no clock of its own. */
+  labels: string[];
 }
 
 /** Same Label style as every other panel header: icon, uppercase, wide tracking. */
@@ -24,7 +22,7 @@ function StripHeading() {
   );
 }
 
-export function HourlyStrip({ periods = [], stale = false }: HourlyStripProps) {
+export function HourlyStrip({ periods = [], labels }: HourlyStripProps) {
   if (periods.length === 0) {
     return (
       <section
@@ -39,11 +37,10 @@ export function HourlyStrip({ periods = [], stale = false }: HourlyStripProps) {
     );
   }
 
-  const today = singaporeDate(new Date());
   const slots = periods.map((period, index) => ({
     key: `${period.label}-${index}`,
-    label: index === 0 && !stale ? 'Now' : periodStartLabel(period.label, today),
-    forecast: period.forecast,
+    label: labels[index],
+    forecast: period.forecast?.trim(),
   }));
 
   return (
@@ -62,11 +59,18 @@ export function HourlyStrip({ periods = [], stale = false }: HourlyStripProps) {
           return (
             <div key={slot.key} className="flex flex-col items-center gap-2 px-2 py-4 text-center">
               <div className="text-xs font-medium text-white/85">{slot.label}</div>
-              <ConditionIcon
-                condition={slot.forecast}
-                className={`h-7 w-7 ${isSun ? 'text-sun' : 'text-white/85'}`}
-              />
-              <div className="text-xs leading-snug text-white/90">{slot.forecast}</div>
+              {slot.forecast ? (
+                <ConditionIcon
+                  condition={slot.forecast}
+                  className={`h-7 w-7 ${isSun ? 'text-sun' : 'text-white/85'}`}
+                />
+              ) : (
+                // No glyph: the fallback cloud would read as a forecast.
+                <span aria-hidden="true" className="h-7 w-7" />
+              )}
+              <div className="text-xs leading-snug text-white/90">
+                {slot.forecast || 'Unavailable'}
+              </div>
             </div>
           );
         })}

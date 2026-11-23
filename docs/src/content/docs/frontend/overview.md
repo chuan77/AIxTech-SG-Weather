@@ -15,7 +15,7 @@ flowchart TD
   App --> ThemeProvider --> StoreProvider --> Layout
 
   Layout --> Sidebar
-  Layout --> Hero
+  Layout -->|"now (60 s clock)"| Hero
   Layout --> ThemeSelector
 
   Sidebar --> Search["Search input<br/>(filters by area/condition)"]
@@ -25,8 +25,8 @@ flowchart TD
   Sidebar --> LoadError["Load error + Retry"]
   Sidebar --> SidebarCard["SidebarCard x N<br/>select, delete"]
 
-  Hero --> Header["Area, verdict (storms, heat, UV, PSI),<br/>lightning nearby, temperature, H/L"]
-  Hero --> HourlyStrip["HourlyStrip<br/>forecast_periods"]
+  Hero --> Header["Area, verdict (forecast rain, storms, heat, UV, PSI),<br/>lightning nearby, temperature, H/L"]
+  Hero --> HourlyStrip["HourlyStrip<br/>forecast_periods, timed labels"]
   Hero --> TenDayForecast["TenDayForecast<br/>daily_forecast"]
   Hero --> LazyMapCard["LazyMapCard<br/>loads Leaflet near view"]
   LazyMapCard --> MapCard
@@ -42,6 +42,8 @@ flowchart TD
   OutdoorGrid --> Outdoor["Heat & Comfort (WBGT, feels like),<br/>Rainfall, UV, Air quality"]
   MoreReadingsGrid --> More["Wind, Humidity, Sunrise/Sunset"]
 ```
+
+`Layout` owns one 60-second clock and passes it to `Hero`. The verdict, the strip's labels and the sky are timed by that clock through `components/forecastTiming.ts`, so "now" moves on all three at once without a request.
 
 `Hero` returns early with a "Select a location" message when nothing is selected, so the map card and tiles only appear once a location exists.
 

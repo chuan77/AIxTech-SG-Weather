@@ -545,15 +545,15 @@ export class SingaporeWeatherClient {
 
     const record = payload.data?.records?.[0];
     const region = nearestRegionName(defaultRegions(), latitude, longitude) ?? 'central';
+    // A period without wording or label keeps its place: the frontend times each one by position.
+    const periods = (record?.periods ?? []).map((period) => ({
+      label: period.timePeriod?.text ?? '',
+      forecast: period.regions?.[region]?.text ?? period.regions?.central?.text ?? '',
+    }));
     return {
       low: numberOrNull(record?.general?.temperature?.low),
       high: numberOrNull(record?.general?.temperature?.high),
-      periods: (record?.periods ?? [])
-        .map((period) => ({
-          label: period.timePeriod?.text ?? '',
-          forecast: period.regions?.[region]?.text ?? period.regions?.central?.text ?? '',
-        }))
-        .filter((period) => period.label && period.forecast),
+      periods: periods.some((period) => period.forecast.trim()) ? periods : [],
       timestamp: record?.updatedTimestamp ?? record?.timestamp ?? null,
     };
   }

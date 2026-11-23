@@ -613,3 +613,38 @@ describe('SingaporeWeatherClient hourly UV (spec 008)', () => {
     expect(uvCalls).toHaveLength(1);
   });
 });
+
+describe('SingaporeWeatherClient periods without wording (spec 018 FR-020)', () => {
+  async function storedPeriods(...periods: [label: string, text: string][]) {
+    const record = {
+      periods: periods.map(([label, text]) => ({
+        timePeriod: { text: label },
+        regions: { central: { text } },
+      })),
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify({ code: 0, data: { records: [record] } }))),
+    );
+    const client = new SingaporeWeatherClient(NO_PACING);
+    return (await client.fetchTwentyFourHourForecast(1.35, 103.85)).periods;
+  }
+
+  it('keeps a period without wording in its place', async () => {
+    expect(await storedPeriods(['Midnight to 6 am', ''], ['6 am to Midday', 'Fair'])).toEqual([
+      { label: 'Midnight to 6 am', forecast: '' },
+      { label: '6 am to Midday', forecast: 'Fair' },
+    ]);
+  });
+
+  it('keeps a period without a label in its place', async () => {
+    expect(await storedPeriods(['', 'Showers'], ['6 am to Midday', 'Fair'])).toEqual([
+      { label: '', forecast: 'Showers' },
+      { label: '6 am to Midday', forecast: 'Fair' },
+    ]);
+  });
+
+  it('stores none when no period has wording', async () => {
+    expect(await storedPeriods(['Midnight to 6 am', ''], ['6 am to Midday', ' '])).toEqual([]);
+  });
+});

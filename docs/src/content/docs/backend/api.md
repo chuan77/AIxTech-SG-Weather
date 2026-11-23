@@ -116,7 +116,7 @@ interface WeatherSnapshot {
   wbgt_station_name: string | null;
   wbgt_station_distance_km: number | null; // great-circle km, kept even when far
   wbgt_observed_at: string | null;
-  forecast_periods: { label: string; forecast: string }[];   // 24-hour periods, nearest region
+  forecast_periods: { label: string; forecast: string }[];   // 24-hour periods in order, nearest region; '' = no wording
   daily_forecast: {
     date: string;
     forecast: string;

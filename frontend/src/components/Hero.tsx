@@ -7,11 +7,11 @@ import { ConditionIcon } from './ConditionIcon';
 import { MoreReadingsGrid, OutdoorGrid } from './Tiles';
 import { ThemeSelector } from './ThemeSelector';
 import { outdoorSummaryParts } from './outdoorSummary';
+import { forecastOutlook, stripLabels } from './forecastTiming';
 import { asSentence, formatTemperature } from './format';
 import { readingFreshness } from './freshness';
-import { formatSgtTime, singaporeDate } from './sunTimes';
+import { formatSgtTime } from './sunTimes';
 import { nearestStrike } from './map/lightningHelpers';
-import { useNow } from './map/useNow';
 import { PrivacyNotice } from './PrivacyNotice';
 import { readAnalyticsMode } from '../analytics/analyticsMode';
 import { readSpeedInsightsMode } from '../analytics/speedInsightsMode';
@@ -24,12 +24,15 @@ const privacy = privacyCopy({
   speed: readSpeedInsightsMode() !== 'off',
 });
 
-export function Hero() {
+interface HeroProps {
+  /** `Layout`'s clock, shared with the sky so the line, strip and sky change together. */
+  now: number;
+}
+
+export function Hero({ now }: HeroProps) {
   const { locations, refresh, refreshingId, refreshError, remove, bulkRefresh, lightning } =
     useStore();
   const selected = useSelectedLocation();
-  // A one-minute tick lets a reading turn stale while the page stays open.
-  const now = useNow(60_000, selected?.weather?.observed_at);
 
   if (!selected) {
     return (
@@ -65,9 +68,8 @@ export function Hero() {
   const high = formatTemperature(selected.weather?.forecast_high_c);
   const low = formatTemperature(selected.weather?.forecast_low_c);
   const condition = selected.weather?.condition;
-  const summary = selected.weather
-    ? outdoorSummaryParts(selected.weather, singaporeDate(new Date(now)))
-    : [];
+  const summary = selected.weather ? outdoorSummaryParts(selected.weather, now) : [];
+  const periodLabels = selected.weather ? stripLabels(forecastOutlook(selected.weather, now)) : [];
   // A stale summary is dated and quieter, so it reads as what was forecast then, not a verdict now.
   const asOf =
     freshness.kind === 'stale'
@@ -197,7 +199,7 @@ export function Hero() {
         </header>
 
         {/* Singapore's questions first: rain and storms, heat, UV and haze, then the detail. */}
-        <HourlyStrip periods={selected.weather?.forecast_periods} stale={isStale} />
+        <HourlyStrip periods={selected.weather?.forecast_periods} labels={periodLabels} />
         <OutdoorGrid weather={selected.weather} asOf={asOfWhen} />
         <TenDayForecast weather={selected.weather} asOf={asOfWhen} />
         <LazyMapCard />
