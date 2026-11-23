@@ -6,16 +6,14 @@ import { DeleteToast } from './DeleteToast';
 import { PhoneDock } from './PhoneDock';
 import { useSelectedLocation } from '../state/store';
 import { applySky, skyState } from '../theme/sky';
-import { readingFreshness } from './freshness';
 import { useNow } from './map/useNow';
 
 export function Layout() {
   // The Singapore theme paints the selected location's sky; other themes ignore data-sky.
   const weather = useSelectedLocation()?.weather;
+  // The page's one forecast clock. Its tick moves "now" and lets a reading turn stale while open.
   const now = useNow(60_000, weather?.observed_at);
-  // A stale reading can't vouch for the sky now, so it paints calm, the same as a missing one.
-  const isStale = readingFreshness(weather?.observed_at, now).kind === 'stale';
-  const sky = skyState(isStale ? null : weather);
+  const sky = skyState(weather, now);
   useEffect(() => applySky(sky), [sky]);
 
   return (
@@ -29,7 +27,7 @@ export function Layout() {
         Skip to weather
       </a>
       <Sidebar />
-      <Hero />
+      <Hero now={now} />
       <ThemeSelector placement="page-end" />
       <PhoneDock />
       <DeleteToast />

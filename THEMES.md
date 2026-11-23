@@ -51,10 +51,10 @@ This file was written from the code. Design rationale from earlier discussions w
 ### Singapore Sky (`singapore`)
 
 - The only theme that reads data. `skyState()` in `frontend/src/theme/sky.ts` turns the selected location's stored snapshot into `data-sky` on `<html>`, and the theme paints one of four skies. The first that applies wins:
-  1. **Storm:** thunder in the current condition or any 2-hour forecast period. Bruised violet with fine slanting rain.
+  1. **Storm:** a thunder forecast in force, on a fresh reading (the 2-hour forecast or a 24-hour period). Bruised violet with fine slanting rain.
   2. **Haze:** 24-hour PSI above 100 (NEA's Unhealthy band and up). Smoky sepia with the sun reduced to a dull disc.
   3. **Heat:** NEA heat stress High, from a WBGT station within 10 km. A scorched rust cast with a glow at the horizon.
-  4. **Calm:** everything else, including missing data. The sky never guesses.
+  4. **Calm:** everything else, including missing data. A stale reading (3 hours) is always calm, whatever it held. The sky never guesses.
 - The sky colours are `@property`-registered, so a change of state crossfades over about 1.2s. It snaps under reduced motion.
 - White ink in every state. Each state was checked so that 85% ink clears 4.5:1 on a selected card at the sky's lightest point (worst case 4.52:1, calm).
 - NEA flag colours (green, amber, red) appear only where they carry data:

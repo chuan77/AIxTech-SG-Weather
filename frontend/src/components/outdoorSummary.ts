@@ -1,13 +1,7 @@
-import type { ForecastPeriod, WeatherSnapshot } from '../types';
+import type { WeatherSnapshot } from '../types';
+import { forecastOutlook, type ForecastOutlook, type TimedForecast } from './forecastTiming';
 import { heatStressView, type HeatStressTone } from './heatStress';
-import { periodStartPhrase } from './periodLabel';
-
-/** "6 pm 14 Nov 2026 to 12 am ..." → "6 pm 14 Nov": the start of a forecast period, without the year. */
-export function shortenPeriodLabel(label: string): string {
-  if (!label) return '';
-  const start = label.split(' to ')[0];
-  return start.replace(/\s\d{4}\b/, '');
-}
+import { periodTimePhrase } from './periodLabel';
 
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -30,39 +24,106 @@ export function uvBand(uv: number | null | undefined): string | null {
   return 'Extreme';
 }
 
-const THUNDER = /thunder/i;
+/** The first forecast of this kind still to come, from either source. */
+function earliestUpcoming(forecasts: TimedForecast[], kind: TimedForecast['kind']) {
+  return forecasts
+    .flatMap((forecast) =>
+      forecast.kind === kind && forecast.state === 'upcoming' ? [forecast] : [],
+    )
+    .sort((a, b) => a.window.start - b.window.start)[0];
+}
+
+/** NEA's wording in sentence case: "Light Rain" → "Light rain". */
+function sentenceCase(text: string): string {
+  const words = text.trim().toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 /**
- * True when thunder is happening now: in the current condition or the forecast period covering now.
- * Later periods don't count; Singapore forecasts thunder most days, so "any period" would mean always.
+ * Period rain in force lasts to the end of its unbroken run of rain periods, called "Rain" when
+ * their wordings differ. An end is named only when what follows the run is known.
  */
-export function thunderNow(condition: string | null, periods: ForecastPeriod[]): boolean {
-  return (!!condition && THUNDER.test(condition)) || THUNDER.test(periods[0]?.forecast ?? '');
+function rainRunPart({ now, periods }: ForecastOutlook): string | null {
+  const first = periods.findIndex((p) => p.kind === 'rain' && p.state === 'active');
+  if (first < 0) return null;
+
+  const wordings = new Set<string>();
+  let end = 0;
+  let next = first;
+  for (; next < periods.length; next++) {
+    const { kind, text, window } = periods[next];
+    if (kind !== 'rain' || !window) break;
+    wordings.add(sentenceCase(text));
+    end = window.end;
+  }
+  const wording = wordings.size === 1 ? [...wordings][0] : 'Rain';
+  const following = periods.at(next);
+  if (following && (following.missing || following.state === 'unknown')) {
+    return `${wording} forecast`;
+  }
+  return `${wording} forecast until ${periodTimePhrase(end, now)}`;
 }
 
-function stormPart(
-  condition: string | null,
-  periods: ForecastPeriod[],
-  today?: string,
-): string | null {
-  if (condition && THUNDER.test(condition)) return 'Thundery showers now';
-  const later = periods.findIndex((period) => THUNDER.test(period.forecast ?? ''));
-  if (later === 0) return 'Thundery showers now';
-  if (later > 0) {
-    const label = periods[later].label;
-    // With today known, say which day: "from tomorrow midday" rather than a bare "Midday".
-    return `Thundery showers from ${today ? periodStartPhrase(label, today) : shortenPeriodLabel(label)}`;
+/** The first rain forecast that applies. It is worded as a forecast, never as rain falling. */
+function rainPart(outlook: ForecastOutlook): string | null {
+  const { now, nearTerm, periods } = outlook;
+  if (nearTerm.kind === 'rain') {
+    if (nearTerm.state === 'active') return `${sentenceCase(nearTerm.text)} forecast now`;
+    if (nearTerm.state === 'unknown') return `${sentenceCase(nearTerm.text)} forecast`;
   }
-  // Only claim "no storms" when there is a forecast to back it.
-  return periods.length > 0 ? 'No storms forecast' : null;
+  const run = rainRunPart(outlook);
+  if (run) return run;
+
+  const forecasts = [nearTerm, ...periods];
+  const next = earliestUpcoming(forecasts, 'rain');
+  const thunder = earliestUpcoming(forecasts, 'thunder');
+  // Rain is named only ahead of thunder, and untimed 2-hour thunder may already apply.
+  const thunderMayBeNow = nearTerm.kind === 'thunder' && nearTerm.state === 'unknown';
+  if (next && !thunderMayBeNow && (!thunder || next.window.start < thunder.window.start)) {
+    return `${sentenceCase(next.text)} forecast from ${periodTimePhrase(next.window.start, now)}`;
+  }
+  const untimed = periods.find((p) => p.kind === 'rain' && p.state === 'unknown');
+  return untimed ? `${sentenceCase(untimed.text)} forecast` : null;
+}
+
+function thunderPart({ now, nearTerm, periods }: ForecastOutlook): string | null {
+  // An untimed 2-hour warning may already apply, so a later one mustn't postpone it.
+  if (nearTerm.kind === 'thunder' && nearTerm.state === 'unknown') {
+    return 'Thundery showers forecast';
+  }
+  const next = earliestUpcoming([nearTerm, ...periods], 'thunder');
+  if (next) return `Thundery showers from ${periodTimePhrase(next.window.start, now)}`;
+  const untimed = periods.some((p) => p.kind === 'thunder' && p.state === 'unknown');
+  return untimed ? 'Thundery showers forecast' : null;
 }
 
 /**
- * The hero's answer to "can I go out?": storms, heat stress, UV (High and up) and PSI.
+ * Asked only when no rain or thunder still applies: "No storms forecast" also needs a forecast to
+ * back it, with no gap where it still applies.
+ */
+function backsNoStorms({ nearTerm, periods }: ForecastOutlook): boolean {
+  return (
+    periods.some((p) => p.state === 'active' || p.state === 'upcoming') &&
+    !periods.some((p) => p.missing && p.state !== 'ended') &&
+    // Even ended, the 2-hour condition still shows under the top line.
+    nearTerm.kind === 'other'
+  );
+}
+
+/** What the line says about the weather, judged by the same outlook as the strip and the sky. */
+function weatherPhrases(outlook: ForecastOutlook): string[] {
+  if (outlook.thunderActive) return ['Thundery showers now'];
+  const parts = [rainPart(outlook), thunderPart(outlook)].filter((part) => part !== null);
+  if (parts.length > 0) return parts;
+  return backsNoStorms(outlook) ? ['No storms forecast'] : [];
+}
+
+/**
+ * The hero's answer to "can I go out?" at `now`: rain and storms, heat stress, UV (High and up) and PSI.
  * Parts with no reading are left out rather than guessed; null when nothing is known.
  */
-export function outdoorSummary(weather: WeatherSnapshot): string | null {
-  const parts = outdoorSummaryParts(weather);
+export function outdoorSummary(weather: WeatherSnapshot, now: number): string | null {
+  const parts = outdoorSummaryParts(weather, now);
   return parts.length > 0 ? parts.map((part) => part.text).join(' · ') : null;
 }
 
@@ -73,11 +134,10 @@ export interface SummaryPart {
 }
 
 /** The same summary as parts, so the hero can mark up the heat-stress phrase. */
-export function outdoorSummaryParts(weather: WeatherSnapshot, today?: string): SummaryPart[] {
-  const parts: SummaryPart[] = [];
-
-  const storm = stormPart(weather.condition, weather.forecast_periods ?? [], today);
-  if (storm) parts.push({ text: storm });
+export function outdoorSummaryParts(weather: WeatherSnapshot, now: number): SummaryPart[] {
+  const parts: SummaryPart[] = weatherPhrases(forecastOutlook(weather, now)).map((text) => ({
+    text,
+  }));
 
   const heat = heatStressView(weather);
   if (heat.kind === 'reading' && heat.level)

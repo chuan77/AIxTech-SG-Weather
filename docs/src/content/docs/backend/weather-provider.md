@@ -58,7 +58,7 @@ flowchart LR
 | `psi_twenty_four_hourly`, pollutant fields, `air_quality_*` | `psi` | Nearest region from `regionMetadata` |
 | `pm25_one_hourly` | `pm25` | Same region |
 | `forecast_low_c`, `forecast_high_c` | `twenty-four-hr-forecast` | Island-wide general temperature |
-| `forecast_periods` | `twenty-four-hr-forecast` | Nearest of the five fixed regions, falling back to `central` |
+| `forecast_periods` | `twenty-four-hr-forecast` | Nearest of the five fixed regions, falling back to `central`. Every period keeps its position, with `''` for missing wording or label; empty only when none has wording |
 | `daily_forecast` | `4-day-weather-forecast` (legacy v1 host) | Island-wide |
 | `wbgt_c`, `heat_stress_level`, `wbgt_station_name`, `wbgt_station_distance_km`, `wbgt_observed_at` | `weather?api=wbgt` | Nearest station with a numeric WBGT, by great-circle distance in km |
 
