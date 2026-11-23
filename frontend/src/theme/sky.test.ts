@@ -10,6 +10,7 @@ import {
   periodSweep,
   sgt,
   snapshotAt,
+  SWEEP_TIMEOUT_MS,
   twoHourSweep,
 } from '../components/forecastFixtures';
 import { outdoorSummaryParts } from '../components/outdoorSummary';
@@ -121,5 +122,5 @@ describe('skyState', () => {
       count++;
     }
     expect({ count, wrong: wrong.slice(0, 5) }).toEqual({ count: expected, wrong: [] });
-  });
+  }, SWEEP_TIMEOUT_MS);
 });

@@ -4,6 +4,12 @@ import type { ForecastPeriod, WeatherSnapshot } from '../types';
 
 const MINUTE = 60_000;
 
+/**
+ * A whole minute-by-minute sweep is tens of thousands of steps: about 5 s locally and three times
+ * that on CI, past vitest's 5 s default. Its tests get this limit instead of fewer steps.
+ */
+export const SWEEP_TIMEOUT_MS = 60_000;
+
 /** An instant from Singapore wall-clock time: "12:30" on 22 Nov 2026, or "2026-10-31 18:01". */
 export function sgt(text: string): number {
   const [date, time] = text.includes(' ') ? text.split(' ') : ['2026-11-22', text];

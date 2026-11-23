@@ -11,6 +11,7 @@ import {
   periodSweep,
   sgt,
   snapshotAt,
+  SWEEP_TIMEOUT_MS,
   twoHourSweep,
   type SweepStep,
 } from './forecastFixtures';
@@ -191,11 +192,11 @@ function runSweep(steps: Iterable<SweepStep>) {
 describe('thunder now, minute by minute (SC-002)', () => {
   it('is exact for every period of every layout', () => {
     expect(runSweep(periodSweep())).toEqual({ count: 19_360, wrong: [], active: 14, ending: 14 });
-  });
+  }, SWEEP_TIMEOUT_MS);
 
   it('is exact for all 48 two-hour windows', () => {
     expect(runSweep(twoHourSweep())).toEqual({ count: 8_688, wrong: [], active: 48, ending: 48 });
-  });
+  }, SWEEP_TIMEOUT_MS);
 });
 
 describe('stripLabels', () => {
